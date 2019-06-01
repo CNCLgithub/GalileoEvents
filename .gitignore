@@ -1,0 +1,23 @@
+# user data
+
+data
+output
+config.yaml
+user.conf
+
+# container + python env
+
+cont
+env
+experiment.egg-info
+.julia/
+
+# miscellaneous
+
+julia.tar.gz
+blender.tar.bz2
+worker-*
+*.lock
+tmp*
+dask-worker-space
+__pycache__
