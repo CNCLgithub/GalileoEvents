@@ -20,63 +20,67 @@ import sys
 import glob
 import copy
 import json
+import string
 import hashlib
 import argparse
 import datetime
 
 import numpy as np
-import pandas as pd
-from tqdm import tqdm
 from pprint import pprint
 from dask import distributed
 from dask_jobqueue import SLURMCluster
 
 from utils import config
 
+from experiment.world.ball import Ball
+from experiment.world.ramp import RampScene
+from experiment.simulation import forward_model
+
 CONFIG = config.Config()
 
-def evaluate_tower(materials, densities, base_scene, debug = False):
+def evaluate_tower(appearances, densities, radius, base_scene, n_ramp,
+                   friction, pred, out, debug = False):
     """ Encapsulation for searching for interesting towers.
 
     Generates a random tower from the provided base and
     determine if it is an interesting tower.
 
-    Arguments:
-    - base (dict): A `dict` containing the fields:
-                 {
-                   'base' : Tower base to build over (can be `None`)
-                   'k'    : The number of blocks to add
-                   'idx'  : ...
-                 }
-    - gen (blockworld.Generator): Creates towers and their configurations
-    - phys (blockworld.TowerEntropy): Evaluates the physical properties of towers
-    - mode (str): Use 'angle' for difference in angle and 'instability' for instability
-
     Returns:
     A tuple (passed, mut) where `passed` is `True` if the tower is interesting and
     `mut` is the mutation type (None if `passed == False`)
     """
-    # Assign materials
-    mat_ids = np.random.permute(len(materials))
-    dens_ids = np.random.permute(len(densities))
+    n = len(appearances)
+    # Assign appearances
+    apps = np.random.permutation(n)
+    dens = np.random.permutation(n)
 
     # balls on ramp
-    rng = np.linalg(0.1, 0.9, 4)
+    rng = np.linspace(0.1, 0.9, 4)
     ramp_pcts = np.random.choice(rng, n_ramp, replace = False)
+
+    # on table
     table_pcts = np.random.choice(rng, n - n_ramp, replace = False)
     pcts = np.concatenate((table_pcts, ramp_pcts + 1))
-    scene = copy(base_scene)
-    for i, (m_id, d_id) in enumerate(zip(mat_ids, dens_ids)):
-        ball = Ball(materials[m_id], (radius,), densities[d_id], friction)
-        scene.add_object(names[i], ball, pcts[i])
 
-    stats = simulate(scene)
-    if not pred(stats):
+    # Add balls to ramp scene
+    scene = copy.deepcopy(base_scene)
+    for i, (a_id, d_id) in enumerate(zip(apps, dens)):
+        ball = Ball(appearances[a_id], (radius,), densities[d_id], friction)
+        scene.add_object(str(i), ball, pcts[i])
+
+    # Eval predicate on trace
+    trace = forward_model.simulate(scene.serialize(), 240)
+    passed = pred(trace) or debug
+    if not passed:
         return (False, None)
+
     # Save the resulting tower pair using the content of `result` for
     # the hash / file name
+    result = {}
+    result['scene'] = scene.serialize()
+    result['trace'] = dict(zip(['pos', 'orn', 'lvl', 'avl'], trace))
     r_str = json.dumps(result, indent = 4, sort_keys = True,
-                            cls = TowerEncoder)
+                            cls = forward_model.TraceEncoder)
     hashed = hashlib.md5()
     hashed.update(r_str.encode('utf-8'))
     hashed = hashed.hexdigest()
@@ -91,7 +95,8 @@ def predicate(state):
     """
     Last object moves
     """
-    return np.sum(state['lin_vel'][:, -1]) > 0
+    (_, _, _, lin_vel) = state
+    return np.sum(lin_vel[:, -1]) > 0
 
 def main():
 
@@ -107,8 +112,14 @@ def main():
                         help = 'XY dimensions of table.')
     parser.add_argument('--ramp', type = int, nargs = 2, default = (35, 18),
                         help = 'XY dimensions of ramp.')
-    parser.add_argument('--shape', type = int, nargs = 3, default = (3,1,1),
-                        help = 'Dimensions of block (x,y,z).')
+    parser.add_argument('--ramp_angle', type = float, default = 15.0,
+                        help = 'ramp angle in degrees')
+    parser.add_argument('--radius', type = float, default = 1.5,
+                        help = 'Ball radius.')
+    parser.add_argument('--friction', type = float, default = 0.3,
+                        help = 'Ball friction')
+    parser.add_argument('--n_ramp', type = int, default = 1,
+                        help = 'Number of balls on ramp')
     parser.add_argument('--out', type = str, help = 'Path to save towers.')
     parser.add_argument('--slurm', action = 'store_true',
                         help = 'Use dask distributed on SLURM.')
@@ -120,7 +131,7 @@ def main():
 
     if args.out is None:
         suffix = datetime.datetime.now().strftime("%y%m%d_%H%M%S")
-        out_d = args.make_path(args) + '_' + suffix
+        out_d =  'ramp_' + suffix
         out_d = os.path.join(CONFIG['PATHS', 'scenes'], out_d)
     else:
         out_d = os.path.join(CONFIG['PATHS', 'scenes'], args.out)
@@ -138,21 +149,19 @@ def main():
 
     out_path = os.path.join(out_d, '{0!s}.json')
     enough_scenes = lambda l: len(np.argwhere(l == '')) == 0
-    predicate = args.search(args)
 
-    materials = {'Wood' : 1.0}
-    gen = MultiBlockGen(materials, 'local', args.shape, args.n_blocks)
-    phys = PushedSim(noise = args.noise, frames = 240)
+    base = RampScene(args.table, args.ramp,
+                     ramp_angle = args.ramp_angle)
 
     params = {
-        'base' : base,
-        'size' : args.size,
-        'gen'  : gen,
-        'phys' : phys,
+        'appearances' : ['R', 'B', 'G'],
+        'densities' : [1, 10, 100],
+        'radius' : args.radius,
+        'base_scene' : base,
+        'n_ramp' : args.n_ramp,
+        'friction' : args.friction,
         'pred' : predicate,
         'out'  : out_path,
-        'materials' : [args.weight],
-        'force' : args.force,
         'debug': args.debug,
     }
     eval_tower = lambda x: evaluate_tower(**params)

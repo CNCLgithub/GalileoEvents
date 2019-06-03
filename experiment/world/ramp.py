@@ -1,10 +1,14 @@
-import .
+from collections import OrderedDict
+import numpy as np
+
+from . import block
 
 
 def pct_to_coord(mag, angle, z):
+    angle = (angle / 180.) * np.pi
+    x_offset = (np.cos(angle) * mag) + (np.sin(angle) * z)
     z_offset = (np.sin(angle) * abs(mag)) + (np.cos(angle) * z)
-    x_offset = (np.cos(angle) * mag) - (np.sin(angle) * z)
-    return np.array((x_offset, 0, z_offset))
+    return np.array([x_offset, 0, z_offset])
 
 class RampScene:
 
@@ -13,16 +17,22 @@ class RampScene:
     """
 
     def __init__(self, table_dims, ramp_dims, objects = None,
-                 ramp_angle = 15.0):
-        self.table = block.Block('table', table_dims, 0, table_friction)
-        self.ramp = block.Block('ramp', ramp_dims, 0, ramp_friction,
-                                rot = ramp_angle)
+                 ramp_angle = 15.0, table_friction = 0.3,
+                 ramp_friction = 0.3):
+        table = block.Block('table', (*table_dims, 0), 0, table_friction)
+        table.position = pct_to_coord(table_dims[0]*0.5 , 0, 0)
+        self.table = table
+        ramp = block.Block('ramp', (*ramp_dims, 0), 0, ramp_friction,
+                                angle = (0, ramp_angle, 0))
+        ramp.position = pct_to_coord(ramp_dims[0]*(-0.5), ramp_angle, 0)
+        self.ramp = ramp
+        self.ramp_angle = ramp_angle
         self.objects = objects
 
     @property
     def objects(self):
         if self._objects is None:
-            return {}
+            return OrderedDict()
         else:
             return self._objects
 
@@ -30,25 +40,29 @@ class RampScene:
     def objects(self, v):
         self._objects = v
 
-    def add_object(name, obj, place):
+    def add_object(self, name, obj, place):
         z = obj.dimensions[-1]
+        # on table
         if place < 1:
             mag = place * self.table.dimensions[0]
-            coords = pct_to_coord(mag, 0, z)
-        elif place < 2:
+            angle = 0
+        # on ramp
+        elif place < 2 and place > 1:
             mag = (1 - place) * self.ramp.dimensions[0]
-            coords = pct_to_coord(mag, self.ramp_angle, z)
+            angle = self.ramp_angle
         else:
             raise ValueError('Place not found')
 
+        pos = pct_to_coord(mag, angle, z)
+        obj.position = pos
+        obj.orientation = (0, angle, 0)
         objects = self.objects
-        objects[name] = (coords, obj)
+        objects[name] = obj
         self.objects = objects
 
     def serialize(self):
         d = {}
         d['ramp'] = self.ramp.serialize()
         d['table'] = self.table.serialize()
-        d['objects'] = {k : {'pct':p, **o.serialize()}
-                        for k,(p,o) in self.objects}
+        d['objects'] = {k : o.serialize() for k,o in self.objects.items()}
         return d

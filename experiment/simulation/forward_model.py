@@ -3,8 +3,9 @@ Wrapper of forward model for all methods.
 
 Used in generation, rendering, and inference.
 """
+import json
 import numpy as np
-from . import ramp_scene
+from .ramp_physics import RampPhysics
 
 def simulate(serialized_scene, frames):
     """ Runs pybullet on on given tower
@@ -13,9 +14,10 @@ def simulate(serialized_scene, frames):
     :param serialized_tower: Tower scene to bake
     :param frames: Number of frames to report
     """
-    sim = ramp_scene.RampPhysics(serialized_scene)
-    blocks = ['ramp', 'table']
-    trace = sim.get_trace(frames, blocks, fps = 60, time_step = 240)
+    sim = RampPhysics(serialized_scene)
+    # ensures that the objects are reported in order
+    objs = list(map(str, range(len(serialized_scene['objects']))))
+    trace = sim.get_trace(frames, objs, fps = 60, time_step = 240)
     return trace
 
 def simulate_mc(serialized_scene, frames, p):
@@ -25,7 +27,16 @@ def simulate_mc(serialized_scene, frames, p):
     :param serialized_tower: Tower scene to bake
     :param frames: Number of frames to report
     """
-    sim = ramp_scene.RampPhysics(serialized_scene)
+    sim = RampPhysics(serialized_scene)
     blocks = ['ramp', 'table']
     trace = sim.get_trace(frames, blocks, fps = 60, time_step = 240)
     return trace
+
+
+class TraceEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        if isinstance(obj, np.int64):
+            return int(obj)
+        return json.JSONEncoder.default(self, obj)

@@ -1,0 +1,6 @@
+[submodule "deps/hdf5_dataset"]
+	path = deps/hdf5_dataset
+	url = https://github.com/belledon/hdf5_dataset.git
+[submodule "deps/slurm"]
+	path = deps/slurm
+	url = https://github.com/belledon/slurm.git

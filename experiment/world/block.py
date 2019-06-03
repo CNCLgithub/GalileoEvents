@@ -12,7 +12,7 @@ class Block(Shape):
         :returns: A shape name
         :rtype: str
         """
-        return "Block"
+        return 'Block'
 
     @property
     def volume(self):
@@ -21,5 +21,17 @@ class Block(Shape):
         :returns: the volume the shape holds
         :rtype: float
         """
-        return np.prod(dimensions)
+        return np.prod(self.dimensions)
 
+    @property
+    def dimensions(self):
+        return self._dimensions
+
+    # ----------------   setters   -----------------#
+
+    @dimensions.setter
+    def dimensions(self, value):
+        v = np.asarray(value)
+        if v.size != 3:
+            raise ValueError('Scale must represent xyz')
+        self._dimensions = v

@@ -16,7 +16,7 @@ class Loader:
     Interface for loading object data.
     """
 
-    def make_table(params, p):
+    def make_table(self, params, p):
         mesh = p.GEOM_PLANE
         exs = np.array(params['dims']) / 2.0
         mass = 0
@@ -28,47 +28,54 @@ class Loader:
                                             planeNormal = [0, 1, 0])
         wall_end = p.createCollisionShape(mesh,
                                           planeNormal = [1, 0, 0])
-        positions = [(0, exs[1], 0), # left wall
-                     (0, -1.0*exs[1]/2, 0), # right wall
-                     (exs[0], 0, 0)] # end wall
+        links = [wall_left, wall_right, wall_end]
+        positions = [[0, exs[1]*0.5, 0], # left wall
+                     [0, -1.0*exs[1]*0.5, 0], # right wall
+                     [exs[0], 0, 0]] # end wall
 
+        linkOrientations = np.repeat([[0, 0, 0, 1]], 3, axis = 0)
+        linkInertialFramePositions = np.repeat([[0, 0, 0]], 3, axis = 0)
+        linkInertialFrameOrientations = np.repeat([[0, 0, 0, 1]], 3, axis = 0)
+        indices = np.repeat(0, 3)
+        jointTypes = np.repeat(p.JOINT_FIXED, 3)
+        axis = np.repeat([[0, 0, 1]], 3, axis = 0)
         obj_id = p.createMultiBody(baseCollisionShapeIndex = base,
+                                   basePosition = params['position'],
+                                   baseOrientation = params['orientation'],
+                                   linkMasses=[0,0,0],
+                                   linkCollisionShapeIndices = links,
+                                   linkVisualShapeIndices = [-1, -1, -1],
                                    linkPositions = positions,
-                                   basePosition = pos,
-                                   baseOrientation = rot)
+                                   linkOrientations=linkOrientations,
+                                   linkInertialFramePositions=linkInertialFramePositions,
+                                   linkInertialFrameOrientations=linkInertialFrameOrientations,
+                                   linkParentIndices=indices,
+                                   linkJointTypes=jointTypes,
+                                   linkJointAxis=axis)
         p.changeDynamics(obj_id, -1,
                          lateralFriction = friction)
         return obj_id
 
-    def make_ramp(params, p):
+    def make_ramp(self, params, p):
 
         mesh = p.GEOM_PLANE
-        exs = np.array(params['dims']) / 2.0
         mass = 0
         friction = params['friction']
         base = p.createCollisionShape(mesh)
-        z_offset = np.sin(params['angle']) * exs[0]
-        x_offset = np.cos(params['angle']) * exs[0] * -1.0
-        pos = (x_offset, 0, z_offset)
-        rot = p.getQuaternionFromEuler([0, params['angle'], 0])
+        rot = p.getQuaternionFromEuler(params['orientation'])
         obj_id = p.createMultiBody(baseCollisionShapeIndex = base,
-                                   basePosition = pos,
+                                   basePosition = params['position'],
                                    baseOrientation = rot)
         p.changeDynamics(obj_id, -1,
                          lateralFriction = friction)
         return obj_id
 
-    def make_ramp_obj(params, ramp, p):
-        """
-        A `pct` of 0 designates the `x` coordinate where the ramp touches
-        the table.
-        """
-        if params['shape'] == 'block':
+    def make_obj(self, params, p):
+        if params['shape'] == 'Block':
             mesh = p.GEOM_BOX
             dims = np.array(params['dims']) / 2.0
-            z = dims[2]
             col_id = p.createCollisionShape(mesh, halfExtents = dims)
-        elif params['shape'] == 'ball':
+        elif params['shape'] == 'Ball':
             mesh = p.GEOM_SPHERE
             z = params['dims'][0]
             col_id = p.createCollisionShape(mesh, radius = z)
@@ -79,49 +86,15 @@ class Loader:
                                             radius = params['radius'],
                                             height = params['height'])
 
-        exs = np.array(ramp['dims'])
-        mag = exs[0] * params['pct']
-        z_offset = np.sin(ramp['angle']) * mag +\
-            np.cos(ramp['angle']) * z
-        x_offset = np.cos(ramp['angle']) * mag * -1.0 + \
-            np.sin(ramp['angle']) * z
-
-        pos = (x_offset, 0, z_offset)
-        rot = p.getQuaternionFromEuler([0, ramp['angle'], 0])
-        mass = params['mass']
+        rot = p.getQuaternionFromEuler(params['orientation'])
         obj_id = p.createMultiBody(baseCollisionShapeIndex = col_id,
-                                   basePosition = pos
+                                   basePosition = params['position'],
                                    baseOrientation = rot)
         p.changeDynamics(obj_id, -1,
-                         mass = mass,
-                         lateralFriction = friction)
+                         mass = params['mass'],
+                         lateralFriction = params['friction'])
         return obj_id
 
-    def make_table_obj(params, table, p):
-        """
-        A `pct` of 0 designates the `x` coordinate where the ramp touches
-        the table.
-        """
-        if params['shape'] == 'block':
-            mesh = p.GEOM_BOX
-            dims = np.array(params['dims']) / 2.0
-            col_id = p.createCollisionShape(mesh,
-                                            halfExtents = dims)
-        else:
-            mesh = p.GEOM_CYLINDER
-            col_id = p.createCollisionShape(mesh,
-                                            radius = params['radius'],
-                                            height = params['height'])
-
-        mag = table['dims'][0] * params['pct']
-        pos = (mag, 0, 0)
-        mass = params['mass']
-        obj_id = p.createMultiBody(baseCollisionShapeIndex = col_id,
-                                   basePosition = pos)
-        p.changeDynamics(obj_id, -1,
-                         mass = mass,
-                         lateralFriction = friction)
-        return obj_id
 
 class RampPhysics:
 
@@ -134,7 +107,7 @@ class RampPhysics:
             loader = Loader()
         self.loader = loader
         self.client = bc.BulletClient(connection_mode=pybullet.DIRECT)
-        self.world = tower_json
+        self.world = scene_json
 
     #-------------------------------------------------------------------------#
     # Attributes
@@ -160,8 +133,8 @@ class RampPhysics:
         self.loader.make_ramp(w['ramp'], self.client)
         self.loader.make_table(w['table'], self.client)
         d = {}
-        d['ramp'] = self.loader.make_ramp_obj(w['ramp_obj'], w['ramp'])
-        d['table'] = self.loader.make_table_obj(w['table_obj'], w['table'])
+        for obj,data in w['objects'].items():
+            d[obj] = self.loader.make_obj(data, self.client)
         self._world = d
 
     #-------------------------------------------------------------------------#
@@ -233,11 +206,11 @@ class RampPhysics:
 
             for c, obj_id in enumerate(object_ids):
                 pos, rot = p.getBasePositionAndOrientation(obj_id)
-                lin_vel, ang_vel = p.getBaseVelocity(obj_id)
+                l_vel, a_vel = p.getBaseVelocity(obj_id)
                 frame = np.floor(step / steps_per_frame).astype(int)
                 positions[frame, c] = pos
                 rotations[frame, c] = rot
-                ang_vel[frame, c] = ang_vel
-                lin_vel[frame, c] = lin_vel
+                ang_vel[frame, c] = a_vel
+                lin_vel[frame, c] = l_vel
 
         return (positions, rotations, ang_vel, lin_vel)

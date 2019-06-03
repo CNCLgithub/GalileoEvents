@@ -4,7 +4,7 @@
 
 # Change any of these values as you see fit.
 # For initial run, all should be set to true.
-BUILDCONT=true
+BUILDCONT=false
 BUILDENV=true
 
 . load_config.sh

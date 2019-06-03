@@ -26,9 +26,14 @@ class Ball(Shape):
         """
         return (self.dimensions**3) * np.pi * (4.0/3.0)
 
+    @property
+    def dimensions(self):
+        return self._dimensions
+    # ----------------  Setters   -----------------#
+
     @dimensions.setter
     def dimensions(self, value):
         v = np.asarray(value)
         if  v.size != 1:
-            raise ValueError("Scale must represent radius of sphere")
+            raise ValueError('Scale must represent radius of sphere')
         self._dimensions = v

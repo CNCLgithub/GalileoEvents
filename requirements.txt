@@ -19,11 +19,6 @@ bokeh
 dask_jobqueue
 pybullet
 pyquaternion
-https://download.pytorch.org/whl/cu100/torch-1.1.0-cp36-cp36m-linux_x86_64.whl
-torchvision
 julia
--e deps/compy
--e deps/monte_carlo
--e deps/blockworld
 -e deps/hdf5_dataset
 -e deps/slurm

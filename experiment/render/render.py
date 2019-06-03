@@ -18,16 +18,16 @@ bpy.app.handlers.load_post.append(load_handler)
 
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
-mat_path = os.path.join(dir_path, 'materials.blend')
+mat_path = os.path.join(dir_path, 'ramp_scene.blend')
 
-class BlockScene:
+class RampScene:
 
     '''
     Interface for bpy.
     '''
 
     def __init__(self, scene_json, materials_path, trace = None,
-                 wire_frame = False, theta = None, blocks = None):
+                 wire_frame = False, theta = None):
         """
         Arguments:
             scene_json (str): A serialized tower string.
@@ -39,7 +39,6 @@ class BlockScene:
         """
 
         # Initialize attributes
-        self.wire_frame = wire_frame
         self.trace = trace
         self.theta = theta
 
@@ -54,11 +53,8 @@ class BlockScene:
         with Suppressor():
             bpy.ops.wm.open_mainfile(filepath=materials_path)
 
-        # Parse tower structure
-        if blocks is None:
-            blocks = []
-        self.load_scene(scene_json, n_sims = len(trace),
-                        blocks = blocks)
+        # Parse scene structure
+        self.load_scene(scene_json)
 
     @property
     def trace(self):
@@ -67,11 +63,8 @@ class BlockScene:
     @trace.setter
     def trace(self, t):
         if not t is None:
-            positions = t[0]['position']
-            frames = len(positions)
-            self.n_sims = len(t)
+            frames = len(t['pos'])
         else:
-            self.n_sims = 1
             frames = 1
         bpy.context.scene.frame_set(1)
         bpy.context.scene.frame_end = frames + 1
@@ -126,84 +119,30 @@ class BlockScene:
         obj.active_material = bpy.data.materials[mat]
         bpy.context.scene.update()
 
-    def create_block(self, object_d, sim, transparent, mutate):
+    def create_block(self, name, object_d):
         """
-        Initializes a block object.
+        Initializes a ball.
         """
-        bpy.ops.mesh.primitive_cube_add(location=object_d['data']['pos'],
-                                        view_align=False,
-                                        enter_editmode=False)
+        bpy.ops.mesh.primitive_ico_sphere_add(location=object_d['position'],
+                                              view_align=False,
+                                              enter_editmode=False,
+                                              subdivisions=7,
+                                              size = object_d['dims'][0])
         ob = bpy.context.object
-        ob.name = '{0:d}_{1:d}'.format(object_d['id'], sim)
+        ob.name = name
         ob.show_name = True
         me = ob.data
-        me.name = '{0:d}_Mesh'.format(object_d['id'])
-        self.scale_obj(ob, object_d['data']['dims'])
-        # ob.matrix_world.translation
+        me.name = '{0!s}_Mesh'.format(name)
 
-        if 'appearance' in object_d['data'] and \
-           'substance' in object_d['data']:
-            mat = object_d['data']['appearance']
-            mass = object_d['data']['substance']['density'] * \
-                   np.prod(object_d['data']['dims'])
-            friction = object_d['data']['substance']['friction']
+        if 'appearance' in object_d:
+            mat = object_d['appearance']
         else:
-            mat = 'Wood'
-            phys_key = 'Wood'
-            mass = substances.density[phys_key] * \
-               np.prod(object_d['data']['dims'])
-            friction = substances.friction[phys_key]
+            mat = 'U'
+        self.set_appearance(ob, mat)
 
-        if transparent:
-            # self.set_appearance(ob, mat + '_Transparent')
-            bpy.ops.object.mode_set(mode='EDIT')
-            # bpy.ops.mesh.subdivide()
-            bpy.ops.object.mode_set(mode='OBJECT')
-            bpy.ops.object.modifier_add(type='WIREFRAME')
-            ob.modifiers['Wireframe'].thickness = 0.2
-        else:
-            if mutate:
-                self.set_appearance(ob, 'U')
-            else:
-                self.set_appearance(ob, mat)
-
-    def set_base(self, block):
-        """
-        Creates the table on which the blocks will stand.
-        """
-        bpy.ops.mesh.primitive_cylinder_add(
-            location = block['pos'],
-            view_align=False,
-            enter_editmode=False)
-        ob = bpy.context.object
-        ob.name = 'base'
-        ob.show_name = False
-        ob.data.name = '{}_Mesh'.format('base')
-        self.scale_obj(ob, (40, 40, 1))
-        self.set_appearance(ob, 'table')
-        if self.wire_frame:
-            ob.cycles_visibility.diffuse = False
-            ob.hide = True
-            ob.hide_render = True
-
-    def set_block(self, block, n, mutate):
-        """
-        Initializes blocks described in the block.
-        """
-        if block['id'] == 0:
-            self.set_base(block['data'])
-        else:
-            for i in range(n):
-                if i == 0:
-                    transparent = False
-                else:
-                    transparent = True
-                self.create_block(block, i, transparent, mutate)
-
-    def load_scene(self, scene_dict, n_sims = 1, blocks = None):
-        for block in scene_dict:
-            mutate = block['id'] in blocks
-            self.set_block(block, n_sims, mutate)
+    def load_scene(self, scene_dict):
+        for name, data in scene_dict['objects'].items():
+            self.create_block(name, data)
 
     def set_rendering_params(self, resolution):
         """
@@ -231,27 +170,27 @@ class BlockScene:
         bpy.context.scene.update()
         # The camera automatically tracks Empty
         camera_track = bpy.data.objects['Empty']
-        self.move_obj(camera_track, [0, 0, 5])
+        self.move_obj(camera_track, [0, 0, 1])
         camera.keyframe_insert(data_path='location', index = -1)
         camera.keyframe_insert(data_path='rotation_quaternion', index = -1)
 
 
-    def _frame_set(self, sim, frame):
+    def _frame_set(self,frame):
         """ Helper to `frame_set`.
 
         Arguments:
             sim (int) : index of trace.
             frame (int) : index for current frame.
         """
-        positions = np.array(self.trace[sim]['position'][frame])
-        rotations = np.array(self.trace[sim]['rotation'][frame])
-        n_blocks = positions.shape[0]
-        for block_i in range(n_blocks):
-            block = bpy.data.objects['{0:d}_{1:d}'.format(block_i + 1, sim)]
-            self.move_obj(block, positions[block_i])
-            self.rotate_obj(block, rotations[block_i])
-            block.keyframe_insert(data_path='location', index = -1)
-            block.keyframe_insert(data_path='rotation_quaternion', index = -1)
+        positions = np.array(self.trace['pos'][frame])
+        rotations = np.array(self.trace['orn'][frame])
+        n_balls = len(positions)
+        for ball_i in range(n_balls):
+            ball = bpy.data.objects['{0:d}'.format(ball_i)]
+            self.move_obj(ball, positions[ball_i])
+            self.rotate_obj(ball, rotations[ball_i])
+            ball.keyframe_insert(data_path='location', index = -1)
+            ball.keyframe_insert(data_path='rotation_quaternion', index = -1)
 
 
     def frame_set(self, frame, rot):
@@ -264,9 +203,8 @@ class BlockScene:
             frame = len(self.trace[0]['position']) + frame
         bpy.context.scene.frame_set(frame)
         n_sims = len(self.trace)
-        for sim in range(n_sims):
-            self._frame_set(sim, frame)
-            self.set_camera(rot)
+        self._frame_set(frame)
+        self.set_camera(rot)
         bpy.context.scene.update()
 
 
@@ -379,8 +317,6 @@ def parser(args):
                    help = 'Path to blender materials.')
     p.add_argument('--out', type = str,
                    help = 'Path to save rendering')
-    p.add_argument('--wireframe', action = 'store_true',
-                   help = 'Render objects as wireframes')
     p.add_argument('--save_world', action = 'store_true',
                    help = 'Save the resulting blend scene')
     p.add_argument('--render_mode', type = str, default = 'default',
@@ -390,8 +326,6 @@ def parser(args):
                    default = (256,256),  help = 'Render resolution')
     p.add_argument('--theta', type = float, default = 0,
                    help = 'Overrides camera angle. (radians)')
-    p.add_argument('--blocks', type = int, nargs = '+',
-                    help = 'Blocks to label as unknown')
     p.add_argument('--gpu', action = 'store_true',
                    help = 'Use CUDA rendering')
     p.add_argument('--frames', type = int, nargs = '+',
@@ -412,10 +346,8 @@ def main():
         argv = sys.argv[sys.argv.index('--') + 1:]
     args = parser(argv)
 
-    scene = BlockScene(args.scene, args.materials, args.trace,
-                       wire_frame = args.wireframe,
-                       theta = args.theta,
-                       blocks = args.blocks)
+    scene = RampScene(args.scene, args.materials, args.trace,
+                       theta = args.theta)
 
     if args.gpu:
         print('Using gpu')
@@ -428,7 +360,7 @@ def main():
     frozen_path = os.path.join(path, 'frozen')
     motion_path = os.path.join(path, 'motion')
     if args.frames is None:
-        n_frames = len(args.trace[0]['position'])
+        n_frames = len(args.trace['pos'])
         frames = np.arange(n_frames)
     else:
         n_frames = len(args.frames)
@@ -444,7 +376,7 @@ def main():
 
     if args.save_world:
         path = os.path.join(args.out, 'world.blend')
-        n_frames = len(args.trace[0]['position'])
+        n_frames = len(args.trace['pos'])
         scene.save(path, n_frames)
 
 if __name__ == '__main__':

@@ -1,14 +1,18 @@
+import numpy as np
 from abc import ABC, abstractmethod
 
 class Shape(ABC):
 
     """ Parent class for physical objects in RampWorld """
 
-    def __init__(self, appearance, dims, density, friction):
+    def __init__(self, appearance, dims, density, friction,
+                 pos = None, angle = None):
         self.appearance = appearance
-        self.dims = dims
+        self.dimensions = dims
         self.density = density
         self.friction = friction
+        self.position = pos
+        self.orientation = angle
 
     # ---------------- Abstract Methods -----------------#
 
@@ -30,6 +34,12 @@ class Shape(ABC):
         """
         pass
 
+    @property
+    @abstractmethod
+    def dimensions(self):
+        pass
+
+
     # ---------------- Properties -----------------#
 
     @property
@@ -48,14 +58,18 @@ class Shape(ABC):
     def density(self):
         return self._density
 
-    @property
-    def dimensions(self):
-        return self._dimensions
 
     @property
     def friction(self):
         return self._friction
 
+    @property
+    def position(self):
+        return self._pos
+
+    @property
+    def orientation(self):
+        return self._orien
 
     # ----------------   setters   -----------------#
 
@@ -76,12 +90,24 @@ class Shape(ABC):
     def friction(self, value):
         self._friction = value
 
-    @dimensions.setter
-    def dimensions(self, value):
-        v = np.asarray(value)
-        if v.size != 3 and v.size != 1:
-            raise ValueError("Scale must represent xyz")
-        self._dimensions = v
+    @position.setter
+    def position(self, value):
+        if value is None:
+            value = [0, 0, 0]
+        v = np.array(value)
+        if v.size != 3:
+            raise ValueError('position must be xyz')
+        self._pos = v
+
+
+    @orientation.setter
+    def orientation(self, value):
+        if value is None:
+            value = [0, 0, 0]
+        v = np.array(value)
+        if v.size != 3:
+            raise ValueError('Orientation must be 3 euler angles')
+        self._orien = v
 
     # ----------------   Methods   -----------------#
     def serialize(self):
@@ -96,4 +122,6 @@ class Shape(ABC):
         d['dims'] = self.dimensions.tolist()
         d['mass'] = self.mass
         d['friction'] = self.friction
+        d['position'] = self.position
+        d['orientation'] = self.orientation
         return d

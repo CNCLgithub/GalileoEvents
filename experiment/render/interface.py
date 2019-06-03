@@ -5,12 +5,10 @@ import argparse
 import subprocess
 from collections.abc import Iterable
 
-from blockworld.utils import json_encoders
-
 dir_path = os.path.dirname(os.path.realpath(__file__))
 render_path = os.path.join(dir_path, 'render.py')
 
-mat_path = os.path.join(dir_path, 'materials.blend')
+mat_path = os.path.join(dir_path, 'ramp_scene.blend')
 cmd = '/blender/blender -noaudio --background -P {0!s}'
 
 def make_args(args_d):
@@ -40,29 +38,10 @@ def render(**kwargs):
         os.mkdir(out)
     t_path = os.path.join(out, 'trace.json')
     with open(t_path, 'w') as temp:
-        json.dump(kwargs.pop('traces'), temp,
-                  cls = json_encoders.TowerEncoder)
+        json.dump(kwargs.pop('trace'), temp)
 
     _cmd = cmd.format(render_path)
     _cmd = shlex.split(_cmd)
     _cmd += make_args(kwargs)
     _cmd += ['--trace', t_path]
     p = subprocess.run(_cmd)
-    # _cmd += [
-    #     '--',
-    #     '--materials',
-    #     materials,
-    #     '--out',
-    #     out,
-    #     '--save_world',
-    #     '--scene',
-    #     scene_str,
-    #     '--trace',
-    #     t_path,
-    #     '--resolution',
-    #     '512', '512',
-    #     '--render_mode',
-    #     mode,
-    #     '--theta',
-    #     '{0:f}'.format(theta),
-    # ]
