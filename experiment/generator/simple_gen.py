@@ -1,10 +1,6 @@
 import numpy as np
 from copy import deepcopy
 from itertools import repeat
-from blockworld import towers, blocks
-from blockworld.simulation import physics, generator, tower_scene
-from blockworld.simulation.substances import Substance
-from experiment.hypothesis.block_hypothesis import simulate
 
 def unit_vector(vector):
     """ Returns the unit vector of the vector.  """
@@ -27,10 +23,10 @@ def angle_2vec(v1, v2):
 class SimpleGen(generator.Generator):
 
     """
-    Creates the configurations needed to evaluate critical blocks.
+    Generates random block scenes
     """
 
-    def __init__(self, materials, stability, block_size):
+    def __init__(self, materials, block_size):
         self.materials = materials
         self.builder = stability
         self.block_size = np.array(block_size)

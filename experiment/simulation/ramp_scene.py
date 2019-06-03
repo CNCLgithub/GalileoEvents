@@ -67,8 +67,11 @@ class Loader:
             mesh = p.GEOM_BOX
             dims = np.array(params['dims']) / 2.0
             z = dims[2]
-            col_id = p.createCollisionShape(mesh,
-                                            halfExtents = dims)
+            col_id = p.createCollisionShape(mesh, halfExtents = dims)
+        elif params['shape'] == 'ball':
+            mesh = p.GEOM_SPHERE
+            z = params['dims'][0]
+            col_id = p.createCollisionShape(mesh, radius = z)
         else:
             mesh = p.GEOM_CYLINDER
             z = params['height'] / 2.0

@@ -90,10 +90,10 @@ class Shape(ABC):
         :rtype: dict
         """
         d = {}
-        d["Material"] = self.material
-        d["Shape"] = self.shape
-        d["Density"] = self.density
-        d["Scaling"] = list(self.dimensions)
-        d["Mass"] = self.mass
-        d["Friction"] = self.friction
+        d['appearance'] = self.appearance
+        d['shape'] = self.shape
+        d['density'] = self.density
+        d['dims'] = self.dimensions.tolist()
+        d['mass'] = self.mass
+        d['friction'] = self.friction
         return d
