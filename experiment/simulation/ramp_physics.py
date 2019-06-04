@@ -6,6 +6,7 @@ Loader - Interface for loading object data into scene
 RampPhysics - Interface for simulating scenes
 """
 
+import time
 import numpy as np
 import pybullet
 import pybullet_utils.bullet_client as bc
@@ -17,51 +18,43 @@ class Loader:
     """
 
     def make_table(self, params, p):
-        mesh = p.GEOM_PLANE
+        mesh = p.GEOM_BOX
         exs = np.array(params['dims']) / 2.0
         mass = 0
+        rot = p.getQuaternionFromEuler(params['orientation'])
         friction = params['friction']
-        base = p.createCollisionShape(mesh)
-        wall_left = p.createCollisionShape(mesh,
-                                           planeNormal = [0, 1, 0])
-        wall_right = p.createCollisionShape(mesh,
-                                            planeNormal = [0, 1, 0])
-        wall_end = p.createCollisionShape(mesh,
-                                          planeNormal = [1, 0, 0])
-        links = [wall_left, wall_right, wall_end]
-        positions = [[0, exs[1]*0.5, 0], # left wall
-                     [0, -1.0*exs[1]*0.5, 0], # right wall
-                     [exs[0], 0, 0]] # end wall
+        base = p.createCollisionShape(mesh, halfExtents = exs)
+        base_id = p.createMultiBody(baseCollisionShapeIndex = base,
+                                    basePosition = params['position'],
+                                    baseOrientation = rot,)
+        p.changeDynamics(base_id, -1, lateralFriction = friction)
 
-        linkOrientations = np.repeat([[0, 0, 0, 1]], 3, axis = 0)
-        linkInertialFramePositions = np.repeat([[0, 0, 0]], 3, axis = 0)
-        linkInertialFrameOrientations = np.repeat([[0, 0, 0, 1]], 3, axis = 0)
-        indices = np.repeat(0, 3)
-        jointTypes = np.repeat(p.JOINT_FIXED, 3)
-        axis = np.repeat([[0, 0, 1]], 3, axis = 0)
-        obj_id = p.createMultiBody(baseCollisionShapeIndex = base,
-                                   basePosition = params['position'],
-                                   baseOrientation = params['orientation'],
-                                   linkMasses=[0,0,0],
-                                   linkCollisionShapeIndices = links,
-                                   linkVisualShapeIndices = [-1, -1, -1],
-                                   linkPositions = positions,
-                                   linkOrientations=linkOrientations,
-                                   linkInertialFramePositions=linkInertialFramePositions,
-                                   linkInertialFrameOrientations=linkInertialFrameOrientations,
-                                   linkParentIndices=indices,
-                                   linkJointTypes=jointTypes,
-                                   linkJointAxis=axis)
-        p.changeDynamics(obj_id, -1,
-                         lateralFriction = friction)
-        return obj_id
+        rot = p.getQuaternionFromEuler((np.pi/2, 0, 0))
+        wall_left = p.createCollisionShape(mesh, halfExtents = exs)
+        obj_id = p.createMultiBody(baseCollisionShapeIndex = wall_left,
+                                   basePosition = [params['position'][0], exs[1], 0],
+                                   baseOrientation = rot,)
+        p.changeDynamics(obj_id, -1)
+        wall_right = p.createCollisionShape(mesh, halfExtents = exs)
+        obj_id = p.createMultiBody(baseCollisionShapeIndex = wall_right,
+                                   basePosition = [params['position'][0], -1 * exs[1], 0],
+                                   baseOrientation = rot,)
+        p.changeDynamics(obj_id, -1)
+        rot = p.getQuaternionFromEuler((0, np.pi/2, 0))
+        wall_end = p.createCollisionShape(mesh, halfExtents = exs)
+        obj_id = p.createMultiBody(baseCollisionShapeIndex = wall_end,
+                                   basePosition = [exs[0]*2+exs[2], 0, 0],
+                                   baseOrientation = rot,)
+        p.changeDynamics(obj_id, -1)
+        return base_id
 
     def make_ramp(self, params, p):
 
-        mesh = p.GEOM_PLANE
+        mesh = p.GEOM_BOX
         mass = 0
         friction = params['friction']
-        base = p.createCollisionShape(mesh)
+        exs = np.array(params['dims'])/2.0
+        base = p.createCollisionShape(mesh, halfExtents = exs)
         rot = p.getQuaternionFromEuler(params['orientation'])
         obj_id = p.createMultiBody(baseCollisionShapeIndex = base,
                                    basePosition = params['position'],
@@ -92,7 +85,8 @@ class Loader:
                                    baseOrientation = rot)
         p.changeDynamics(obj_id, -1,
                          mass = params['mass'],
-                         lateralFriction = params['friction'])
+                         lateralFriction = params['friction'],
+                         restitution = 0.99)
         return obj_id
 
 
@@ -102,11 +96,15 @@ class RampPhysics:
     Handles physics for block towers.
     """
 
-    def __init__(self, scene_json, loader = None):
+    def __init__(self, scene_json, loader = None, debug = False):
         if loader is None:
             loader = Loader()
         self.loader = loader
-        self.client = bc.BulletClient(connection_mode=pybullet.DIRECT)
+        if debug:
+            self.client = bc.BulletClient(connection_mode=pybullet.GUI)
+        else:
+            self.client = bc.BulletClient(connection_mode=pybullet.DIRECT)
+        self.debug = debug
         self.world = scene_json
 
     #-------------------------------------------------------------------------#
@@ -183,7 +181,8 @@ class RampPhysics:
         p = self.client
         p.setPhysicsEngineParameter(
             fixedTimeStep = 1.0 / time_step,
-            enableConeFriction = 0)
+            enableFileCaching = 0,
+        )
 
         p.setGravity(0, 0, -10)
 
@@ -197,6 +196,16 @@ class RampPhysics:
 
         if not state is None:
             self.apply_state(object_ids, state)
+
+        if self.debug:
+            p.setRealTimeSimulation(1)
+
+            while (1):
+                keys = p.getKeyboardEvents()
+                print(keys)
+
+                time.sleep(0.01)
+            return
 
         for step in range(total_steps):
             p.stepSimulation()

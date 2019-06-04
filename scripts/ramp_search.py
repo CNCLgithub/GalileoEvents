@@ -55,10 +55,11 @@ def evaluate_tower(appearances, densities, radius, base_scene, n_ramp,
     dens = np.random.permutation(n)
 
     # balls on ramp
-    rng = np.linspace(0.1, 0.9, 4)
+    rng = np.linspace(0.4, 0.9, 4)
     ramp_pcts = np.random.choice(rng, n_ramp, replace = False)
 
     # on table
+    rng = np.linspace(0.2, 0.7, 4)
     table_pcts = np.random.choice(rng, n - n_ramp, replace = False)
     pcts = np.concatenate((table_pcts, ramp_pcts + 1))
 
@@ -112,11 +113,11 @@ def main():
                         help = 'XY dimensions of table.')
     parser.add_argument('--ramp', type = int, nargs = 2, default = (35, 18),
                         help = 'XY dimensions of ramp.')
-    parser.add_argument('--ramp_angle', type = float, default = 15.0,
+    parser.add_argument('--ramp_angle', type = float, default = np.pi*(30.0/180),
                         help = 'ramp angle in degrees')
     parser.add_argument('--radius', type = float, default = 1.5,
                         help = 'Ball radius.')
-    parser.add_argument('--friction', type = float, default = 0.3,
+    parser.add_argument('--friction', type = float, default = 0.4,
                         help = 'Ball friction')
     parser.add_argument('--n_ramp', type = int, default = 1,
                         help = 'Number of balls on ramp')
