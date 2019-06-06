@@ -8,7 +8,7 @@ from collections.abc import Iterable
 dir_path = os.path.dirname(os.path.realpath(__file__))
 render_path = os.path.join(dir_path, 'render.py')
 
-mat_path = os.path.join(dir_path, 'ramp_scene.blend')
+mat_path = os.path.join(dir_path, 'new_scene.blend')
 cmd = '/blender/blender -noaudio --background -P {0!s}'
 
 def make_args(args_d):
@@ -39,6 +39,9 @@ def render(**kwargs):
     t_path = os.path.join(out, 'trace.json')
     with open(t_path, 'w') as temp:
         json.dump(kwargs.pop('trace'), temp)
+
+    if not 'materials' in kwargs:
+        kwargs['materials'] = mat_path
 
     _cmd = cmd.format(render_path)
     _cmd = shlex.split(_cmd)

@@ -17,9 +17,6 @@ bpy.app.handlers.load_post.append(load_handler)
 #################################################
 
 
-dir_path = os.path.dirname(os.path.realpath(__file__))
-mat_path = os.path.join(dir_path, 'ramp_scene.blend')
-
 class RampScene:
 
     '''
@@ -85,8 +82,12 @@ class RampScene:
         Rotates the given object by the given quaternion.
         """
         self.select_obj(obj)
-        obj.rotation_mode = 'QUATERNION'
-        obj.rotation_quaternion = np.roll(rot, 1) # [3, 0, 1, 2]
+        if len(rot) == 3:
+            obj.rotation_mode = 'XYZ'
+            obj.rotation_euler = rot
+        else:
+            obj.rotation_mode = 'QUATERNION'
+            obj.rotation_quaternion = np.roll(rot, 1) # [3, 0, 1, 2]
         bpy.context.scene.update()
 
     def move_obj(self, obj, pos):
@@ -141,6 +142,12 @@ class RampScene:
         self.set_appearance(ob, mat)
 
     def load_scene(self, scene_dict):
+        # Setup ramp
+        ramp = bpy.data.objects['Ramp']
+        ramp_d = scene_dict['ramp']
+        self.move_obj(ramp, ramp_d['position'])
+        self.rotate_obj(ramp, ramp_d['orientation'])
+        # Load Objects
         for name, data in scene_dict['objects'].items():
             self.create_block(name, data)
 
@@ -313,7 +320,7 @@ def parser(args):
                    help = 'Tower json describing the scene.')
     p.add_argument('--trace', type = load_trace,
                    help = 'Trace json for physics.')
-    p.add_argument('--materials', type = str, default = mat_path,
+    p.add_argument('--materials', type = str,
                    help = 'Path to blender materials.')
     p.add_argument('--out', type = str,
                    help = 'Path to save rendering')

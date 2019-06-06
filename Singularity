@@ -41,7 +41,11 @@ from: nvidia/cuda:10.0-cudnn7-devel
                      ffmpeg \
                      libglu1 \
                      libxi6 \
-                     libc6
+                     libc6 \
+                     libgl1-mesa-dev \
+                     mesa-utils
+
+
 
  apt-get clean
 

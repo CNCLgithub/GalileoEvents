@@ -17,7 +17,7 @@ def simulate(serialized_scene, frames):
     sim = RampPhysics(serialized_scene)
     # ensures that the objects are reported in order
     objs = list(map(str, range(len(serialized_scene['objects']))))
-    trace = sim.get_trace(frames, objs, fps = 60, time_step = 480)
+    trace = sim.get_trace(frames, objs, fps = 60)
     return trace
 
 def simulate_mc(serialized_scene, frames, p):
@@ -29,7 +29,7 @@ def simulate_mc(serialized_scene, frames, p):
     """
     sim = RampPhysics(serialized_scene)
     blocks = ['ramp', 'table']
-    trace = sim.get_trace(frames, blocks, fps = 60, time_step = 240)
+    trace = sim.get_trace(frames, blocks, fps = 60)
     return trace
 
 

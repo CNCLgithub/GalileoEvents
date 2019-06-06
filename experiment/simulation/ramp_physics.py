@@ -8,8 +8,18 @@ RampPhysics - Interface for simulating scenes
 
 import time
 import numpy as np
+import operator as op
+from functools import reduce
+from itertools import combinations
+
 import pybullet
 import pybullet_utils.bullet_client as bc
+
+def ncr(n, r):
+    r = min(r, n-r)
+    numer = reduce(op.mul, range(n, n-r, -1), 1)
+    denom = reduce(op.mul, range(1, r+1), 1)
+    return numer // denom
 
 class Loader:
 
@@ -86,7 +96,7 @@ class Loader:
         p.changeDynamics(obj_id, -1,
                          mass = params['mass'],
                          lateralFriction = params['friction'],
-                         restitution = 0.99)
+                         restitution = 0.9)
         return obj_id
 
 
@@ -180,7 +190,6 @@ class RampPhysics:
 
         p = self.client
         p.setPhysicsEngineParameter(
-            fixedTimeStep = 1.0 / time_step,
             enableFileCaching = 0,
         )
 
@@ -190,6 +199,7 @@ class RampPhysics:
         rotations = np.zeros((frames, len(objects), 4))
         ang_vel = np.zeros((frames, len(objects), 3))
         lin_vel = np.zeros((frames, len(objects), 3))
+        collisions = np.zeros((frames, ncr(len(objects), 2)))
 
         steps_per_frame = int(time_step / fps)
         total_steps = int(max(1, ((frames / fps) * time_step)))
@@ -210,16 +220,21 @@ class RampPhysics:
         for step in range(total_steps):
             p.stepSimulation()
 
+            frame = np.floor(step / steps_per_frame).astype(int)
+            for c,(a,b) in enumerate(combinations(object_ids, 2)):
+                cp = len(p.getContactPoints(bodyA=a, bodyB=b))
+                collisions[frame, c] += cp
+
             if step % steps_per_frame != 0:
                 continue
 
             for c, obj_id in enumerate(object_ids):
                 pos, rot = p.getBasePositionAndOrientation(obj_id)
                 l_vel, a_vel = p.getBaseVelocity(obj_id)
-                frame = np.floor(step / steps_per_frame).astype(int)
                 positions[frame, c] = pos
                 rotations[frame, c] = rot
                 ang_vel[frame, c] = a_vel
                 lin_vel[frame, c] = l_vel
 
-        return (positions, rotations, ang_vel, lin_vel)
+
+        return (positions, rotations, ang_vel, lin_vel, collisions)
