@@ -8,7 +8,7 @@ setuptools.setup(
     version="0.0.1",
     author="Mario Belledonne",
     author_email="mbelledonne@gmail.com",
-    description="Human Galileo experiment module",
+    description="Human Galileo experiment module for the ball ramp scenario",
     long_description=long_description,
     long_description_content_type="text/markdown",
     packages = ['galileo_ramp'],
