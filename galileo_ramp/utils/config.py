@@ -13,6 +13,7 @@ import configparser
 
 project_root = os.path.dirname(os.path.realpath(__file__))
 project_root = os.path.dirname(project_root)
+project_root = os.path.dirname(project_root)
 
 class Config:
 

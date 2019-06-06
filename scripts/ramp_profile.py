@@ -35,10 +35,10 @@ mpl.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib import cm
 
-from utils import config
-from experiment.world.ball import Ball
-from experiment.world.ramp import RampScene
-from experiment.simulation import forward_model
+from galileo_ramp.utils import config
+from galileo_ramp.world.scene.ball import Ball
+from galileo_ramp.world.scene.ramp import RampScene
+from galileo_ramp.world.simulation import forward_model
 
 CONFIG = config.Config()
 
@@ -105,9 +105,11 @@ def plot_profile(ratios, n_pos, results, out):
     fig, ax = plt.subplots(tight_layout=True)
     xs = np.repeat(np.arange(len(ratios)), n_pos)
     ys = np.tile(np.arange(n_pos), len(ratios))
+    print(results[0])
     print(np.sum(results, axis = 2))
     ws = np.sum(results, axis = 2) == results.shape[2]
-    hist = ax.hist2d(xs, ys, ws.flatten(), bins = (len(ratios), n_pos),
+    hist = ax.hist2d(xs, ys, weights = ws.flatten(),
+                     bins = (len(ratios), n_pos),
                      cmap = cm.binary)
     fig.savefig(out)
     plt.close(fig)
@@ -145,13 +147,15 @@ def main():
     args = parser.parse_args()
 
     name = os.path.basename(args.mass_file)[:-4]
-    name = 'profile_{0!s}.png'.format(name)
     out_path = os.path.join(CONFIG['PATHS', 'scenes'], name)
+    results_path = os.path.join(out_path, 'results.csv')
+    profile_path = os.path.join(out_path, 'profile.png')
     print('Saving profile to {0!s}'.format(out_path))
-
+    if not os.path.isdir(out_path):
+        os.mkdir(out_path)
 
     # Digest masses
-    mass_ratios = read_mass_file(args.mass_file)
+    mass_ratios = read_csv_file(args.mass_file)
     n_ratios, n_assignments = mass_ratios.shape[:]
     n_unique = len(np.unique(mass_ratios[0]))
     n_orderings = npr(n_assignments, n_unique)
@@ -178,7 +182,7 @@ def main():
         'pred' : predicate,
     }
     if os.path.isfile(results_path):
-        results = read_csv_file(results_path)
+        results = np.load(results_path)
     else:
         results = np.zeros((n_ratios, n_positions, n_orderings))
         for row in range(n_ratios):
@@ -193,8 +197,8 @@ def main():
                         results[row, pi, mi] = profile_scene(**params, **d)
                     pi += 1
 
-        numpy.savetxt(results_path, results, delimiter=",")
-    plot_profile(mass_ratios, n_positions, results, out_path)
+        np.save(results_path, results)
+    plot_profile(mass_ratios, n_positions, results, profile_path)
 
 
 if __name__ == '__main__':
