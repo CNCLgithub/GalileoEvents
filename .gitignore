@@ -9,6 +9,7 @@ user.conf
 
 cont
 env
+.env
 experiment.egg-info
 .julia/
 
