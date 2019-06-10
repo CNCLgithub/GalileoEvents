@@ -96,7 +96,8 @@ class Loader:
         p.changeDynamics(obj_id, -1,
                          mass = params['mass'],
                          lateralFriction = params['friction'],
-                         restitution = 0.5)
+                         rollingFriction = 0.05,
+                         restitution = 1.0)
         return obj_id
 
 
@@ -106,7 +107,7 @@ class RampPhysics:
     Handles physics for block towers.
     """
 
-    def __init__(self, scene_json, loader = None, debug = False):
+    def __init__(self, scene_json, loader = None, debug = True):
         if loader is None:
             loader = Loader()
         self.loader = loader

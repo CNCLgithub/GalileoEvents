@@ -10,7 +10,7 @@ user.conf
 cont
 env
 .env
-experiment.egg-info
+galileo_ramp.egg-info
 .julia/
 
 # miscellaneous

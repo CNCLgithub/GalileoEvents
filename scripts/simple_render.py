@@ -75,7 +75,7 @@ def main():
     else:
         # Otherwise save in `renders` destination
         src = os.path.join(CONFIG['PATHS', 'scenes'], args.src)
-        src = glob.glob(os.path.join(src, 'trial*.json'))
+        src = glob.glob(os.path.join(src, '*.json'))
         out = os.path.join(CONFIG['PATHS', 'renders'], args.src)
 
     if not os.path.isdir(out):

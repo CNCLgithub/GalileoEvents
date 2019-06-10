@@ -17,7 +17,6 @@ is normalized by the average and variance of the entire pool.
 
 import os
 import sys
-import glob
 import copy
 import json
 import string
@@ -28,12 +27,6 @@ import numpy as np
 import operator as op
 from functools import reduce
 from itertools import combinations, permutations
-
-
-import matplotlib as mpl
-mpl.use('Agg')
-import matplotlib.pyplot as plt
-from matplotlib import cm
 
 from galileo_ramp.utils import config
 from galileo_ramp.world.scene.ball import Ball
@@ -64,7 +57,7 @@ def profile_scene(appearances, radius, base_scene, n_ramp,
     trace = forward_model.simulate(scene.serialize(), 900)
     result = {
         'scene' : scene.serialize(),
-        'trace' : dict(zip(['pos', 'orn', 'lvl', 'avl', 'col'], trace))
+        # 'trace' : dict(zip(['pos', 'orn', 'lvl', 'avl', 'col'], trace))
     }
     r_str = json.dumps(result, indent = 4, sort_keys = True,
                        cls = forward_model.TraceEncoder)
@@ -87,6 +80,7 @@ def predicate(state):
     A->B, A->C, B->C
     """
     contacts = state[-1]
+    print(np.sum(contacts, axis = 0))
     return all(np.sum(contacts, axis = 0)[[0,-1]] > 0)
 
 def read_csv_file(path):
@@ -112,26 +106,12 @@ def npr(n, r):
     assert 0 <= r <= n
     return np.product(np.arange(n - r + 1, n + 1))
 
-def plot_profile(ratios, n_pos, results, out):
-    """ Creates a 2D binary histogram of viable mass/positions.
-    """
-    fig, ax = plt.subplots(tight_layout=True)
-    xs = np.tile(np.arange(n_pos), len(ratios))
-    ys = np.repeat(np.arange(len(ratios)), n_pos)
-    print(results.shape)
-    print(results[0])
-    print(results[1])
-    print(np.sum(results, axis = 2) == 6)
-    ws = np.sum(results, axis = 2) == results.shape[2]
-    hist = ax.hist2d(xs, ys, weights = ws.flatten(),
-                     bins = (n_pos + 1, len(ratios)),
-                     cmap = cm.binary)
-    ax.xaxis.set_ticks(np.arange(n_pos + 1))
-    ax.yaxis.set_ticks(np.arange(len(ratios)))
-    tickNames = plt.setp(ax, yticklabels=ratios)
-    plt.setp(tickNames, rotation=45, fontsize=8)
-    fig.savefig(out)
-    plt.close(fig)
+def read_float(s):
+    if '/' in s:
+        num, den = s.split('/')
+        return float(num) / float(den)
+    else:
+        return float(s)
 
 def main():
 
@@ -139,8 +119,8 @@ def main():
         description = 'Evaluates the energy of mass ratios',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-    parser.add_argument('mass_file', type = str,
-                        help = 'CSV file containing mass ratios')
+    parser.add_argument('ratio', type = read_float, nargs = '+',
+                        help = 'Mass ratios (1 for each ball, may havel duplicates')
     parser.add_argument('--table', type = int, nargs = 2, default = (35, 18),
                         help = 'XY dimensions of table.')
     parser.add_argument('--table_steps', type = int, default = 4,
@@ -149,7 +129,7 @@ def main():
                         help = 'XY dimensions of ramp.')
     parser.add_argument('--ramp_steps', type = int, default = 4,
                         help = 'Number of positions along X-axis.')
-    parser.add_argument('--ramp_angle', type = float, default = np.pi*(30.0/180),
+    parser.add_argument('--ramp_angle', type = float, default = 35,
                         help = 'ramp angle in degrees')
     parser.add_argument('--radius', type = float, default = 1.5,
                         help = 'Ball radius.')
@@ -167,18 +147,16 @@ def main():
                         help = 'Ignore previous profiles')
     args = parser.parse_args()
 
-    name = os.path.basename(args.mass_file)[:-4]
-    out_path = os.path.join(CONFIG['PATHS', 'scenes'], name)
-    results_path = os.path.join(out_path, 'results.npy')
-    profile_path = os.path.join(out_path, 'profile.png')
-    print('Saving profile to {0!s}'.format(out_path))
+    ratio_str = '-'.join(['{0:4.2f}'.format(m) for m in args.ratio])
+    out_path = os.path.join(CONFIG['PATHS', 'scenes'], ratio_str)
+    results_path = out_path + '.npy'
+    print('Saving profile to {0!s}(.npy)'.format(out_path))
     if not os.path.isdir(out_path):
         os.mkdir(out_path)
 
     # Digest masses
-    mass_ratios = read_csv_file(args.mass_file)
-    n_ratios, n_assignments = mass_ratios.shape[:]
-    n_unique = len(np.unique(mass_ratios[0]))
+    n_assignments = len(args.ratio)
+    n_unique = len(np.unique(args.ratio))
     n_orderings = npr(n_assignments, n_unique)
 
     # Setup positions
@@ -192,7 +170,7 @@ def main():
     n_comb = n_orderings * n_positions
 
     base = RampScene(args.table, args.ramp,
-                     ramp_angle = args.ramp_angle)
+                     ramp_angle = args.ramp_angle * (np.pi/180.))
 
     params = {
         'appearances' : ['R', 'B', 'G'],
@@ -202,30 +180,26 @@ def main():
         'friction' : args.friction,
         'pred' : predicate,
     }
-    ratio_strs = ['-'.join(['{0:4.2f}'.format(m) for m in ms])
-                     for ms in mass_ratios]
-    if not args.fresh and os.path.isfile(results_path):
-        results = np.load(results_path)
-    else:
-        results = np.zeros((n_ratios, n_positions, n_orderings))
-        for row in range(n_ratios):
-            ratio = mass_ratios[row]
-            pi = 0
-            for rp_pcts in combinations(ramp_pcts, args.n_ramp):
-                for tb_pcts in combinations(table_pcts, n_table):
-                    for mi, mass_assign in enumerate(permutations(ratio)):
-                        out_scene = os.path.join(out_path,
-                                                 'trial_{0!s}_{1:d}_{2:d}.json'.format(ratio_strs[row],
-                                                                                       pi,mi))
-                        d = {'ramp_pcts' : rp_pcts,
-                             'table_pcts' : tb_pcts,
-                             'densities' : mass_assign,
-                             'out' : out_scene}
-                        results[row, pi, mi] = profile_scene(**params, **d)
-                    pi += 1
+    results = np.zeros((n_positions, n_orderings))
+    pi = 0
 
-        np.save(results_path, results)
-    plot_profile(ratio_strs, n_positions, results, profile_path)
+    if os.path.isfile(results_path) and not args.fresh:
+        print('Already computed, exiting')
+        return
+
+    for rp_pcts in combinations(ramp_pcts, args.n_ramp):
+        for tb_pcts in combinations(table_pcts, n_table):
+            for mi, mass_assign in enumerate(permutations(args.ratio)):
+                out_scene = '{0:d}_{1:d}.json'.format(pi,mi)
+                out_scene = os.path.join(out_path, out_scene)
+                d = {'ramp_pcts' : rp_pcts,
+                     'table_pcts' : tb_pcts,
+                     'densities' : mass_assign,
+                     'out' : out_scene}
+                results[pi, mi] = profile_scene(**params, **d)
+            pi += 1
+
+    np.save(results_path, results)
 
 
 if __name__ == '__main__':
