@@ -43,7 +43,7 @@ from galileo_ramp.world.simulation import forward_model
 CONFIG = config.Config()
 
 def profile_scene(appearances, radius, base_scene, n_ramp,
-                   friction, pred, ramp_pcts, table_pcts, densities):
+                   friction, pred, ramp_pcts, table_pcts, densities, out):
     """ Encapsulation for searching for interesting towers.
 
     Generates a random tower from the provided base and
@@ -62,6 +62,19 @@ def profile_scene(appearances, radius, base_scene, n_ramp,
 
     # Eval predicate on trace
     trace = forward_model.simulate(scene.serialize(), 900)
+    result = {
+        'scene' : scene.serialize(),
+        'trace' : dict(zip(['pos', 'orn', 'lvl', 'avl', 'col'], trace))
+    }
+    r_str = json.dumps(result, indent = 4, sort_keys = True,
+                       cls = forward_model.TraceEncoder)
+    hashed = hashlib.md5()
+    hashed.update(r_str.encode('utf-8'))
+    hashed = hashed.hexdigest()
+    out_file = out.format(hashed)
+    print('Writing to ' + out_file)
+    with open(out, 'w') as f:
+        f.write(r_str)
     return pred(trace)
 
 
@@ -103,14 +116,20 @@ def plot_profile(ratios, n_pos, results, out):
     """ Creates a 2D binary histogram of viable mass/positions.
     """
     fig, ax = plt.subplots(tight_layout=True)
-    xs = np.repeat(np.arange(len(ratios)), n_pos)
-    ys = np.tile(np.arange(n_pos), len(ratios))
+    xs = np.tile(np.arange(n_pos), len(ratios))
+    ys = np.repeat(np.arange(len(ratios)), n_pos)
+    print(results.shape)
     print(results[0])
-    print(np.sum(results, axis = 2))
+    print(results[1])
+    print(np.sum(results, axis = 2) == 6)
     ws = np.sum(results, axis = 2) == results.shape[2]
     hist = ax.hist2d(xs, ys, weights = ws.flatten(),
-                     bins = (len(ratios), n_pos),
+                     bins = (n_pos + 1, len(ratios)),
                      cmap = cm.binary)
+    ax.xaxis.set_ticks(np.arange(n_pos + 1))
+    ax.yaxis.set_ticks(np.arange(len(ratios)))
+    tickNames = plt.setp(ax, yticklabels=ratios)
+    plt.setp(tickNames, rotation=45, fontsize=8)
     fig.savefig(out)
     plt.close(fig)
 
@@ -144,11 +163,13 @@ def main():
                         help = 'Number of towers to search concurrently.')
     parser.add_argument('--debug', action = 'store_true',
                         help = 'Run in debug (no rejection).')
+    parser.add_argument('--fresh', action = 'store_true',
+                        help = 'Ignore previous profiles')
     args = parser.parse_args()
 
     name = os.path.basename(args.mass_file)[:-4]
     out_path = os.path.join(CONFIG['PATHS', 'scenes'], name)
-    results_path = os.path.join(out_path, 'results.csv')
+    results_path = os.path.join(out_path, 'results.npy')
     profile_path = os.path.join(out_path, 'profile.png')
     print('Saving profile to {0!s}'.format(out_path))
     if not os.path.isdir(out_path):
@@ -181,7 +202,9 @@ def main():
         'friction' : args.friction,
         'pred' : predicate,
     }
-    if os.path.isfile(results_path):
+    ratio_strs = ['-'.join(['{0:4.2f}'.format(m) for m in ms])
+                     for ms in mass_ratios]
+    if not args.fresh and os.path.isfile(results_path):
         results = np.load(results_path)
     else:
         results = np.zeros((n_ratios, n_positions, n_orderings))
@@ -191,14 +214,18 @@ def main():
             for rp_pcts in combinations(ramp_pcts, args.n_ramp):
                 for tb_pcts in combinations(table_pcts, n_table):
                     for mi, mass_assign in enumerate(permutations(ratio)):
+                        out_scene = os.path.join(out_path,
+                                                 'trial_{0!s}_{1:d}_{2:d}.json'.format(ratio_strs[row],
+                                                                                       pi,mi))
                         d = {'ramp_pcts' : rp_pcts,
                              'table_pcts' : tb_pcts,
-                             'densities' : mass_assign}
+                             'densities' : mass_assign,
+                             'out' : out_scene}
                         results[row, pi, mi] = profile_scene(**params, **d)
                     pi += 1
 
         np.save(results_path, results)
-    plot_profile(mass_ratios, n_positions, results, profile_path)
+    plot_profile(ratio_strs, n_positions, results, profile_path)
 
 
 if __name__ == '__main__':

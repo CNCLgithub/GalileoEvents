@@ -96,7 +96,7 @@ class Loader:
         p.changeDynamics(obj_id, -1,
                          mass = params['mass'],
                          lateralFriction = params['friction'],
-                         restitution = 0.9)
+                         restitution = 0.5)
         return obj_id
 
 
