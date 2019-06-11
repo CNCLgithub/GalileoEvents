@@ -53,8 +53,8 @@ def profile_scene(appearances, radius, base_scene, n_ramp,
         ball = Ball(appearances[i], (radius,), densities[i], friction)
         scene.add_object(str(i), ball, pcts[i])
 
-    forward_model.simulate(scene.serialize(), 900, debug = True)
-
+    s = forward_model.simulate(scene.serialize(), 900, debug =True)
+    print(np.sum(s[-1], axis = 0))
 
 
 def main():
@@ -91,9 +91,9 @@ def main():
 
 
     # Setup positions
-    ramp_pcts = np.array([0.7])
-    table_pcts = np.array([0.25, 0.4])
-    mass_assign = np.array([1/1.5, 1.5, 1])
+    ramp_pcts = np.array([0.9])
+    table_pcts = np.array([0.2, 0.35,])
+    mass_assign = np.array((0.5, 2., 1.0))
 
     base = RampScene(args.table, args.ramp,
                      ramp_angle = args.ramp_angle * (np.pi/180.))

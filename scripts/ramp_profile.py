@@ -26,7 +26,8 @@ import datetime
 import numpy as np
 import operator as op
 from functools import reduce
-from itertools import combinations, permutations
+from itertools import combinations
+from sympy.utilities.iterables import multiset_permutations
 
 from galileo_ramp.utils import config
 from galileo_ramp.world.scene.ball import Ball
@@ -148,6 +149,7 @@ def main():
     args = parser.parse_args()
 
     ratio_str = '-'.join(['{0:4.2f}'.format(m) for m in args.ratio])
+    ratio_str = '{0:d}|{1!s}'.format(args.n_ramp, ratio_str)
     out_path = os.path.join(CONFIG['PATHS', 'scenes'], ratio_str)
     results_path = out_path + '.npy'
     print('Saving profile to {0!s}(.npy)'.format(out_path))
@@ -156,12 +158,13 @@ def main():
 
     # Digest masses
     n_assignments = len(args.ratio)
-    n_unique = len(np.unique(args.ratio))
-    n_orderings = npr(n_assignments, n_unique)
+    unique_ratio = np.unique(args.ratio)
+    n_unique = len(unique_ratio)
+    n_orderings = npr(n_assignments, n_unique - 1)
 
     # Setup positions
     n_steps = args.ramp_steps + args.table_steps
-    ramp_pcts = np.linspace(0.4, 0.9, args.ramp_steps)
+    ramp_pcts = np.linspace(0.9, 0.4, args.ramp_steps)
     table_pcts = np.linspace(0.2, 0.7, args.table_steps)
     n_table = n_assignments - args.n_ramp
     n_positions = ncr(args.ramp_steps, args.n_ramp) * \
@@ -182,14 +185,15 @@ def main():
     }
     results = np.zeros((n_positions, n_orderings))
     pi = 0
-
     if os.path.isfile(results_path) and not args.fresh:
         print('Already computed, exiting')
         return
 
     for rp_pcts in combinations(ramp_pcts, args.n_ramp):
         for tb_pcts in combinations(table_pcts, n_table):
-            for mi, mass_assign in enumerate(permutations(args.ratio)):
+            for mi, mass_assign in enumerate(
+                    multiset_permutations(args.ratio, n_assignments)
+            ):
                 out_scene = '{0:d}_{1:d}.json'.format(pi,mi)
                 out_scene = os.path.join(out_path, out_scene)
                 d = {'ramp_pcts' : rp_pcts,
@@ -197,6 +201,7 @@ def main():
                      'densities' : mass_assign,
                      'out' : out_scene}
                 results[pi, mi] = profile_scene(**params, **d)
+
             pi += 1
 
     np.save(results_path, results)

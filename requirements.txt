@@ -20,5 +20,6 @@ dask_jobqueue
 pybullet
 pyquaternion
 julia
+sympy
 -e deps/hdf5_dataset
 -e deps/slurm
