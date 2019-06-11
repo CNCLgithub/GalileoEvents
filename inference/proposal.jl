@@ -2,28 +2,38 @@ using Gen
 
 include("dist.jl")
 
-@gen function perturb_mass(prev_trace, params)
+
+
+# Applies a truncated normal perturbation at the given address
+@gen function trunc_norm_perturb(prev_trace, addr, params)
     choices = get_choices(prev_trace)
-    mass = get_value(choices, :unknown_mass)
-    @trace(trunc_norm(mass, params.mass_prior[2:end]...),
-           :unknown_mass)
+    value = get_value(choices, addr)
+    @trace(trunc_norm(value, params...), addr)
     return nothing
 end;
 
-mh_move(trace, prop, options) = metropolis_hastings(trace, prop, (options,))
+# mh_move(trace, prop, options) = metropolis_hastings(trace, prop, (options,))
+function mh_move(trace, prop, options)
+    println(prop)
+    println(options)
+    return metropolis_hastings(trace, prop, (options,))
+end
 
 """
 Returns a function that folds a trace over a collection moves given
-a trace and options for those perturbation functions
+a trace and parameters for those perturbation functions
 """
-function mh_rejuvinate(moves::Array)
-    return (trace, options) -> foldl(( t, p ) -> first(mh_move(t, p, options)),
-                                     moves, init = trace)
+function mh_rejuvenate(moves::Array)
+    return (trace, params) -> foldl((t, etc) -> first(mh(t, etc...)),
+                                     zip(moves, params), init = trace)
 end;
 
 """
-Simple case of only perturbing mass
+Perturb each latent sequentially
+using `trunc_norm_perturb`
 """
-function simple_rejuv()
-    mh_rejuvinate([perturb_mass])
+function gen_seq_trunc_norm(latents::Array{Symbol}, rv_params::Array)
+    n_latents = length(latents)
+    blocks = mh_rejuvenate(repeat([trunc_norm_perturb], n_latents))
+    return trace -> blocks(trace, zip(latents, rv_params))
 end
