@@ -50,8 +50,11 @@ def profile_scene(appearances, radius, base_scene, n_ramp,
     # Add balls to ramp scene
     scene = copy.deepcopy(base_scene)
     pcts = np.concatenate((np.array(ramp_pcts) + 1, table_pcts), axis = 0)
+    uniques = np.unique(densities)
+    color_map = dict(zip(uniques, appearances))
     for i in range(len(appearances)):
-        ball = Ball(appearances[i], (radius,), densities[i], friction)
+        dens = densities[i]
+        ball = Ball(color_map[dens], (radius,), dens, friction)
         scene.add_object(str(i), ball, pcts[i])
 
     # Eval predicate on trace
@@ -149,7 +152,7 @@ def main():
     args = parser.parse_args()
 
     ratio_str = '-'.join(['{0:4.2f}'.format(m) for m in args.ratio])
-    ratio_str = '{0:d}|{1!s}'.format(args.n_ramp, ratio_str)
+    ratio_str = '{0:d}_{1!s}'.format(args.n_ramp, ratio_str)
     out_path = os.path.join(CONFIG['PATHS', 'scenes'], ratio_str)
     results_path = out_path + '.npy'
     print('Saving profile to {0!s}(.npy)'.format(out_path))

@@ -4,6 +4,7 @@ import shlex
 import argparse
 import subprocess
 from collections.abc import Iterable
+from galileo_ramp.world.simulation.forward_model import TraceEncoder
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 render_path = os.path.join(dir_path, 'render.py')
@@ -38,7 +39,8 @@ def render(**kwargs):
         os.mkdir(out)
     t_path = os.path.join(out, 'trace.json')
     with open(t_path, 'w') as temp:
-        json.dump(kwargs.pop('trace'), temp)
+        json.dump(kwargs.pop('trace'), temp,
+                  cls = TraceEncoder)
 
     if not 'materials' in kwargs:
         kwargs['materials'] = mat_path

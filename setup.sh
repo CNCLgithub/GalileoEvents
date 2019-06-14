@@ -62,6 +62,7 @@ fi
 # Initiliazes julia depot
 if [ ! -d ${ENV[julia_depot]} ]; then
     mkdir ${ENV[julia_depot]}
+    ./run.sh "julia -e \"using Pkg; Pkg.instantiate()\""
 else
     echo "Julia depot already exists at ${ENV[julia_depot]}"
 fi

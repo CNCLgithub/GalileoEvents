@@ -169,9 +169,9 @@ class RampScene:
         Arguments:
             rot (float): angle in radians along path.
         """
-        radius = 27.0
+        radius = 81.0
         # Move camera to position on ring
-        xyz = [np.cos(rot) * radius, np.sin(rot) * radius, 15]
+        xyz = [np.cos(rot) * radius, np.sin(rot) * radius, 35]
         camera = bpy.data.objects['Camera']
         camera.location = xyz
         bpy.context.scene.update()

@@ -13,7 +13,7 @@ from slurmpy import sbatch
 
 from galileo_ramp.utils import config
 from galileo_ramp.world.render.interface import render
-
+from galileo_ramp.world.simulation import forward_model
 
 CONFIG = config.Config()
 
@@ -35,17 +35,24 @@ def render_scene(src, out, res, mode, snapshot = False):
         data = json.load(f)
 
     scene = data['scene']
-    trace = data['trace']
+
+    if 'trace' in data:
+        trace = data['trace']
+    else:
+        trace = forward_model.simulate(data['scene'], 900)
+        trace = dict(zip(['pos', 'orn', 'lvl', 'avl', 'col'], trace))
     # Render
     kwargs = dict(
-        scene = json.dumps(scene),
+        scene = json.dumps(scene,),
         trace = trace,
         out = out,
         render_mode = mode,
         resolution = res,
+        theta = 45,
+        frames = 0
     )
-    if snapshot:
-        kwargs['frames'] = [0]
+    # if snapshot:
+    #     kwargs['frames'] = [0]
     render(**kwargs)
 
 def main():
@@ -68,25 +75,16 @@ def main():
 
     args = parser.parse_args()
 
-    if os.path.isfile(args.src):
-        # If individual tower, save render in common directory
-        src = [args.src]
+
+    if args.out is None:
         out = '{0!s}_rendered'.format(os.path.dirname(args.src))
     else:
-        # Otherwise save in `renders` destination
-        src = os.path.join(CONFIG['PATHS', 'scenes'], args.src)
-        src = glob.glob(os.path.join(src, '*.json'))
-        out = os.path.join(CONFIG['PATHS', 'renders'], args.src)
+        out = os.path.join(CONFIG['PATHS', 'renders'], args.out)
 
     if not os.path.isdir(out):
-        os.mkdir(out)
+        os.makedirs(out)
 
-    for scene_j in src:
-        scene_name = os.path.splitext(os.path.basename(scene_j))[0]
-        scene_base = os.path.join(out, scene_name)
-        if not os.path.isdir(scene_base):
-            os.mkdir(scene_base)
-        render_scene(scene_j, scene_base, args.res, args.mode)
+    render_scene(args.src, out, args.res, args.mode)
 
 
 if __name__ == '__main__':

@@ -119,7 +119,7 @@ class Shape(ABC):
         d['appearance'] = self.appearance
         d['shape'] = self.shape
         d['density'] = self.density
-        d['dims'] = self.dimensions.tolist()
+        d['dims'] = self.dimensions
         d['mass'] = self.mass
         d['friction'] = self.friction
         d['position'] = self.position

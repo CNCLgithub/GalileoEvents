@@ -24,7 +24,7 @@ class Ball(Shape):
         :returns: the volume the shape holds
         :rtype: float
         """
-        return (self.dimensions**3) * np.pi * (4.0/3.0)
+        return (self.dimensions[0]**3) * np.pi * (4.0/3.0)
 
     @property
     def dimensions(self):

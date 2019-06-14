@@ -25,6 +25,7 @@ import argparse
 import datetime
 import numpy as np
 import operator as op
+from pprint import pprint
 from functools import reduce
 from itertools import combinations, permutations
 
@@ -53,6 +54,7 @@ def profile_scene(appearances, radius, base_scene, n_ramp,
         ball = Ball(appearances[i], (radius,), densities[i], friction)
         scene.add_object(str(i), ball, pcts[i])
 
+
     s = forward_model.simulate(scene.serialize(), 900, debug =True)
     print(np.sum(s[-1], axis = 0))
 
@@ -71,7 +73,7 @@ def main():
                         help = 'XY dimensions of ramp.')
     parser.add_argument('--ramp_steps', type = int, default = 4,
                         help = 'Number of positions along X-axis.')
-    parser.add_argument('--ramp_angle', type = float, default = 30,
+    parser.add_argument('--ramp_angle', type = float, default = 35,
                         help = 'ramp angle in degrees')
     parser.add_argument('--radius', type = float, default = 1.5,
                         help = 'Ball radius.')
@@ -93,7 +95,7 @@ def main():
     # Setup positions
     ramp_pcts = np.array([0.9])
     table_pcts = np.array([0.2, 0.35,])
-    mass_assign = np.array((0.5, 2., 1.0))
+    mass_assign = np.array((1, 2, 2))
 
     base = RampScene(args.table, args.ramp,
                      ramp_angle = args.ramp_angle * (np.pi/180.))
