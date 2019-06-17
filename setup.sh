@@ -26,7 +26,7 @@ if [ $BUILDCONT = "pull" ]; then
     unzip "_env.zip"
     echo "Moving container..."
     mv "cont" "$SING"
-if [ $BUILDCONT = "build" ]; then
+elif [ $BUILDCONT = "build" ]; then
     if [ ! -f "blender.tar.bz2" ]; then
         wget "$BLENDPATH" -O "blender.tar.bz2"
     fi
