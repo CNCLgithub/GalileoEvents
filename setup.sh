@@ -4,7 +4,9 @@
 
 # Change any of these values as you see fit.
 # For initial run, all should be set to true.
-BUILDCONT=false
+# "pull" : Download from host
+# "build" : Build locally
+BUILDCONT="pull"
 BUILDENV=true
 
 . load_config.sh
@@ -14,28 +16,30 @@ SING="${ENV[path]}"
 CONT="${ENV[cont]}"
 ENVPATH="${ENV[env]}"
 
-# 1) Create the singularity container (requires sudo)
-if [ $BUILDCONT = true ]; then
-    if [ -f "$CONT" ]; then
-        echo "Older container found...removing"
-        rm -f "$CONT"
-    fi
-    if [ ! -f "blender.tar.bz2" ]; then
-        wget "https://www.dropbox.com/s/3f39ste5xh6rjkt/blender.tar.bz2?dl=0" \
-             -O "blender.tar.bz2"
-    fi
+DEPPATH="https://www.dropbox.com/sh/exloazrievnjvey/AADXtso1A4WaPKQ09LX1alFAa?dl=0"
+BLENDPATH="https://www.dropbox.com/s/rg5hhphs4hdxzun/blender.tar.bz2?dl=0"
+JULIAPATH="https://www.dropbox.com/s/w04yhfn3jp9sndd/julia.tar.gz?dl=0"
 
-    if [ ! -f "julia.tar.gz" ]; then
-        wget https://julialang-s3.julialang.org/bin/linux/x64/1.0/julia-1.0.4-linux-x86_64.tar.gz \
-             -O "julia.tar.gz"
+# 1) Create the singularity container (requires sudo)
+if [ $BUILDCONT = "pull" ]; then
+    wget "$DEPPATH" -O "_env.zip"
+    unzip "_env.zip"
+    echo "Moving container..."
+    mv "cont" "$SING"
+if [ $BUILDCONT = "build" ]; then
+    if [ ! -f "blender.tar.bz2" ]; then
+        wget "$BLENDPATH" -O "blender.tar.bz2"
     fi
-    echo "Building container..."
+    if [ ! -f "julia.tar.gz" ]; then
+        wget "$JULIAPATH" -O "julia.tar.gz"
+    fi
+    echo "Building container...(REQUIRES ROOT)"
     if [ ! -d $PWD/.tmp ]; then
         mkdir $PWD/.tmp
     fi
     SINGULARITY_TMPDIR=$PWD/.tmp sudo -E $SING build $CONT  Singularity
 else
-    echo "Not building container at ${CONT}"
+    echo "Not touching container at ${CONT}"
 fi
 
 # Initialize python env
