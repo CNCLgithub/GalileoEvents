@@ -32,7 +32,9 @@ def plot_convergence(trace_path, out, collapse = False):
         as time to convergence.
     """
     estimates, scores, result = trace.extract_chains(trace_path, maps = collapse)
+    print(estimates)
     estimates = np.exp(estimates)
+    print(estimates)
     xs = result['xs']
     latents = result['latents']
     fig, axes = plt.subplots(nrows=estimates.shape[0] + 1,

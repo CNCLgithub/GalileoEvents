@@ -20,7 +20,7 @@ def extract_chains(trace, maps = True):
         result = hdf5.to_dic(f)
     n_chains = len(result['chains'])
     xs = result['xs']
-    n_latents = result['chains']['0']['estimates'].shape[2]
+    n_latents = result['chains']['0']['estimates'].shape[-1]
     if maps:
         estimates = np.zeros((n_latents, len(xs), n_chains))
         scores = np.zeros((len(xs), n_chains))

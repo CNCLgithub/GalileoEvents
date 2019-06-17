@@ -14,11 +14,17 @@ struct Scene
     prior::Matrix{Float64}
 end;
 
+
 @gen function simulate(scene::Scene, latents::Dict, frames::Int)::Array{Float64,3}
     # Add the features from the latents to the scene descriptions
-    data = copy(scene.data)
+    data = deepcopy(scene.data)
     for obj in keys(latents)
-        merge!(data["objects"][obj], latents[obj])
+        obj_data = data["objects"][obj]
+        merge!(obj_data, latents[obj])
+        # TODO: automate this, replace with "volume"
+        obj_data["mass"] = obj_data["density"] * obj_data["dims"][1]
+        merge!(data["objects"][obj], obj_data)
+        println(obj_data["density"])
     end
     state = forward_model.simulate(data, frames)
     pos = state[1]

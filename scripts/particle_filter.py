@@ -44,6 +44,7 @@ def run_search(scene_args, dist_args, inf_args, inf_module, out):
     print('RUNNING SMC')
     results = smc(scene_args, dist_args, inf_args)
     # dict containing: gt, xs, scores, estimates
+    pprint(results)
     with open(out, 'w') as f:
         json.dump(results, f, cls = PFEncoder)
 

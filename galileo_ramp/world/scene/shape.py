@@ -120,6 +120,7 @@ class Shape(ABC):
         d['shape'] = self.shape
         d['density'] = self.density
         d['dims'] = self.dimensions
+        d['volume'] = self.volume
         d['mass'] = self.mass
         d['friction'] = self.friction
         d['position'] = self.position

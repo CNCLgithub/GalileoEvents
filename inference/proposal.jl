@@ -88,3 +88,13 @@ function gen_stupid_proposal(scene, prop::Matrix{Float64})
     end
     return (t -> first(mh(t, f, tuple()))), addresses
 end;
+
+function gen_gibbs_proposal(scene, prop::Matrix{Float64})
+    addresses = []
+    for ball in keys(scene.balls)
+        for l in scene.latents
+            push!(addresses, ball => l)
+        end
+    end
+    return gen_seq_trunc_norm(addresses, prop), addresses
+end;
