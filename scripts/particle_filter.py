@@ -73,7 +73,7 @@ def format_parameters(args):
         'inf_args': [args.particles, args.steps, args.resample, args.perturb],
         'dist_args': {
             'prior' : np.array([args.bounds,]),
-            'prop'  : np.array([[args.width, *args.bounds],])
+            'prop'  : (np.array([args.width, *args.bounds]),)
         },
         'inf_module' : args.module
     }

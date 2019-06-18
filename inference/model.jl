@@ -24,13 +24,13 @@ end;
         # TODO: automate this, replace with "volume"
         obj_data["mass"] = obj_data["density"] * obj_data["dims"][1]
         merge!(data["objects"][obj], obj_data)
-        println(obj_data["density"])
+        # println(obj_data["density"])
     end
     state = forward_model.simulate(data, frames)
     pos = state[1]
     obs = Matrix{Float64}(pos[end, :, :])
     @trace(mat_noise(obs, 0.1), frames => :pos)
-    println(obs)
+    # println(obs)
     return pos
 end;
 

@@ -15,7 +15,7 @@ end;
 @gen function trunc_norm_perturb(prev_trace, addr, params)
     choices = get_choices(prev_trace)
     value = get_value(choices, addr)
-    @trace(trunc_norm(value, params...), addr)
+    @trace(trunc_norm(value, first(params)...), addr)
     return nothing
 end;
 
@@ -89,12 +89,13 @@ function gen_stupid_proposal(scene, prop::Matrix{Float64})
     return (t -> first(mh(t, f, tuple()))), addresses
 end;
 
-function gen_gibbs_proposal(scene, prop::Matrix{Float64})
+function gen_gibbs_proposal(scene, prop::Tuple{Array{Float64}})
     addresses = []
     for ball in keys(scene.balls)
         for l in scene.latents
             push!(addresses, ball => l)
         end
     end
-    return gen_seq_trunc_norm(addresses, prop), addresses
+    prop_func = gen_seq_trunc_norm(addresses, repeat([prop], length(addresses)))
+    return (prop_func, addresses)
 end;

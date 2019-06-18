@@ -44,7 +44,7 @@ function particle_filter(trial::Scene,
     set_submap!(init_obs, :obs => frames[1],
                 get_submap(obs, :obs => frames[1]))
 
-    println(init_obs)
+    # println(init_obs)
     state = Gen.initialize_particle_filter(model, (frames[1],), init_obs,
                                            params.n_particles)
     report_step!(results, state, addrs, 1)
@@ -58,7 +58,7 @@ function particle_filter(trial::Scene,
         # Step to next observation
         next_obs = choicemap()
         set_submap!(next_obs, :obs => t, get_submap(obs, :obs => t))
-        println(next_obs)
+        # println(next_obs)
         Gen.particle_filter_step!(state, (t,), (UnknownChange(),), next_obs)
         # Report step
         @printf "Iteration %d / %d\n" (it+1) length(frames)
@@ -75,8 +75,6 @@ function run_inference(scene_args, dist_args, inf_args)
     gt, balls, latents, nf = scene_args
     # (tower json, unknown block ids, mass prior)
     scene = Scene(scene_args..., dist_args["prior"])
-    println(typeof(scene.prior))
-
     # rejuv, addrs = gen_stupid_proposal(scene, dist_args["prop"])
     rejuv, addrs = gen_gibbs_proposal(scene, dist_args["prop"])
 
