@@ -16,6 +16,7 @@ is normalized by the average and variance of the entire pool.
 """
 
 import os
+import json
 import glob
 import string
 import argparse
@@ -74,7 +75,8 @@ def main():
     plot_profile(names, results, profile_path)
 
     positions = np.argwhere(np.sum(results, axis = 0) == results.shape[0])
-    print(positions.flatten())
+    with open(os.path.join(out_path, 'valid_positions.json'), 'w') as f:
+        json.dump(positions.flatten().tolist(), f)
 
 if __name__ == '__main__':
    main()
