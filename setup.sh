@@ -6,7 +6,7 @@
 # For initial run, all should be set to true.
 # "pull" : Download from host
 # "build" : Build locally
-BUILDCONT="pull"
+BUILDCONT="none"
 BUILDENV=true
 
 . load_config.sh
@@ -25,7 +25,7 @@ if [ $BUILDCONT = "pull" ]; then
     wget "$DEPPATH" -O "_env.zip"
     unzip "_env.zip"
     echo "Moving container..."
-    mv "cont" "$SING"
+    mv "cont" "$CONT"
 elif [ $BUILDCONT = "build" ]; then
     if [ ! -f "blender.tar.bz2" ]; then
         wget "$BLENDPATH" -O "blender.tar.bz2"
