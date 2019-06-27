@@ -10,7 +10,7 @@ import datetime
 import numpy as np
 from pprint import pprint
 
-from galileo_ramp.utils import config, hdf5
+from galileo_ramp.utils import config, hdf5, encoders
 from galileo_ramp.inference.execute import initialize
 
 CONFIG = config.Config()
@@ -18,15 +18,6 @@ CONFIG = config.Config()
 root = CONFIG['PATHS', 'root']
 module_path = os.path.join(root, 'inference', 'smc.jl')
 
-class PFEncoder(json.JSONEncoder):
-
-    """ Encodes PF results for json """
-
-    def default(self, obj):
-        if isinstance(obj, np.ndarray):
-            return obj.tolist()
-        else:
-            return super(PFEncoder, self).default(obj)
 
 
 def run_search(scene_args, dist_args, inf_args, inf_module, out):
@@ -46,7 +37,7 @@ def run_search(scene_args, dist_args, inf_args, inf_module, out):
     # dict containing: gt, xs, scores, estimates
     pprint(results)
     with open(out, 'w') as f:
-        json.dump(results, f, cls = PFEncoder)
+        json.dump(results, f, cls = encoders.NpEncoder)
 
 ###############################################################################
 # Helpers

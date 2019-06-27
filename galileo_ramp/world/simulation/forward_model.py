@@ -7,16 +7,21 @@ import json
 import numpy as np
 from .ramp_physics import RampPhysics
 
-def simulate(serialized_scene, frames, debug = False):
-    """ Runs pybullet on on given tower
+def simulate(serialized_scene, frames, objs = None,
+             debug = False):
+    """ Runs pybullet on on given scene
     Frames per second are fixed at 60
+    If no objects are given, then the top keys of
+    `serialized_scene` are used.
 
-    :param serialized_tower: Tower scene to bake
+    :param serialized_scene: Dict repr wesenting scene
     :param frames: Number of frames to report
+    :param objs,optional: Order of objects to report.
     """
     sim = RampPhysics(serialized_scene, debug = debug)
     # ensures that the objects are reported in order
-    objs = list(map(str, range(len(serialized_scene['objects']))))
+    if objs is None:
+        objs = sorted(list(serialize_scene['objects'].keys()))
     trace = sim.get_trace(frames, objs, fps = 60)
     return trace
 
