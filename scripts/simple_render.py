@@ -49,10 +49,9 @@ def render_scene(src, out, res, mode, snapshot = False):
         render_mode = mode,
         resolution = res,
         theta = 45,
-        frames = 0
     )
-    # if snapshot:
-    #     kwargs['frames'] = [0]
+    if snapshot:
+        kwargs['frames'] = [0]
     render(**kwargs)
 
 def main():
