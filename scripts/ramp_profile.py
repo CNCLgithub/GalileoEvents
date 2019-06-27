@@ -127,11 +127,11 @@ def main():
                         help = 'Mass ratios (1 for each ball, may havel duplicates')
     parser.add_argument('--table', type = int, nargs = 2, default = (35, 18),
                         help = 'XY dimensions of table.')
-    parser.add_argument('--table_steps', type = int, default = 4,
+    parser.add_argument('--table_steps', type = int, default = 5,
                         help = 'Number of positions along X-axis.')
     parser.add_argument('--ramp', type = int, nargs = 2, default = (35, 18),
                         help = 'XY dimensions of ramp.')
-    parser.add_argument('--ramp_steps', type = int, default = 4,
+    parser.add_argument('--ramp_steps', type = int, default = 5,
                         help = 'Number of positions along X-axis.')
     parser.add_argument('--ramp_angle', type = float, default = 35,
                         help = 'ramp angle in degrees')

@@ -1,5 +1,6 @@
 [deps]
 ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
+DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 GR = "28b8d3ca-fb5f-59d9-8090-bfdbd6d07a71"
 Gen = "ea4f424c-a589-11e8-07c0-fd5c91b9da4a"

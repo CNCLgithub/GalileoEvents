@@ -6,9 +6,9 @@
 scenes=$(find "${PATHS[scenes]}" -mindepth 1 -maxdepth 1 -type d)
 singleramp=($(echo "$scenes" | grep -e "1_[0-9]" | sed 's/:.*//'))
 doubleramp=($(echo "$scenes" | grep -e "2_[0-9]" | sed 's/:.*//'))
-positions=(0 3 6 9 12 15 18)
+positions=(1 39)
 
-single="${singleramp[0]}"
+single=" ${singleramp[0]}"
 double="${doubleramp[0]}"
 echo $single
 echo $double
@@ -16,10 +16,10 @@ echo $double
 for pos in "${positions[@]}";do
     out="profile/$(basename ${single})_$pos"
     spath="$single/${pos}_0.json"
-    ./run.sh scripts/simple_render.py --src "$spath" --mode "motion" --out "$out"
-    out="profile/$(basename ${double})_$pos"
-    spath="${double}/${pos}_0.json"
-    ./run.sh scripts/simple_render.py --src "$spath" --mode "motion" --out "$out"
+    ./scripts/simple_render.py --src "$spath" --mode "motion" --out "$out"
+    # out="profile/$(basename ${double})_$pos"
+    # spath="${double}/${pos}_0.json"
+    #./scripts/simple_render.py --src "$spath" --mode "motion" --out "$out"
 done
 
 dest="${PATHS[renders]}/profile"

@@ -93,9 +93,9 @@ def main():
 
 
     # Setup positions
-    ramp_pcts = np.array([0.9, 0.55])
-    table_pcts = np.array([0.35,])
-    mass_assign = np.array((1, 1, 1))
+    ramp_pcts = np.array([0.525])
+    table_pcts = np.array([0.2, 0.45])
+    mass_assign = np.array((1, 4, 4))
 
     base = RampScene(args.table, args.ramp,
                      ramp_angle = args.ramp_angle * (np.pi/180.))
