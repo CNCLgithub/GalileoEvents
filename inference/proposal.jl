@@ -5,7 +5,6 @@ include("dist.jl")
 @gen function propose_to_addr(trace, addr, rv)
     choices = get_choices(trace)
     value = get_value(choices, addr)
-    println(typeof(rv))
     rv(value, addr)
     return nothing
 end;
@@ -15,7 +14,7 @@ end;
 @gen function trunc_norm_perturb(prev_trace, addr, params)
     choices = get_choices(prev_trace)
     value = get_value(choices, addr)
-    @trace(trunc_norm(value, first(params)...), addr)
+    @trace(trunc_norm(value, params...), addr)
     return nothing
 end;
 
@@ -34,7 +33,7 @@ end;
 Perturb each latent sequentially
 using `trunc_norm_perturb`
 """
-function gen_seq_trunc_norm(latents::Array, rv_params::Array)
+function gen_gibbs_trunc_norm(latents::Array, rv_params::Array)
     n_latents = length(latents)
     blocks = mh_rejuvenate(repeat([trunc_norm_perturb], n_latents))
     return trace -> blocks(trace, zip(latents, rv_params))
@@ -89,13 +88,3 @@ function gen_stupid_proposal(scene, prop::Matrix{Float64})
     return (t -> first(mh(t, f, tuple()))), addresses
 end;
 
-function gen_gibbs_proposal(scene, prop::Tuple{Array{Float64}})
-    addresses = []
-    for ball in keys(scene.balls)
-        for l in scene.latents
-            push!(addresses, ball => l)
-        end
-    end
-    prop_func = gen_seq_trunc_norm(addresses, repeat([prop], length(addresses)))
-    return (prop_func, addresses)
-end;

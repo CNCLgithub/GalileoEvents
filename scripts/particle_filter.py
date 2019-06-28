@@ -58,13 +58,13 @@ def format_parameters(args):
     with open(trial_path, 'r') as f:
         data = json.load(f)
 
-    balls = data['scene']['objects']
+    balls = sorted(list(data['scene']['objects'].keys()))
     d = {
         'scene_args' : [data['scene'], balls, ['density'], 900],
         'inf_args': [args.particles, args.steps, args.resample, args.perturb],
         'dist_args': {
             'prior' : np.array([args.bounds,]),
-            'prop'  : (np.array([args.width, *args.bounds]),)
+            'prop'  : np.array([[args.width, *args.bounds]]),
         },
         'inf_module' : args.module
     }
@@ -92,7 +92,7 @@ def main():
                         help = 'Sigma for density prior')
     parser.add_argument('--width', type = float, default = 0.2,
                         help = 'Percent width for each particle')
-    parser.add_argument('--bounds', type = float, nargs=2, default = (0.01, 13),
+    parser.add_argument('--bounds', type = float, nargs=2, default = (-2, 2),
                         help = 'Lower and upper bounds for density')
     parser.add_argument('--particles', type = int, default = 4,
                         help = 'Number of particles per time step.')

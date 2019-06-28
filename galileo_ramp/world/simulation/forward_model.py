@@ -21,7 +21,7 @@ def simulate(serialized_scene, frames, objs = None,
     sim = RampPhysics(serialized_scene, debug = debug)
     # ensures that the objects are reported in order
     if objs is None:
-        objs = sorted(list(serialize_scene['objects'].keys()))
+        objs = sorted(list(serialized_scene['objects'].keys()))
     trace = sim.get_trace(frames, objs, fps = 60)
     return trace
 
