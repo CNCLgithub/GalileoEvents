@@ -1,59 +1,21 @@
-# /stimuli
+# Workflow
 
-Streamlines stimuli generation
+Describes basic project setup
 
-## generate_towers.py
 
-```
-usage: generate_towers.py [-h] [--out OUT] [--base BASE] n b
+## Generating scenes
 
-Renders the towers in a given directory
+Scenes (ramp worlds) can be generating using `scripts/ramp_profile.sh`
+This bash file expects a file names `mass_ratios_3.csv` located under
+the `PATHS[scenes]` section of the project config (`[default|user].conf`).
 
-positional arguments:
-  n            Number of towers to generate
-  b            The size of each tower.
+An example would be:
 
-optional arguments:
-  -h, --help   show this help message and exit
-  --out OUT    Path to save renders.
-  --base BASE  Path to base tower.
+```bash
+$ cat output/scenes/mass_ratios_3.csv
+1,1,1
+1/2,1,2
 
 ```
 
-
-## generate_renders.py
-
-```
-usage: generate_renders.py [-h] [--src SRC]
-
-Renders the towers in a given directory
-
-optional arguments:
-  -h, --help  show this help message and exit
-  --src SRC   Path to tower jsons
-```
-
-## generate_alternates.py
-
-```
-usage: generate_renders.py [-h] [--src SRC]
-
-Renders the towers in a given directory
-
-optional arguments:
-  -h, --help  show this help message and exit
-  --src SRC   Path to tower jsons
-
-```
-
-## movies.py
-
-```
-usage: movies.py [-h] [--src SRC]
-
-Generates movie from scene
-
-optional arguments:
-  -h, --help  show this help message and exit
-  --src SRC   Path to rendered frames
-```
+Afterwards, 

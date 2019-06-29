@@ -21,5 +21,6 @@ pybullet
 pyquaternion
 julia
 sympy
+sphinx
 -e deps/hdf5_dataset
 -e deps/slurm
