@@ -1,3 +1,7 @@
+""" BPY script that handles rendering logic for ramp world
+
+
+"""
 import os
 import sys
 import bpy
@@ -7,51 +11,30 @@ import argparse
 import mathutils
 
 import numpy as np
-#################################################
-# https://stackoverflow.com/questions/28075599/opening-blend-files-using-blenders-python-api
-from bpy.app.handlers import persistent
-@persistent
-def load_handler(dummy):
-    print("Load Handler:", bpy.data.filepath)
-bpy.app.handlers.load_post.append(load_handler)
-#################################################
 
 
 class RampScene:
 
-    '''
-    Interface for bpy.
-    '''
+    """
+    Defines the ramp world in bpy.
+    """
 
-    def __init__(self, scene_json, materials_path, trace = None,
-                 wire_frame = False, theta = None):
-        """
-        Arguments:
-            scene_json (str): A serialized tower string.
-            materials_path (str): Path to a .blend file containing materials.
-            trace (optional, list): A list of traces, [sim1, sim2, ...]
-                 where each sim is a complete trace for all blocks.
-            theta (optional, float): An angle to orient the camera.
-            wireframe : DEPRECATED
-        """
+    def __init__(self, scene, trace = None, theta = None):
+        """ Initializes objects, physics, and camera
 
+        :param scene: Describes the ramp, table, and balls.
+        :type scene_d: dict
+        :param trace: the physical state of the objects
+        :type trace: dict or None
+        :param theta: Angle around the world to point the camera
+        :type theta: float or None
+        """
         # Initialize attributes
         self.trace = trace
         self.theta = theta
 
-        # Clear scene
-        bpy.ops.object.mode_set(mode='OBJECT')
-        bpy.ops.object.select_by_type(type='MESH')
-        bpy.ops.object.delete(use_global=False)
-        for item in bpy.data.meshes:
-            bpy.data.meshes.remove(item)
-
-        # Load materials and textures
-        with Suppressor():
-            bpy.ops.wm.open_mainfile(filepath=materials_path)
-
         # Parse scene structure
-        self.load_scene(scene_json)
+        self.load_scene(scene)
 
     @property
     def trace(self):
@@ -59,6 +42,16 @@ class RampScene:
 
     @trace.setter
     def trace(self, t):
+        """
+        A dictionary containing to keys: `('pos', 'rot')` where each
+        holds a 3-dimensional array of `TxNxK`,
+        where `T` is the number of key frames,
+        `N` is the number of objects,
+        and `K` is either `xyz` or `wxyz`.
+
+        :param t: The physics state to apply as keyframes
+        :type t: dict or None
+        """
         if not t is None:
             frames = len(t['pos'])
         else:
@@ -68,8 +61,7 @@ class RampScene:
         self._trace = t
 
     def select_obj(self, obj):
-        """
-        Brings the given object into active context.
+        """ Sets the given object into active context.
         """
         bpy.ops.object.select_all(action='DESELECT')
         obj.select = True
@@ -78,8 +70,9 @@ class RampScene:
 
 
     def rotate_obj(self, obj, rot):
-        """
-        Rotates the given object by the given quaternion.
+        """ Rotates the object.
+
+        :param rot: Either an euler angle (xyz) or quaternion (wxyz)
         """
         self.select_obj(obj)
         if len(rot) == 3:
@@ -91,8 +84,9 @@ class RampScene:
         bpy.context.scene.update()
 
     def move_obj(self, obj, pos):
-        """
-        Moves the given object by the given 3-d vector.
+        """ Moves the object.
+
+        :param pos: An xyz designating the object's new location.
         """
         self.select_obj(obj)
         pos = mathutils.Vector(pos)
@@ -100,8 +94,7 @@ class RampScene:
         bpy.context.scene.update()
 
     def scale_obj(self, obj, dims):
-        """
-        Rescales to the object to the given dimensions.
+        """ Rescales to the object to the given dimensions.
         """
         self.select_obj(obj)
         obj.dimensions = dims
@@ -110,8 +103,10 @@ class RampScene:
         bpy.context.scene.update()
 
     def set_appearance(self, obj, mat):
-        """
-        Assigns a material to a block.
+        """ Assigns a material to a block.
+
+        If the material is not defined within the blend file,
+        the object is assigned `"Wood"`.
         """
         if not mat in bpy.data.materials:
             raise ValueError('Unknown material {}'.format(mat))
@@ -121,8 +116,12 @@ class RampScene:
         bpy.context.scene.update()
 
     def create_block(self, name, object_d):
-        """
-        Initializes a ball.
+        """ Initializes a ball.
+
+        :param name: The name to refer to the object
+        :type name: str
+        :param object_d: Describes the objects appearance and location.
+        :type object_d: dict
         """
         bpy.ops.mesh.primitive_ico_sphere_add(location=object_d['position'],
                                               view_align=False,
@@ -142,6 +141,8 @@ class RampScene:
         self.set_appearance(ob, mat)
 
     def load_scene(self, scene_dict):
+        """ Configures the ramp, table, and balls
+        """
         # Setup ramp
         ramp = bpy.data.objects['Ramp']
         ramp_d = scene_dict['ramp']
@@ -152,8 +153,7 @@ class RampScene:
             self.create_block(name, data)
 
     def set_rendering_params(self, resolution):
-        """
-        Configures various settings for rendering such as resolution.
+        """ Configures various settings for rendering such as resolution.
         """
         bpy.context.scene.render.resolution_x = resolution[0]
         bpy.context.scene.render.resolution_y = resolution[1]
@@ -164,10 +164,10 @@ class RampScene:
         bpy.context.scene.render.engine = 'CYCLES'
 
     def set_camera(self, rot):
-        """
-        Moves the camera along a circular path.
-        Arguments:
-            rot (float): angle in radians along path.
+        """ Moves the camera along a circular path.
+
+        :param rot: Angle in radians along path.
+        :type rot: float
         """
         radius = 81.0
         # Move camera to position on ring
@@ -184,10 +184,6 @@ class RampScene:
 
     def _frame_set(self,frame):
         """ Helper to `frame_set`.
-
-        Arguments:
-            sim (int) : index of trace.
-            frame (int) : index for current frame.
         """
         positions = np.array(self.trace['pos'][frame])
         rotations = np.array(self.trace['orn'][frame])
@@ -202,9 +198,11 @@ class RampScene:
 
     def frame_set(self, frame, rot):
         """ Updates the scene to the given frame.
-        Arguments:
-            frame (int): Index of the frame.
-            rot (float): Rotation of camera.
+
+        :param frame: Index of keyframe
+        :type frame: int
+        :param rot: Rotation of camera
+        :type rot: float
         """
         if frame < 0:
             frame = len(self.trace[0]['position']) + frame
@@ -215,26 +213,24 @@ class RampScene:
         bpy.context.scene.update()
 
 
-    def render(self, output_name, frames, show = [],
+    def render(self, output_name, frames,
                resolution = (256, 256), camera_rot = None):
         """ Renders a scene.
-        Arguments:
-            output_name (str): Path to save frames
-            frames (list) : a list of frames to render (shifted by warmup)
-            show (list) : a list of object names to render
-            resolution (tuple) : xy resolution.
-            camerate_rot (0,360) : degrees around the scene to place the camera.
+
+        Skips over existing frames
+
+        :param output_name: Path to save frames
+        :type output_name: str
+        :param frames: a list of frames to render (shifted by warmup)
+        :type frames: list
+        :param resolution: Image resolution
+        :type resolution: tuple(int, int)
+        :param camera_rot: Rotation for camera.
+        :type camera_rot: float
         """
         if not os.path.isdir(output_name):
             os.mkdir(output_name)
         self.set_rendering_params(resolution)
-        if len(show) > 0:
-            for obj in bpy.context.scene.objects:
-                if not obj.name in show:
-                    # print("Hiding {0!s}".format(o_name))
-                    obj.cycles_visibility.diffuse = False
-                    obj.hide = True
-                    obj.hide_render = True
 
         if camera_rot is None:
             camera_rot = np.zeros(len(frames))
@@ -254,27 +250,6 @@ class RampScene:
             print('Rendering frame {} at {} took {}s'.format(i, out, dur))
 
 
-    def render_circle(self, out_path, freeze = True, dur = 1,
-                      resolution = (256, 256), theta = 0):
-        """
-        Renders a ring around a tower.
-        Arguments:
-            out_path (str): Path to save frames.
-            freeze (bool): Whether or not to run physics.
-            dur (float, optional): Duration in seconds.
-            resolution (float, optional): Resolution of render.
-        """
-        self.set_rendering_params(resolution)
-        n = int(dur * 60) # rendered at 60 fps
-        rots = np.linspace(theta, theta + (np.pi * 2), n)
-        if freeze == True:
-            frames = np.zeros(n).astype(int)
-        else:
-            frames = np.arange(n)
-
-        self.render(out_path, frames, resolution = resolution,
-                    camera_rot = rots)
-
     def save(self, out, frames):
         """
         Writes the scene as a blend file.
@@ -285,14 +260,14 @@ class RampScene:
 
 # From https://stackoverflow.com/questions/11130156/suppress-stdout-stderr-print-from-python-functions
 class Suppressor(object):
-    '''
+    """
     A context manager for doing a "deep suppression" of stdout and stderr in
     Python, i.e. will suppress all print, even if the print originates in a
     compiled C/Fortran sub-function.
        This will not suppress raised exceptions, since exceptions are printed
     to stderr just before a script exits, and after the context manager has
     exited (at least, I think that is why it lets exceptions through).
-    '''
+    """
     def __init__(self):
         # Open a pair of null files
         self.null_fds =  [os.open(os.devnull,os.O_RDWR) for x in range(2)]
@@ -314,20 +289,19 @@ class Suppressor(object):
 
 
 def parser(args):
-
+    """Parses extra arguments
+    """
     p = argparse.ArgumentParser(description = 'Renders blockworld scene')
     p.add_argument('--scene', type = json.loads,
                    help = 'Tower json describing the scene.')
     p.add_argument('--trace', type = load_trace,
                    help = 'Trace json for physics.')
-    p.add_argument('--materials', type = str,
-                   help = 'Path to blender materials.')
     p.add_argument('--out', type = str,
                    help = 'Path to save rendering')
     p.add_argument('--save_world', action = 'store_true',
                    help = 'Save the resulting blend scene')
     p.add_argument('--render_mode', type = str, default = 'default',
-                   choices = ['default', 'motion', 'frozen', 'none'],
+                   choices = ['default', 'none'],
                    help = 'mode to render')
     p.add_argument('--resolution', type = int, nargs = 2,
                    default = (256,256),  help = 'Render resolution')
@@ -341,6 +315,7 @@ def parser(args):
 
 
 def load_trace(path):
+    """Helper that loads trace file"""
     with open(path, 'r') as f:
         str = f.read()
         traces = json.loads(str)
@@ -353,7 +328,7 @@ def main():
         argv = sys.argv[sys.argv.index('--') + 1:]
     args = parser(argv)
 
-    scene = RampScene(args.scene, args.materials, args.trace,
+    scene = RampScene(args.scene, args.trace,
                        theta = args.theta)
 
     if args.gpu:
@@ -364,8 +339,6 @@ def main():
     if not os.path.isdir(path):
         os.mkdir(path)
 
-    frozen_path = os.path.join(path, 'frozen')
-    motion_path = os.path.join(path, 'motion')
     if args.frames is None:
         n_frames = len(args.trace['pos'])
         frames = np.arange(n_frames)
@@ -373,11 +346,8 @@ def main():
         n_frames = len(args.frames)
         frames = args.frames
 
-    if args.render_mode == 'default' or args.render_mode == 'frozen':
-        scene.render_circle(frozen_path, freeze = True, dur = 2,
-                            resolution = args.resolution, theta = args.theta)
-    if args.render_mode == 'default' or args.render_mode == 'motion':
-        scene.render(motion_path, frames,
+    if args.render_mode == 'default':
+        scene.render(path, frames,
                      camera_rot = np.repeat(args.theta, n_frames),
                      resolution = args.resolution,)
 

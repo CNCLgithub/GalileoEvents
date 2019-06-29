@@ -10,7 +10,8 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 render_path = os.path.join(dir_path, 'render.py')
 
 mat_path = os.path.join(dir_path, 'new_scene.blend')
-cmd = '/blender/blender -noaudio --background -P {0!s}'
+# takes the blend file and the bpy script
+cmd = '/blender/blender -noaudio --background {0!s} -P {1!s}'
 
 def make_args(args_d):
     cmd = ['--', '--save_world']
@@ -42,10 +43,12 @@ def render(**kwargs):
         json.dump(kwargs.pop('trace'), temp,
                   cls = TraceEncoder)
 
-    if not 'materials' in kwargs:
-        kwargs['materials'] = mat_path
+    if 'materials' in kwargs:
+        blend_file = kwargs.pop('materials')
+    else:
+        blend_file = mat_path
 
-    _cmd = cmd.format(render_path)
+    _cmd = cmd.format(blend_file, render_path)
     _cmd = shlex.split(_cmd)
     _cmd += make_args(kwargs)
     _cmd += ['--trace', t_path]
