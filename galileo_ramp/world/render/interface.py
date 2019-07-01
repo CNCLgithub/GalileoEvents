@@ -25,13 +25,6 @@ def make_args(args_d):
 
 def render(**kwargs):
     """ Subprocess call to blender
-
-    Arguments:
-        scene_str (str): The serialized tower scene
-        traces (dict): A collection of positions and orientations for each
-                       block across time.
-        theta (float): The camera angle in radians
-        out (str): The directory to save renders
     """
     out = ''
     if 'out' in kwargs:

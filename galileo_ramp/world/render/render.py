@@ -4,11 +4,15 @@
 """
 import os
 import sys
-import bpy
+try:
+    import bpy
+    import mathutils
+except:
+    # For documentation
+    print('No `bpy` available')
 import json
 import time
 import argparse
-import mathutils
 
 import numpy as np
 
@@ -227,6 +231,7 @@ class RampScene:
         :type resolution: tuple(int, int)
         :param camera_rot: Rotation for camera.
         :type camera_rot: float
+
         """
         if not os.path.isdir(output_name):
             os.mkdir(output_name)
@@ -260,14 +265,15 @@ class RampScene:
 
 # From https://stackoverflow.com/questions/11130156/suppress-stdout-stderr-print-from-python-functions
 class Suppressor(object):
-    """
-    A context manager for doing a "deep suppression" of stdout and stderr in
-    Python, i.e. will suppress all print, even if the print originates in a
-    compiled C/Fortran sub-function.
-       This will not suppress raised exceptions, since exceptions are printed
-    to stderr just before a script exits, and after the context manager has
-    exited (at least, I think that is why it lets exceptions through).
-    """
+
+    # A context manager for doing a "deep suppression" of stdout and stderr in
+    # Python, i.e. will suppress all print, even if the print originates in a
+    # compiled C/Fortran sub-function.
+
+    # This will not suppress raised exceptions, since exceptions are printed
+    # to stderr just before a script exits, and after the context manager has
+    # exited (at least, I think that is why it lets exceptions through).
+
     def __init__(self):
         # Open a pair of null files
         self.null_fds =  [os.open(os.devnull,os.O_RDWR) for x in range(2)]
