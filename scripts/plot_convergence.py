@@ -33,7 +33,7 @@ def plot_convergence(trace_path, out, collapse = False):
     """
     estimates, scores, result = trace.extract_chains(trace_path, maps = collapse)
     print(estimates)
-    estimates = np.exp(estimates)
+    # estimates = np.exp(estimates)
     print(estimates)
     xs = result['xs']
     latents = result['latents']
@@ -48,8 +48,9 @@ def plot_convergence(trace_path, out, collapse = False):
                       widths = 15.0, showmedians = True)
         ax.set_ylabel(latent_str)
         ax.set_xlabel('Time')
-        ax.set_ylim((0, 6))
-        gt = result['gt'][row]
+        ax.set_xlim((0, 900))
+        ax.set_ylim((-2.5, 2.5))
+        gt = np.log(result['gt'][row])
         ax.axhline(gt, lw=1.7, ls='--', label='GT')
 
     ax = axes[row + 1]

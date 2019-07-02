@@ -106,16 +106,21 @@ end;
 """
 Returns a choicemap for the GT of a given scene
 """
-function make_obs(scene::Scene; steps = 2)
+function make_obs(scene::Scene; steps::Int = 2, factor::Bool = false)
     positions, lin_vel = simulate(scene, Dict(), scene.nf)
     start = floor(scene.nf / steps)
     frames = range(start, scene.nf, length = steps)
     frames = Array{Int, 1}(collect(frames))
-    active_map = get_active(scene.balls, lin_vel)[frames, :]
+    if factor
+        active_map = get_active(scene.balls, lin_vel)[frames, :]
+        args = collect(zip(frames, eachrow(active_map)))
+    else
+        active_map = repeat(scene.balls, 1, steps)
+        args = collect(zip(frames, eachcol(active_map)))
+    end
     obs = Gen.choicemap()
     for i in frames
         obs[:obs => i => :pos] = positions[i, :, :]
     end
-    args = collect(zip(frames, eachrow(active_map)))
     return obs, args
 end;

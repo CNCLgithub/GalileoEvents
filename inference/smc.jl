@@ -11,13 +11,14 @@ struct InferenceParams
     n_particles::Int
     steps::Int
     resample::Real
-    prop::Array
+    factor::Bool
     rejuv::Function
+    prop::Matrix{Float64}
 end;
 
 struct InferenceResults
     weights::Matrix{Float64}
-    estimates::Array{Float64}
+    estimates::Array{Float64, 3}
 end
 
 ## Particle filter
@@ -52,12 +53,11 @@ function particle_filter(trial::Scene,
     # construct initial observations
     model = make_model(trial)
     ess = params.n_particles * params.resample
-    obs, args = make_obs(trial, steps = params.steps)
+    obs, args = make_obs(trial, steps = params.steps, factor = params.factor)
     results = InferenceResults(
         Matrix{Float64}(undef, length(args), params.n_particles),
-        Array{Float64,3}(undef, length(args),
-                         params.n_particles,
-                         length(trial.balls) * length(trial.latents)))
+        fill(NaN, (length(args), params.n_particles,
+                   length(trial.balls) * length(trial.latents))))
 
     let
         state = Nothing;
@@ -103,8 +103,7 @@ function run_inference(scene_args, dist_args, inf_args)
     scene = Scene(scene_args..., dist_args["prior"])
     # rejuv, addrs = gen_stupid_proposal(scene, dist_args["prop"])
     rejuv = gen_gibbs_trunc_norm
-    params = InferenceParams(inf_args[1:(end-1)]...,
-                             dist_args["prop"], rejuv)
+    params = InferenceParams(inf_args..., rejuv, dist_args["prop"])
     @time results, args = particle_filter(scene, params)
     frames = map(first, args)
     addrs = [o => l for l in latents for o in balls]
@@ -126,7 +125,7 @@ function test_inf(trial_path)
     scene_args = (dict, balls, ["density"], 900)
     dist_args = Dict("prior" => [[-2 2];],
                      "prop" => [[0.1 -2 2];])
-    inf_args = [10, 9, 0.5, 1]
+    inf_args = [10, 9, 0.5, false]
     d = run_inference(scene_args, dist_args, inf_args)
     print(json(d, 4))
 end;
