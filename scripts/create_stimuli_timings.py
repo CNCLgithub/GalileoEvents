@@ -22,11 +22,12 @@ def compute_timings(ramp_file, before, after, dur = 900):
     with open(ramp_file, 'r') as f:
         data = json.load(f)
     state = forward_model.simulate(data['scene'], dur)
-    state = state[-1]
-    collided = np.sum(state, axis = -1) > 0
+    collided = np.sum(state[-1], axis = -1) > 0
     collided = np.flatnonzero(collided)[:2].astype(int)
+    stopped = np.sum(np.abs(state[3]), axis = (2, 1)) > 1e-4
+    stopped = int(np.flatnonzero(stopped)[-1])
     return (collided[0] - before, collided[0] + after,
-            collided[1] - before, collided[1] + after, dur-1)
+            collided[1] - before, collided[1] + after, stopped)
 
 def main():
 
