@@ -19,7 +19,8 @@ from galileo_ramp.world.simulation import forward_model
 
 CONFIG = config.Config()
 
-def render_scene(src, out, res, mode, snapshot = False):
+def render_scene(src, out, res, mode,
+                 snapshot = False, gpu = False):
     """ Render tower with randomly sampled camera angle.
     For a given scene pair, render either the congruent or incongruent
     tower with the same camera angle.
@@ -54,10 +55,12 @@ def render_scene(src, out, res, mode, snapshot = False):
         out = out_path,
         render_mode = mode,
         resolution = res,
-        theta = 45,
+        theta = 1.5*np.pi,
     )
     if snapshot:
         kwargs['frames'] = [0]
+    if gpu:
+        kwargs['gpu'] = None
     render(**kwargs)
 
 def main():
@@ -69,17 +72,20 @@ def main():
     parser.add_argument('src', type = str, nargs = '+',
                         help = 'Path to scenes')
     parser.add_argument('--resolution', type = int, nargs = 2,
-                        default = (512,512),
+                        default = (1280,720),
                         help = 'Resolution for images')
     parser.add_argument('--run', type = str, default = 'local',
                         choices = ['batch', 'local'],
                         help = 'submission modes')
     parser.add_argument('--mode', type = str, default = 'none',
-                        choices = ['default', 'none', 'motion', 'frozen',])
+                        choices = ['default', 'none',],
+                        help = 'rendering mode.')
     parser.add_argument('--snapshot', action = 'store_true',
                         help = 'Only render first frame of each scene')
     parser.add_argument('--batch', type = int, default = 10,
                         help = 'Size of sbatch array.')
+    parser.add_argument('--gpu', action = 'store_true',
+                        help = 'Use CUDA rendering')
     parser.add_argument('--out', type = str, default = 'stimuli',
                         help = 'Path to render individual scene.')
 
@@ -96,7 +102,8 @@ def main():
     else:
         # compute rendering
         for src in args.src:
-            render_scene(src, out, args.resolution, args.mode, args.snapshot)
+            render_scene(src, out, args.resolution, args.mode,
+                         args.snapshot, args.gpu)
 
 def submit_sbatch(args, out, chunks = 100):
     """ Helper function that submits sbatch jobs.
@@ -124,6 +131,8 @@ def submit_sbatch(args, out, chunks = 100):
              '--out {0!s}'.format(out)]
     if args.snapshot:
         flags += ['--snapshot',]
+    if args.gpu:
+        flags += ['--gpu',]
     jobs = [(f,) for f in args.src]
     path = os.path.realpath(__file__)
     func = 'cd {0!s} && '.format(CONFIG['PATHS', 'root']) +\
