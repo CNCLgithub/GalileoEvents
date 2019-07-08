@@ -13,6 +13,11 @@ env
 galileo_ramp.egg-info
 .julia/
 
+# docs
+
+doc/build
+doc/_index.rst
+
 # miscellaneous
 
 julia.tar.gz
