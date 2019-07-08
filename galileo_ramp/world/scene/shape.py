@@ -3,7 +3,12 @@ from abc import ABC, abstractmethod
 
 class Shape(ABC):
 
-    """ Parent class for physical objects in RampWorld """
+    """ Parent class for physical objects in :mod:`galileo_ramp.world`
+
+    This class describes the interface for
+    physical properties, apearance, and geometry
+    of objects. 
+    """
 
     def __init__(self, appearance, dims, density, friction,
                  pos = None, angle = None):
@@ -28,8 +33,8 @@ class Shape(ABC):
     @property
     @abstractmethod
     def volume(self):
-        """
-        :returns: the volume the shape holds
+        """ Should be implemented by children.
+        :returns: volume in m^3
         :rtype: float
         """
         pass
@@ -37,6 +42,8 @@ class Shape(ABC):
     @property
     @abstractmethod
     def dimensions(self):
+        """ The xyz extremas of a given object type.
+        """
         pass
 
 
@@ -44,7 +51,7 @@ class Shape(ABC):
 
     @property
     def mass(self):
-        """
+        """ Returns the mass in units
         :returns: volume * density
         :rtype: float
         """
@@ -52,23 +59,28 @@ class Shape(ABC):
 
     @property
     def appearance(self):
+        """ Returns the appearance descriptor"""
         return self._appearance
 
     @property
     def density(self):
+        """ Returns the density in grams/m^3"""
         return self._density
 
 
     @property
     def friction(self):
+        """ Returns the friction coefficient used by Bullet3D"""
         return self._friction
 
     @property
     def position(self):
+        """ The XYZ coordinate of the object's COM"""
         return self._pos
 
     @property
     def orientation(self):
+        """ The wxyz quaternion for object's rotation"""
         return self._orien
 
     # ----------------   setters   -----------------#
@@ -111,8 +123,7 @@ class Shape(ABC):
 
     # ----------------   Methods   -----------------#
     def serialize(self):
-        """
-        :returns: a json friendly dictionary representation
+        """ Returns a json friendly dictionary representation
         :rtype: dict
         """
         d = {}
