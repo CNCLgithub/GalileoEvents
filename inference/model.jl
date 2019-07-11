@@ -10,7 +10,7 @@ struct Scene
     data::Dict
     balls::Array{String, 1}
     latents::Array{String, 1}
-    nf::Int
+    ts::Array{Int, 1}
     prior::Matrix{Float64}
 end;
 
@@ -24,15 +24,15 @@ function get_active(objs::Array{String},
     active_map = fill("", (n_frames, n_objs))
     for c = 1:n_objs
         t = findfirst(vels[:, c] .> 1e-2)
-        active_map[t:end, c] = fill(objs[c], n_frames-t+1)
+        if !isnothing(t)
+            active_map[t:end, c] = fill(objs[c], n_frames-t+1)
+        end
     end
     return active_map
 end
 
-"""
-Runs the forward model on the given scene,
-replacing any features found in `latents`
-"""
+# Runs the forward model on the given scene,
+# replacing any features found in `latents`
 @gen function simulate(scene::Scene, latents::Dict, frames::Int)
     # Add the features from the latents to the scene descriptions
     data = deepcopy(scene.data)
@@ -111,14 +111,14 @@ end;
 Returns a choicemap for the GT of a given scene
 and a list of objects to track for each observation.
 """
-function make_obs(scene::Scene; ts::Array{Int, 1},
-                  factorize::Bool = false)
+function make_obs(scene::Scene; factorize::Bool = false)
+    ts = scene.ts
     positions, lin_vel = simulate(scene, Dict(), ts[end])
-    if factor
+    if factorize
         active_map = get_active(scene.balls, lin_vel)[ts, :]
         args = collect(zip(ts, eachrow(active_map)))
     else
-        active_map = repeat(scene.balls, 1, steps)
+        active_map = repeat(scene.balls, 1, length(ts))
         args = collect(zip(ts, eachcol(active_map)))
     end
     obs = Gen.choicemap()

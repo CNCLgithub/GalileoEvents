@@ -2,16 +2,15 @@ using Gen
 using JSON
 using Printf
 using Base.Iterators
+using ProgressMeter
 
 include("model.jl")
 include("proposal.jl")
 
 
 struct InferenceParams
-    n_particles::Int
     steps::Int
-    resample::Real
-    factor::Bool
+    factorize::Bool
     rejuv::Function
     prop::Matrix{Float64}
 end;
@@ -20,6 +19,15 @@ struct InferenceResults
     weights::Matrix{Float64}
     estimates::Array{Float64, 3}
 end
+
+struct MHBlock
+    model
+    args::Tuple{Int, Array{String}}
+    obs
+    prop::Function
+    addrs
+    size::Tuple
+end;
 
 ## Particle filter
 
@@ -38,37 +46,38 @@ end;
 """
 Records inference results to two arrays.
 """
-function report_step!(weights, estimates, state, latents)
-    weights[:] = Gen.get_log_weights(state)
-    for p = 1:length(state.traces)
-        choices = Gen.get_choices(state.traces[p])
-        for l = 1:length(latents)
-            if !Gen.has_value(choices, latents[l])
-                continue
-            end
-            estimates[p, l] = choices[latents[l]]
+function report_step!(weights, estimates, state, latents, p)
+    weights[p] = Gen.get_score(state)
+    choices = Gen.get_choices(state)
+    for l = 1:length(latents)
+        if !Gen.has_value(choices, latents[l])
+            continue
         end
+        estimates[p, l] = choices[latents[l]]
     end
 end;
 
 """
 Peforms MH-MCMC on a given observation
 """
-function resim_mh(params::MHBlock)
+function resim_mh!(params::MHBlock)
 
-    steps = length(params.weights)
+    steps = params.size[1]
+    weights = Array{Float64, 1}(undef, steps)
+    estimates = fill(NaN, params.size)
 
     # Gen's `generate` function accepts a model, a tuple of arguments to the model,
     # and a ChoiceMap representing observations (or constraints to satisfy). It returns
     # a complete trace consistent with the observations, and an importance weight.
-    (tr, _) = generate(params.model, (), params.obs)
+    (tr, _) = generate(params.model, params.args, params.obs)
 
     # Perform resimulation updates
-    for it=1:steps
+    @showprogress 1 "Running resim-mh..." for it=1:steps
         tr = params.prop(tr)
-        report_step!(params.weights, params.latents, tr, params.addrs, it)
-        @printf "Iteration %d / %d\n" it steps
+        report_step!(weights, estimates, tr,
+                     params.addrs, it)
     end
+    return weights, estimates
 end;
 
 
@@ -77,12 +86,13 @@ Performs SMC using MH-MCMC across several observations
 """
 function smc(trial::Scene, params::InferenceParams)
     # construct initial observations
-    obs, args = make_obs(trial, steps = params.steps,
-                         factorize = params.factorize)
+    model = make_model(trial)
+    obs, args = make_obs(trial, factorize = params.factorize)
+    result_size = (length(args), params.steps,
+                   length(trial.balls) * length(trial.latents))
     results = InferenceResults(
         Matrix{Float64}(undef, length(args), params.steps),
-        fill(NaN, (length(args), params.steps,
-                   length(trial.balls) * length(trial.latents))))
+        fill(NaN, result_size))
 
     for (it, (t, active)) in enumerate(args)
         # Step to next observation
@@ -95,10 +105,10 @@ function smc(trial::Scene, params::InferenceParams)
         n_active = length(filter(x-> x!="", active))
         prop_params = collect(eachrow(repeat(params.prop, n_active)))
         rejuv = params.rejuv(addrs, prop_params)
-        block = MHBlock(model, cur_obs, rejuv, results.weights[it, :],
-                        results.estimates[it, :, :, :])
+        block = MHBlock(model, (t, active), cur_obs, rejuv,
+                        addrs, result_size[2:end])
         # Apply the proposal function to the MH procedure
-        resim_mh!(block)
+        results.weights[it, :], results.estimates[it, :, :] = resim_mh!(block)
     end
     return results, args
 end;
@@ -111,7 +121,6 @@ function run_inference(scene_args, dist_args, inf_args)
     gt, balls, latents, ts = scene_args
     # (tower json, unknown block ids, mass prior)
     scene = Scene(scene_args..., dist_args["prior"])
-    # rejuv, addrs = gen_stupid_proposal(scene, dist_args["prop"])
     rejuv = gen_gibbs_trunc_norm
     params = InferenceParams(inf_args..., rejuv, dist_args["prop"])
     @time results, args = smc(scene, params)
@@ -125,6 +134,12 @@ function run_inference(scene_args, dist_args, inf_args)
                  for o in balls]),])
     return d
 end;
+# struct InferenceParams
+#     steps::Int
+#     factorize::Bool
+#     rejuv::Function
+#     prop::Matrix{Float64}
+# end;
 
 function test_inf(trial_path)
 
@@ -132,12 +147,12 @@ function test_inf(trial_path)
     dict = JSON.parse(str)["scene"]
 
     balls = collect(keys(dict["objects"]))
-    ts = [1 2 3 4]
+    ts = [10, 100]
     scene_args = (dict, balls, ["density"], ts)
 
     dist_args = Dict("prior" => [[-2 2];],
                      "prop" => [[0.1 -2 2];])
-    inf_args = [10, 9, 0.5, false]
+    inf_args = [2000, true]
     d = run_inference(scene_args, dist_args, inf_args)
     print(json(d, 4))
 end;
