@@ -127,7 +127,7 @@ def main():
     if not os.path.isdir(movie_dir):
         os.mkdir(movie_dir)
 
-    for trial_path, times in timings:
+    for trial_path, times in timings[1:2]:
 
         parts = trial_path.split(os.sep)
         trial = '{0!s}_{1!s}'.format(parts[-2],
@@ -135,7 +135,7 @@ def main():
         trial_path = os.path.join(render_src, trial)
 
         # Create motion component
-        src_path = '{0!s}/render/motion/%d.png'.format(trial_path)
+        src_path = '{0!s}/render/%d.png'.format(trial_path)
         src_path = os.path.join(render_src, src_path)
 
         for cond, point in enumerate(times):

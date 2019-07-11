@@ -16,7 +16,9 @@ cmd = '/blender/blender -noaudio --background {0!s} -P {1!s}'
 def make_args(args_d):
     cmd = ['--', '--save_world']
     for k,v in args_d.items():
-        if isinstance(v, str) or not isinstance(v, Iterable):
+        if v is None:
+            cmd += ['--{0!s}'.format(k),]
+        elif isinstance(v, str) or not isinstance(v, Iterable):
             cmd += ['--{0!s}'.format(k), str(v)]
         else :
             cmd += ['--{0!s}'.format(k),
