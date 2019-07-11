@@ -173,17 +173,17 @@ class RampScene:
         :param rot: Angle in radians along path.
         :type rot: float
         """
-        radius = 70.0
+        # radius = 70.0
         # Move camera to position on ring
-        xyz = [np.cos(rot) * radius, np.sin(rot) * radius, 50]
-        camera = bpy.data.objects['Camera']
-        camera.location = xyz
-        bpy.context.scene.update()
+        # xyz = [np.cos(rot) * radius, np.sin(rot) * radius, 50]
+        # camera = bpy.data.objects['Camera']
+        # camera.location = xyz
+        # bpy.context.scene.update()
         # The camera automatically tracks Empty
-        camera_track = bpy.data.objects['Empty']
-        self.move_obj(camera_track, [0, 0, 1])
-        camera.keyframe_insert(data_path='location', index = -1)
-        camera.keyframe_insert(data_path='rotation_quaternion', index = -1)
+        # camera_track = bpy.data.objects['Empty']
+        # self.move_obj(camera_track, [0, 0, 1])
+        # camera.keyframe_insert(data_path='location', index = -1)
+        # camera.keyframe_insert(data_path='rotation_quaternion', index = -1)
 
 
     def _frame_set(self,frame):

@@ -10,7 +10,7 @@ out="stimuli"
 for pos in "${positions[@]}";do
     rexp=".+\/${pos}_[0-9]+\.json"
     srcs=($(echo "$singleramp" | grep -E -e "$rexp"))
-    ./scripts/render_stimuli.py --mode "motion" --out "$out" --run "batch" \
+    ./scripts/render_stimuli.py --mode "default" --resolution 854 480 --out "$out" --run "batch" \
                                 "${srcs[@]}"
 done
 
