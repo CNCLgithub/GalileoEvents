@@ -4,7 +4,7 @@ from .shape import Shape
 
 class Ball(Shape):
 
-    """Instance of Shape describing spheres
+    """Instance of :mod:`.shape.Shape` describing spheres
     """
 
     # ---------------- Properties -----------------#
