@@ -127,7 +127,7 @@ def main():
     if not os.path.isdir(movie_dir):
         os.mkdir(movie_dir)
 
-    for trial_path, times in timings[1:2]:
+    for trial_path, times in timings:
 
         parts = trial_path.split(os.sep)
         trial = '{0!s}_{1!s}'.format(parts[-2],
