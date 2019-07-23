@@ -167,8 +167,10 @@ def main():
 
     # Setup positions
     n_steps = args.ramp_steps + args.table_steps
+
     ramp_pcts = np.linspace(0.9, 0.4, args.ramp_steps)
     table_pcts = np.linspace(0.2, 0.7, args.table_steps)
+
     n_table = n_assignments - args.n_ramp
     n_positions = ncr(args.ramp_steps, args.n_ramp) * \
         ncr(args.table_steps, n_table)

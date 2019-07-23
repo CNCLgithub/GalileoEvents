@@ -19,6 +19,11 @@ from galileo_ramp.world.simulation import forward_model
 
 CONFIG = config.Config()
 
+render_path = os.path.join(CONFIG['PATHS', 'root'],
+                           'galileo_ramp', 'world', 'render', 'render.py')
+scene_path = os.path.join(CONFIG['PATHS', 'root'],
+                           'galileo_ramp', 'world', 'render', 'new_scene.blend')
+
 def render_scene(src, out, res, mode,
                  snapshot = False, gpu = False):
     """ Render tower with randomly sampled camera angle.
@@ -56,6 +61,8 @@ def render_scene(src, out, res, mode,
         render_mode = mode,
         resolution = res,
         theta = 1.5*np.pi,
+        render = render_path,
+        materials = scene_path,
     )
     if snapshot:
         kwargs['frames'] = [0]
