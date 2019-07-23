@@ -55,9 +55,17 @@ def profile_scene(appearances, radius, base_scene, n_ramp,
         scene.add_object(str(i), ball, pcts[i])
 
 
+
+    r_str = json.dumps(scene.serialize(),
+                       indent = 4, sort_keys = True,
+                       cls = forward_model.TraceEncoder)
+    out = os.path.join(CONFIG['PATHS', 'scenes'], 'intro', 'intro-2.json')
+    print('Writing to ' + out)
+    with open(out, 'w') as f:
+        f.write(r_str)
+
     s = forward_model.simulate(scene.serialize(), 900, debug =True)
     print(np.sum(s[-1], axis = 0))
-
 
 def main():
 
@@ -95,13 +103,13 @@ def main():
     # Setup positions
     ramp_pcts = np.array([0.525])
     table_pcts = np.array([0.2, 0.45])
-    mass_assign = np.array((1, 4, 4))
+    mass_assign = np.array((1.5, 4, 1))
 
     base = RampScene(args.table, args.ramp,
                      ramp_angle = args.ramp_angle * (np.pi/180.))
 
     params = {
-        'appearances' : ['R', 'B', 'G'],
+        'appearances' : ['B', 'R', 'B'],
         'radius' : args.radius,
         'base_scene' : base,
         'n_ramp' : args.n_ramp,
