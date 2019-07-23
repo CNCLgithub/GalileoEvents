@@ -6,12 +6,12 @@ import subprocess
 from collections.abc import Iterable
 from galileo_ramp.world.simulation.forward_model import TraceEncoder
 
-dir_path = os.path.dirname(os.path.realpath(__file__))
+dir_path = os.path.dirname(__file__)
 render_path = os.path.join(dir_path, 'render.py')
 
 mat_path = os.path.join(dir_path, 'new_scene.blend')
 # takes the blend file and the bpy script
-cmd = '/blender/blender -noaudio --background {0!s} -P {1!s}'
+cmd = 'xvfb-run -a /blender/blender --verbose 2 -noaudio --background {0!s} -P {1!s} -t {2:d} --debug-all'
 
 def make_args(args_d):
     cmd = ['--', '--save_world']
@@ -43,8 +43,17 @@ def render(**kwargs):
     else:
         blend_file = mat_path
 
-    _cmd = cmd.format(blend_file, render_path)
+    if 'render' in kwargs:
+        render_path = kwargs.pop('render')
+
+    if 'threads' in kwargs:
+        threads = kwargs.pop('threads')
+    else:
+        threads = len(os.sched_getaffinity(0))
+
+    _cmd = cmd.format(blend_file, render_path, threads)
     _cmd = shlex.split(_cmd)
     _cmd += make_args(kwargs)
     _cmd += ['--trace', t_path]
+    print('Running blender')
     p = subprocess.run(_cmd)
