@@ -6,7 +6,7 @@
 # For initial run, all should be set to true.
 # "pull" : Download from host
 # "build" : Build locally
-BUILDCONT="pull"
+BUILDCONT="true"
 BUILDENV=true
 
 . load_config.sh
@@ -54,7 +54,8 @@ if [ $BUILDENV = true ]; then
             BS="${BS} -B $i:$i"
         fi
     done
-    ${SING} ${BS} ${CONT} bash -c "yes | conda create -p ${ENVPATH} python=3.6"
+    ${SING} ${BS} ${CONT} bash -c "cd ${PWD} \
+            && yes | conda create -p ${ENVPATH} python=3.6"
     chmod +x run.sh
     ./run.sh "python3 -m pip install -r requirements.txt"
     ./run.sh "python3 -m pip install -e ."

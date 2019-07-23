@@ -6,7 +6,8 @@
 scenes=$(find "${PATHS[scenes]}" -mindepth 2 -maxdepth 2 -type f)
 singleramp=$(echo "$scenes" | grep -E -e ".+\/1_.+\/[0-9]+_[0-9]+\.json")
 doubleramp=$(echo "$scenes" | grep -E -e ".+\/2_.+\/[0-9]+_[0-9]+\.json")
-positions=(1 39)
+# positions=(1 39)
+positions=(17 30)
 out="stimuli"
 # Change mode for single or double ramp
 # mode=$singleramp

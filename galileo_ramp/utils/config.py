@@ -7,11 +7,13 @@ Generates user-specific config for current project.
 
 import os
 import errno
+import inspect
 import argparse
 import subprocess
 import configparser
+import galileo_ramp
 
-project_root = os.path.dirname(os.path.realpath(__file__))
+project_root = inspect.getfile(galileo_ramp)
 project_root = os.path.dirname(project_root)
 project_root = os.path.dirname(project_root)
 

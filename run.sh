@@ -21,5 +21,6 @@ done
 ${SING} ${BS} ${CONT} bash -c "source activate ${PWD}/${ENV[env]} \
         && export JULIA_DEPOT_PATH=${ENV[julia_depot]} \
         && export JULIA_PROJECT=${PWD} \
+        && cd ${PWD} \
         && exec $COMMAND \
         && source deactivate"
