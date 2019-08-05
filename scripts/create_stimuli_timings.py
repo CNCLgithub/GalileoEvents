@@ -14,6 +14,7 @@ from galileo_ramp.world.simulation import forward_model
 
 CONFIG = config.Config()
 
+
 def compute_timings(ramp_file, before, after, dur = 900):
     """ Returns a tuple describing 5 temporal conditions
 
