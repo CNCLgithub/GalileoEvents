@@ -51,6 +51,7 @@ def profile_scene(appearances, radius, base_scene, n_ramp,
     scene = copy.deepcopy(base_scene)
     pcts = np.concatenate((np.array(ramp_pcts) + 1, table_pcts), axis = 0)
     uniques = np.unique(densities)
+    uniques = np.sort(uniques)
     color_map = dict(zip(uniques, appearances))
     for i in range(len(appearances)):
         dens = densities[i]
@@ -61,6 +62,7 @@ def profile_scene(appearances, radius, base_scene, n_ramp,
     trace = forward_model.simulate(scene.serialize(), 900)
     result = {
         'scene' : scene.serialize(),
+        # can optionally add physics trace here; will slow things down...
         # 'trace' : dict(zip(['pos', 'orn', 'lvl', 'avl', 'col'], trace))
     }
     r_str = json.dumps(result, indent = 4, sort_keys = True,
