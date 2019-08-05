@@ -85,7 +85,7 @@ class RampScene:
         else:
             obj.rotation_mode = 'QUATERNION'
             obj.rotation_quaternion = np.roll(rot, 1) # [3, 0, 1, 2]
-        bpy.context.scene.update()
+        bpy.context.view_layer.update()
 
     def move_obj(self, obj, pos):
         """ Moves the object.
@@ -95,16 +95,16 @@ class RampScene:
         self.select_obj(obj)
         pos = mathutils.Vector(pos)
         obj.location = pos
-        bpy.context.scene.update()
+        bpy.context.view_layer.update()
 
     def scale_obj(self, obj, dims):
         """ Rescales to the object to the given dimensions.
         """
         self.select_obj(obj)
         obj.dimensions = dims
-        bpy.context.scene.update()
+        bpy.context.view_layer.update()
         bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY')
-        bpy.context.scene.update()
+        bpy.context.view_layer.update()
 
     def set_appearance(self, obj, mat):
         """ Assigns a material to a block.
@@ -117,7 +117,7 @@ class RampScene:
         if mat == 'Wood':
             mat = 'rough_wood_{0:d}'.format(1)
         obj.active_material = bpy.data.materials[mat]
-        bpy.context.scene.update()
+        bpy.context.view_layer.update()
 
     def create_block(self, name, object_d):
         """ Initializes a ball.
@@ -178,7 +178,7 @@ class RampScene:
         # xyz = [np.cos(rot) * radius, np.sin(rot) * radius, 50]
         # camera = bpy.data.objects['Camera']
         # camera.location = xyz
-        # bpy.context.scene.update()
+        # bpy.context.view_layer.update()
         # The camera automatically tracks Empty
         # camera_track = bpy.data.objects['Empty']
         # self.move_obj(camera_track, [0, 0, 1])
@@ -214,7 +214,7 @@ class RampScene:
         n_sims = len(self.trace)
         self._frame_set(frame)
         self.set_camera(rot)
-        bpy.context.scene.update()
+        bpy.context.view_layer.update()
 
 
     def render(self, output_name, frames,
