@@ -6,8 +6,8 @@
 # For initial run, all should be set to true.
 # "pull" : Download from host
 # "build" : Build locally
-BUILDCONT="true"
-BUILDENV=true
+BUILDCONT="build"
+BUILDENV="false"
 
 . load_config.sh
 

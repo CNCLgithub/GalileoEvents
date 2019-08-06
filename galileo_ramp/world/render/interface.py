@@ -7,11 +7,11 @@ from collections.abc import Iterable
 from galileo_ramp.world.simulation.forward_model import TraceEncoder
 
 dir_path = os.path.dirname(__file__)
-render_path = os.path.join(dir_path, 'render.py')
+RENDERFILE = os.path.join(dir_path, 'render.py')
 
-mat_path = os.path.join(dir_path, 'new_scene.blend')
+BLENDFILE = os.path.join(dir_path, 'new_scene.blend')
 # takes the blend file and the bpy script
-cmd = 'xvfb-run -a /blender/blender --verbose 2 -noaudio --background {0!s} -P {1!s} -t {2:d} --debug-all'
+cmd = 'xvfb-run -a /blender/blender -noaudio --background {0!s} -P {1!s} -t {2:d}'
 
 def make_args(args_d):
     cmd = ['--', '--save_world']
@@ -41,10 +41,12 @@ def render(**kwargs):
     if 'materials' in kwargs:
         blend_file = kwargs.pop('materials')
     else:
-        blend_file = mat_path
+        blend_file = BLENDFILE
 
     if 'render' in kwargs:
         render_path = kwargs.pop('render')
+    else:
+        render_path = RENDERFILE
 
     if 'threads' in kwargs:
         threads = kwargs.pop('threads')

@@ -66,7 +66,8 @@ def main():
                         choices = ['batch', 'local'],
                         help = 'submission modes')
     parser.add_argument('--mode', type = str, default = 'none',
-                        choices = ['default', 'none', 'motion', 'frozen',])
+                        choices = ['default', 'none',],
+                        help = 'rendering mode.')
     parser.add_argument('--out', type = str,
                         help = 'Path to render individual scene.')
     parser.add_argument('--res', type = int, nargs = 2, default = (512,512),

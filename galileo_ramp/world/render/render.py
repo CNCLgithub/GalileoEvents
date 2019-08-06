@@ -68,9 +68,8 @@ class RampScene:
         """ Sets the given object into active context.
         """
         bpy.ops.object.select_all(action='DESELECT')
-        obj.select = True
-        bpy.context.scene.objects.active
-        bpy.context.scene.update()
+        obj.select_set(True)
+        bpy.context.view_layer.update()
 
 
     def rotate_obj(self, obj, rot):
@@ -128,10 +127,9 @@ class RampScene:
         :type object_d: dict
         """
         bpy.ops.mesh.primitive_ico_sphere_add(location=object_d['position'],
-                                              view_align=False,
                                               enter_editmode=False,
                                               subdivisions=7,
-                                              size = object_d['dims'][0])
+                                              radius = object_d['dims'][0])
         ob = bpy.context.object
         ob.name = name
         ob.show_name = True
@@ -159,13 +157,14 @@ class RampScene:
     def set_rendering_params(self, resolution):
         """ Configures various settings for rendering such as resolution.
         """
+        bpy.context.scene.render.engine = 'BLENDER_EEVEE'
         bpy.context.scene.render.resolution_x = resolution[0]
         bpy.context.scene.render.resolution_y = resolution[1]
         bpy.context.scene.render.resolution_percentage = 100
-        bpy.context.scene.cycles.samples = 128
-        bpy.context.scene.render.tile_x = 16
-        bpy.context.scene.render.tile_y = 16
-        bpy.context.scene.render.engine = 'CYCLES'
+        # bpy.context.scene.cycles.samples = 128
+        # bpy.context.scene.render.tile_x = 16
+        # bpy.context.scene.render.tile_y = 16
+        # bpy.context.scene.render.engine = 'CYCLES'
 
     def set_camera(self, rot):
         """ Moves the camera along a circular path.
