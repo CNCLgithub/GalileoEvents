@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import shlex
 import argparse
@@ -11,7 +12,7 @@ RENDERFILE = os.path.join(dir_path, 'render.py')
 
 BLENDFILE = os.path.join(dir_path, 'new_scene.blend')
 # takes the blend file and the bpy script
-cmd = 'xvfb-run -a /blender/blender -noaudio --background {0!s} -P {1!s} -t {2:d}'
+cmd = 'xvfb-run -a /blender/blender --verbose 2 -noaudio --background {0!s} -P {1!s} -t {2:d}'
 
 def make_args(args_d):
     cmd = ['--', '--save_world']
@@ -58,4 +59,5 @@ def render(**kwargs):
     _cmd += make_args(kwargs)
     _cmd += ['--trace', t_path]
     print('Running blender')
+    sys.stdout.flush()
     p = subprocess.run(_cmd)

@@ -50,8 +50,8 @@ def profile_scene(appearances, radius, base_scene, n_ramp,
     # Add balls to ramp scene
     scene = copy.deepcopy(base_scene)
     pcts = np.concatenate((np.array(ramp_pcts) + 1, table_pcts), axis = 0)
-    uniques = np.unique(densities)
-    uniques = np.sort(uniques)
+    u, ind = np.unique(densities, return_index=True)
+    uniques = u[np.argsort(ind)]
     color_map = dict(zip(uniques, appearances))
     for i in range(len(appearances)):
         dens = densities[i]

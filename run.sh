@@ -9,8 +9,7 @@ CONT="${ENV['cont']}"
 COMMAND="$@"
 
 # Enter the container and run the command
-# SING="${ENV['path']} exec --nv"
-SING="${ENV['path']} exec"
+SING="${ENV['path']} exec --nv"
 mounts=(${ENV[mounts]})
 BS=""
 for i in "${mounts[@]}";do

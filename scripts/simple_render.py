@@ -43,7 +43,7 @@ def render_scene(src, out, res, mode, snapshot = False):
         trace = dict(zip(['pos', 'orn', 'lvl', 'avl', 'col'], trace))
     # Render
     kwargs = dict(
-        scene = json.dumps(scene,),
+        scene = src,
         trace = trace,
         out = out,
         render_mode = mode,

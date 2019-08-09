@@ -55,7 +55,7 @@ def render_scene(src, out, res, mode,
         trace = dict(zip(['pos', 'orn', 'lvl', 'avl', 'col'], trace))
     # Render
     kwargs = dict(
-        scene = json.dumps(scene,),
+        scene = src,
         trace = trace,
         out = out_path,
         render_mode = mode,
@@ -79,7 +79,7 @@ def main():
     parser.add_argument('src', type = str, nargs = '+',
                         help = 'Path to scenes')
     parser.add_argument('--resolution', type = int, nargs = 2,
-                        default = (1280,720),
+                        default = (854, 480),
                         help = 'Resolution for images')
     parser.add_argument('--run', type = str, default = 'local',
                         choices = ['batch', 'local'],
@@ -125,8 +125,8 @@ def submit_sbatch(args, out, chunks = 100):
     interpreter = '#!/bin/bash'
     extras = []
     resources = {
-        'cpus-per-task' : '8',
-        'mem-per-cpu' : '2GB',
+        'cpus-per-task' : '12',
+        'mem-per-cpu' : '300MB',
         'time' : '1-0',
         'qos' : 'use-everything',
         'requeue' : None,

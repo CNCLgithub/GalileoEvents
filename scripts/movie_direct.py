@@ -46,7 +46,7 @@ def main():
 
 
     # Create motion component
-    src_path = '{0!s}/render/%04d.png'.format(render_src)
+    src_path = '{0!s}/%04d.png'.format(render_src)
     src_path = os.path.join(render_src, src_path)
 
     for t in args.timings:

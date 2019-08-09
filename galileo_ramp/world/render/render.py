@@ -16,6 +16,8 @@ import argparse
 
 import numpy as np
 
+# Flush stdout in case blender is complaining
+sys.stdout.flush()
 
 class RampScene:
 
@@ -39,6 +41,8 @@ class RampScene:
 
         # Parse scene structure
         self.load_scene(scene)
+        print('Loaded scene')
+        sys.stdout.flush()
 
     @property
     def trace(self):
@@ -157,14 +161,14 @@ class RampScene:
     def set_rendering_params(self, resolution):
         """ Configures various settings for rendering such as resolution.
         """
-        bpy.context.scene.render.engine = 'BLENDER_EEVEE'
+        # bpy.context.scene.render.engine = 'CYCLES'
+        # bpy.context.scene.render.engine = 'BLENDER_EEVEE'
         bpy.context.scene.render.resolution_x = resolution[0]
         bpy.context.scene.render.resolution_y = resolution[1]
         bpy.context.scene.render.resolution_percentage = 100
         # bpy.context.scene.cycles.samples = 128
         # bpy.context.scene.render.tile_x = 16
         # bpy.context.scene.render.tile_y = 16
-        # bpy.context.scene.render.engine = 'CYCLES'
 
     def set_camera(self, rot):
         """ Moves the camera along a circular path.
@@ -211,9 +215,12 @@ class RampScene:
             frame = len(self.trace[0]['position']) + frame
         bpy.context.scene.frame_set(frame)
         n_sims = len(self.trace)
+        print('Setting frame {0:d}'.format(frame))
+        sys.stdout.flush()
         self._frame_set(frame)
-        self.set_camera(rot)
         bpy.context.view_layer.update()
+        print('Setting frame {0:d} ...done'.format(frame))
+        sys.stdout.flush()
 
 
     def render(self, output_name, frames,
@@ -244,14 +251,18 @@ class RampScene:
                 msg = 'Frame {} already rendered at {}'
                 msg = msg.format(i, out)
                 print(msg)
+                sys.stdout.flush()
                 continue
             bpy.context.scene.render.filepath = out
             self.frame_set(frame, cam)
             t_0 = time.time()
+            print('Rendering frame {0:d}'.format(i))
+            sys.stdout.flush()
             with Suppressor():
                 bpy.ops.render.render(write_still=True)
             dur = time.time() - t_0
             print('Rendering frame {} at {} took {}s'.format(i, out, dur))
+            sys.stdout.flush()
 
 
     def save(self, out, frames):
@@ -297,7 +308,7 @@ def parser(args):
     """Parses extra arguments
     """
     p = argparse.ArgumentParser(description = 'Renders blockworld scene')
-    p.add_argument('--scene', type = json.loads,
+    p.add_argument('--scene', type =load_data,
                    help = 'Tower json describing the scene.')
     p.add_argument('--trace', type = load_trace,
                    help = 'Trace json for physics.')
@@ -325,6 +336,13 @@ def load_trace(path):
         str = f.read()
         traces = json.loads(str)
     return traces
+
+def load_data(path):
+    """Helper that loads trace file"""
+    with open(path, 'r') as f:
+        str = f.read()
+        traces = json.loads(str)
+    return traces['scene']
 
 def main():
     argv = sys.argv
