@@ -50,7 +50,8 @@ def profile_scene(appearances, radius, base_scene, n_ramp,
     # Add balls to ramp scene
     scene = copy.deepcopy(base_scene)
     pcts = np.concatenate((np.array(ramp_pcts) + 1, table_pcts), axis = 0)
-    uniques = np.unique(densities)
+    u, ind = np.unique(densities, return_index=True)
+    uniques = u[np.argsort(ind)]
     color_map = dict(zip(uniques, appearances))
     for i in range(len(appearances)):
         dens = densities[i]
@@ -61,6 +62,7 @@ def profile_scene(appearances, radius, base_scene, n_ramp,
     trace = forward_model.simulate(scene.serialize(), 900)
     result = {
         'scene' : scene.serialize(),
+        # can optionally add physics trace here; will slow things down...
         # 'trace' : dict(zip(['pos', 'orn', 'lvl', 'avl', 'col'], trace))
     }
     r_str = json.dumps(result, indent = 4, sort_keys = True,
@@ -167,8 +169,10 @@ def main():
 
     # Setup positions
     n_steps = args.ramp_steps + args.table_steps
+
     ramp_pcts = np.linspace(0.9, 0.4, args.ramp_steps)
     table_pcts = np.linspace(0.2, 0.7, args.table_steps)
+
     n_table = n_assignments - args.n_ramp
     n_positions = ncr(args.ramp_steps, args.n_ramp) * \
         ncr(args.table_steps, n_table)

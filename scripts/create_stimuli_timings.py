@@ -14,6 +14,7 @@ from galileo_ramp.world.simulation import forward_model
 
 CONFIG = config.Config()
 
+
 def compute_timings(ramp_file, before, after, dur = 900):
     """ Returns a tuple describing 5 temporal conditions
 
@@ -23,8 +24,9 @@ def compute_timings(ramp_file, before, after, dur = 900):
         data = json.load(f)
     state = forward_model.simulate(data['scene'], dur)
     collided = np.sum(state[-1], axis = -1) > 0
-    collided = np.flatnonzero(collided)[:2].astype(int)
-    stopped = np.sum(np.abs(state[3]), axis = (2, 1)) > 1e-4
+    collided = np.flatnonzero(collided).astype(int)
+    # Find the time when all balls stop moving
+    stopped = np.sum(np.abs(state[3]), axis = (2, 1)) > 1e-3
     stopped = int(np.flatnonzero(stopped)[-1])
     return (collided[0] - before, collided[0] + after,
             collided[1] - before, collided[1] + after, stopped)

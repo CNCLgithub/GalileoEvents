@@ -45,6 +45,8 @@ def get_collisions(ramp_file):
     state = state[-1]
     collided = np.sum(state, axis = -1) > 0
     indeces = np.flatnonzero(collided)
+    print(ramp_file)
+    print(indeces)
     delta = (indeces[1] - indeces[0])*(100./6.)
     return delta
 
@@ -94,9 +96,9 @@ def main():
         positions = json.load(f)
 
     durations = []
+    pos_suffix = '{0!s}_*/'.format(args.on_ramp) + '{0:d}_*.json'
     for pos in positions:
-        pos_suffix = '1_*/{0:d}_*.json'.format(pos)
-        scene_paths = glob.glob(os.path.join(out_path, pos_suffix))
+        scene_paths = glob.glob(os.path.join(out_path, pos_suffix.format(pos)))
         t = list(map(get_collisions, scene_paths))
         durations.append(t)
 

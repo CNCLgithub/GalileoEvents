@@ -16,6 +16,8 @@ import argparse
 
 import numpy as np
 
+# Flush stdout in case blender is complaining
+sys.stdout.flush()
 
 class RampScene:
 
@@ -39,6 +41,8 @@ class RampScene:
 
         # Parse scene structure
         self.load_scene(scene)
+        print('Loaded scene')
+        sys.stdout.flush()
 
     @property
     def trace(self):
@@ -68,9 +72,8 @@ class RampScene:
         """ Sets the given object into active context.
         """
         bpy.ops.object.select_all(action='DESELECT')
-        obj.select = True
-        bpy.context.scene.objects.active
-        bpy.context.scene.update()
+        obj.select_set(True)
+        bpy.context.view_layer.update()
 
 
     def rotate_obj(self, obj, rot):
@@ -85,7 +88,7 @@ class RampScene:
         else:
             obj.rotation_mode = 'QUATERNION'
             obj.rotation_quaternion = np.roll(rot, 1) # [3, 0, 1, 2]
-        bpy.context.scene.update()
+        bpy.context.view_layer.update()
 
     def move_obj(self, obj, pos):
         """ Moves the object.
@@ -95,16 +98,16 @@ class RampScene:
         self.select_obj(obj)
         pos = mathutils.Vector(pos)
         obj.location = pos
-        bpy.context.scene.update()
+        bpy.context.view_layer.update()
 
     def scale_obj(self, obj, dims):
         """ Rescales to the object to the given dimensions.
         """
         self.select_obj(obj)
         obj.dimensions = dims
-        bpy.context.scene.update()
+        bpy.context.view_layer.update()
         bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY')
-        bpy.context.scene.update()
+        bpy.context.view_layer.update()
 
     def set_appearance(self, obj, mat):
         """ Assigns a material to a block.
@@ -117,7 +120,7 @@ class RampScene:
         if mat == 'Wood':
             mat = 'rough_wood_{0:d}'.format(1)
         obj.active_material = bpy.data.materials[mat]
-        bpy.context.scene.update()
+        bpy.context.view_layer.update()
 
     def create_block(self, name, object_d):
         """ Initializes a ball.
@@ -128,10 +131,9 @@ class RampScene:
         :type object_d: dict
         """
         bpy.ops.mesh.primitive_ico_sphere_add(location=object_d['position'],
-                                              view_align=False,
                                               enter_editmode=False,
                                               subdivisions=7,
-                                              size = object_d['dims'][0])
+                                              radius = object_d['dims'][0])
         ob = bpy.context.object
         ob.name = name
         ob.show_name = True
@@ -159,13 +161,14 @@ class RampScene:
     def set_rendering_params(self, resolution):
         """ Configures various settings for rendering such as resolution.
         """
+        # bpy.context.scene.render.engine = 'CYCLES'
+        # bpy.context.scene.render.engine = 'BLENDER_EEVEE'
         bpy.context.scene.render.resolution_x = resolution[0]
         bpy.context.scene.render.resolution_y = resolution[1]
         bpy.context.scene.render.resolution_percentage = 100
-        bpy.context.scene.cycles.samples = 128
-        bpy.context.scene.render.tile_x = 16
-        bpy.context.scene.render.tile_y = 16
-        bpy.context.scene.render.engine = 'CYCLES'
+        # bpy.context.scene.cycles.samples = 128
+        # bpy.context.scene.render.tile_x = 16
+        # bpy.context.scene.render.tile_y = 16
 
     def set_camera(self, rot):
         """ Moves the camera along a circular path.
@@ -178,7 +181,7 @@ class RampScene:
         # xyz = [np.cos(rot) * radius, np.sin(rot) * radius, 50]
         # camera = bpy.data.objects['Camera']
         # camera.location = xyz
-        # bpy.context.scene.update()
+        # bpy.context.view_layer.update()
         # The camera automatically tracks Empty
         # camera_track = bpy.data.objects['Empty']
         # self.move_obj(camera_track, [0, 0, 1])
@@ -212,9 +215,12 @@ class RampScene:
             frame = len(self.trace[0]['position']) + frame
         bpy.context.scene.frame_set(frame)
         n_sims = len(self.trace)
+        print('Setting frame {0:d}'.format(frame))
+        sys.stdout.flush()
         self._frame_set(frame)
-        self.set_camera(rot)
-        bpy.context.scene.update()
+        bpy.context.view_layer.update()
+        print('Setting frame {0:d} ...done'.format(frame))
+        sys.stdout.flush()
 
 
     def render(self, output_name, frames,
@@ -245,14 +251,18 @@ class RampScene:
                 msg = 'Frame {} already rendered at {}'
                 msg = msg.format(i, out)
                 print(msg)
+                sys.stdout.flush()
                 continue
             bpy.context.scene.render.filepath = out
             self.frame_set(frame, cam)
             t_0 = time.time()
+            print('Rendering frame {0:d}'.format(i))
+            sys.stdout.flush()
             with Suppressor():
                 bpy.ops.render.render(write_still=True)
             dur = time.time() - t_0
             print('Rendering frame {} at {} took {}s'.format(i, out, dur))
+            sys.stdout.flush()
 
 
     def save(self, out, frames):
@@ -298,7 +308,7 @@ def parser(args):
     """Parses extra arguments
     """
     p = argparse.ArgumentParser(description = 'Renders blockworld scene')
-    p.add_argument('--scene', type = json.loads,
+    p.add_argument('--scene', type =load_data,
                    help = 'Tower json describing the scene.')
     p.add_argument('--trace', type = load_trace,
                    help = 'Trace json for physics.')
@@ -326,6 +336,13 @@ def load_trace(path):
         str = f.read()
         traces = json.loads(str)
     return traces
+
+def load_data(path):
+    """Helper that loads trace file"""
+    with open(path, 'r') as f:
+        str = f.read()
+        traces = json.loads(str)
+    return traces['scene']
 
 def main():
     argv = sys.argv

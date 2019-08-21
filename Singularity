@@ -43,7 +43,8 @@ from: nvidia/cuda:10.0-cudnn7-devel
                      libxi6 \
                      libc6 \
                      libgl1-mesa-dev \
-                     mesa-utils
+                     mesa-utils \
+                     xvfb
 
 
 
@@ -51,7 +52,7 @@ from: nvidia/cuda:10.0-cudnn7-devel
 
  # Install Julia
  tar xvzf "/julia.tar.gz"
- ln -s /julia-1.0.4/bin/julia /usr/bin/julia
+ ln -s /julia-1.1.1/bin/julia /usr/bin/julia
  chmod +x /usr/bin/julia
 
  # Setup /mybin
@@ -60,7 +61,7 @@ from: nvidia/cuda:10.0-cudnn7-devel
  # Setup blender
  tar xvjf /blender.tar.bz2
  rm /blender.tar.bz2
- mv blender-2.79* /blender
+ mv blender-2.80* /blender
  chmod +x blender/blender
 
  # Setup conda
