@@ -22,7 +22,9 @@ def get_colors(scene_file):
     objects = scene['scene']['objects']
     n_objs = len(objects)
     colors = [objects[str(k)]['appearance'] for k in range(n_objs)]
-    return np.unique(colors).tolist()
+    colors = np.array(colors)
+    _, idx = np.unique(colors, return_index=True)
+    return colors[np.sort(idx)].tolist()
 
 def main():
 
