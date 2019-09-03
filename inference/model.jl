@@ -110,14 +110,20 @@ end;
 """
 Returns a choicemap for the GT of a given scene
 and a list of objects to track for each observation.
+
+Factorizing the scene causes infernce to only track
+objects that are moving or have moved in the past
+in every observation.
 """
 function make_obs(scene::Scene; factorize::Bool = false)
     ts = scene.ts
     positions, lin_vel = simulate(scene, Dict(), ts[end])
     if factorize
+        # which objects are active
         active_map = get_active(scene.balls, lin_vel)[ts, :]
         args = collect(zip(ts, eachrow(active_map)))
     else
+        # just activate all objects
         active_map = repeat(scene.balls, 1, length(ts))
         args = collect(zip(ts, eachcol(active_map)))
     end
