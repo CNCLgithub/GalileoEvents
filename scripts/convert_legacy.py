@@ -65,6 +65,8 @@ def convert_scene(old_file, dest):
         # Shape `A` is on the ramp in old syntax
         if obj_name == 'A':
             pct += 1 # indicates in the current syntax object is on ramp
+        else:
+            pct = 1 - pct # table is reversed
         scene.add_object(obj_name, shape, pct)
 
     result = { 'scene' : scene.serialize() }

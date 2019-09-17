@@ -20,11 +20,11 @@ class RampScene:
                  ramp_friction = 0.8):
         table = block.Block('table', (*table_dims, 1), 0, table_friction)
         # We want the table surface to be the xy plane @ z = 0
-        table.position = pct_to_coord(table_dims[0]*0.5 , 0, 0) - np.array((0, 0, 0.5))
+        table.position = pct_to_coord(table_dims[0]*0.5 , 0, 0)  - np.array((0, 0, 0.5))
         self.table = table
         ramp = block.Block('ramp', (*ramp_dims, 1), 0, ramp_friction,
                                 angle = (0, ramp_angle, 0))
-        ramp.position = pct_to_coord(ramp_dims[0]*(-0.5), ramp_angle, 0) - np.array((0, 0, 0.5))
+        ramp.position = pct_to_coord(ramp_dims[0]*(-0.5), ramp_angle, 0.5) - np.array((0, 0, 0.5))
         self.ramp = ramp
         self.ramp_angle = ramp_angle
         self.objects = objects
