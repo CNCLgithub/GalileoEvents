@@ -5,7 +5,6 @@ from . import block
 
 
 def pct_to_coord(mag, angle, z):
-    angle = angle
     x_offset = (np.cos(angle) * mag) + (np.sin(angle) * z)
     z_offset = (np.sin(angle) * abs(mag)) + (np.cos(angle) * z)
     return np.array([x_offset, 0, z_offset])
@@ -20,6 +19,7 @@ class RampScene:
                  ramp_angle = 0.0, table_friction = 0.8,
                  ramp_friction = 0.8):
         table = block.Block('table', (*table_dims, 1), 0, table_friction)
+        # We want the table surface to be the xy plane @ z = 0
         table.position = pct_to_coord(table_dims[0]*0.5 , 0, 0) - np.array((0, 0, 0.5))
         self.table = table
         ramp = block.Block('ramp', (*ramp_dims, 1), 0, ramp_friction,
