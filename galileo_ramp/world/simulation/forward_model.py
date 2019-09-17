@@ -14,7 +14,7 @@ def simulate(serialized_scene, frames, objs = None,
     If no objects are given, then the top keys of
     `serialized_scene` are used.
 
-    :param serialized_scene: Dict repr wesenting scene
+    :param serialized_scene: Dict representing scene
     :param frames: Number of frames to report
     :param objs,optional: Order of objects to report.
     """
