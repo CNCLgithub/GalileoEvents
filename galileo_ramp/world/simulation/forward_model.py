@@ -8,7 +8,7 @@ import numpy as np
 from .ramp_physics import RampPhysics
 
 def simulate(serialized_scene, frames, objs = None,
-             debug = False):
+             debug = False, fps = 60):
     """ Runs pybullet on on given scene
     Frames per second are fixed at 60
     If no objects are given, then the top keys of
@@ -22,7 +22,7 @@ def simulate(serialized_scene, frames, objs = None,
     # ensures that the objects are reported in order
     if objs is None:
         objs = sorted(list(serialized_scene['objects'].keys()))
-    trace = sim.get_trace(frames, objs, fps = 60)
+    trace = sim.get_trace(frames, objs, fps = fps)
     return trace
 
 def simulate_mc(serialized_scene, frames, p):
