@@ -24,7 +24,7 @@ class RampScene:
         self.table = table
         ramp = block.Block('ramp', (*ramp_dims, 1), 0, ramp_friction,
                                 angle = (0, ramp_angle, 0))
-        ramp.position = pct_to_coord(ramp_dims[0]*(-0.5), ramp_angle, 0.5) - np.array((0, 0, 0.5))
+        ramp.position = pct_to_coord(ramp_dims[0]*(-0.5), ramp_angle, 0.0) - np.array((0, 0, 0.5))
         self.ramp = ramp
         self.ramp_angle = ramp_angle
         self.objects = objects
@@ -53,7 +53,7 @@ class RampScene:
         else:
             raise ValueError('Place not found')
 
-        pos = pct_to_coord(mag, angle, z)
+        pos = pct_to_coord(mag, angle, z/2)
         obj.position = pos
         obj.orientation = (0, angle, 0)
         objects = self.objects
