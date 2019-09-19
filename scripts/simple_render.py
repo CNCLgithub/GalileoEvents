@@ -39,7 +39,7 @@ def render_scene(src, out, res, mode, snapshot = False):
     if 'trace' in data:
         trace = data['trace']
     else:
-        trace = forward_model.simulate(data['scene'], 900)
+        trace = forward_model.simulate(data['scene'], 100, fps = 6)
         trace = dict(zip(['pos', 'orn', 'lvl', 'avl', 'col'], trace))
     # Render
     kwargs = dict(
