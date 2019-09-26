@@ -6,9 +6,10 @@ Used in generation, rendering, and inference.
 import json
 import numpy as np
 from .ramp_physics import RampPhysics
+from .legacy_physics import LegacyPhysics
 
 def simulate(serialized_scene, frames, objs = None,
-             debug = False, fps = 60):
+             debug = False, fps = 60, legacy = False):
     """ Runs pybullet on on given scene
     Frames per second are fixed at 60
     If no objects are given, then the top keys of
@@ -18,7 +19,11 @@ def simulate(serialized_scene, frames, objs = None,
     :param frames: Number of frames to report
     :param objs,optional: Order of objects to report.
     """
-    sim = RampPhysics(serialized_scene, debug = debug)
+    if legacy:
+        phys = LegacyPhysics
+    else:
+        phys = RampPhysics
+    sim = phys(serialized_scene, debug = debug)
     # ensures that the objects are reported in order
     if objs is None:
         objs = sorted(list(serialized_scene['objects'].keys()))
