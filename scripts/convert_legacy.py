@@ -13,6 +13,7 @@ from glob import glob
 from galileo_ramp.utils import config
 from galileo_ramp.world.scene.puck import Puck
 from galileo_ramp.world.scene.block import Block
+from galileo_ramp.world.scene.ramp_legacy import LegacyRamp
 from galileo_ramp.world.scene.ramp import RampScene
 from galileo_ramp.world.simulation import forward_model
 
@@ -26,7 +27,7 @@ table_dims = (35, 18)
 table_friction = 0.340
 ramp_dims = (32, 18)
 ramp_friction = 0.340
-ramp_angle = 15 # degrees
+ramp_angle = -15 # degrees
 
 
 
@@ -46,28 +47,26 @@ def convert_scene(old_file, dest):
 
     # First reorganize "scene" data
     objects = data['Objects']
-    scene = RampScene(table_dims, ramp_dims,
-                      ramp_angle = ramp_angle * (np.pi/180.),
-                      table_friction = table_friction,
-                      ramp_friction = ramp_friction)
+    scene = LegacyRamp(table_dims, ramp_dims,
+                       ramp_angle = ramp_angle * (np.pi/180.),
+                       table_friction = table_friction,
+                       ramp_friction = ramp_friction)
 
     for obj_name, obj_data in objects.items():
-
         # Construct the shape
         appearance = appearance_map[obj_data['Material']]
         density = obj_data['Density']
-        dims = obj_data['Scaling']
+        dims = np.array(obj_data['Scaling'])
         friction = obj_data['Friction']
         shape = shape_map[obj_data['Shape']](appearance, dims, density, friction)
-
-        # Place object on the table or ramp
         pct = obj_data['SlopePos']
-        # Shape `A` is on the ramp in old syntax
-        if obj_name == 'A':
-            pct += 1 # indicates in the current syntax object is on ramp
-        else:
-            pct = 1 - pct # table is reversed
+        # if obj_name == 'A':
+        #     pct = (pct * 31.17) / 32 + 1
+        # else:
+        #     pct = 1 - pct
+
         scene.add_object(obj_name, shape, pct)
+
 
     result = { 'scene' : scene.serialize() }
     r_str = json.dumps(result, indent = 4, sort_keys = True,
