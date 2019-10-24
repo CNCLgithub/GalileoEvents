@@ -41,9 +41,16 @@ shape_map = [
     Puck
 ]
 
-def convert_scene(old_file, dest):
-    with open(old_file, 'r') as f:
+def convert_scene(src_file, pos_file, dest):
+    """ Converts the legacy scene syntax
+
+    :param src_file: Path to legacy json
+    :param pos_file: Path to legacy position trace
+    :dest: Path to save converted scene
+    """
+    with open(src_file, 'r') as f:
         data = json.load(f)
+    positions = np.load(pos_file)[0, 0, :]
 
     # First reorganize "scene" data
     objects = data['Objects']
@@ -59,19 +66,13 @@ def convert_scene(old_file, dest):
         dims = np.array(obj_data['Scaling'])
         friction = obj_data['Friction']
         shape = shape_map[obj_data['Shape']](appearance, dims, density, friction)
-        pct = obj_data['SlopePos']
-        # if obj_name == 'A':
-        #     pct = (pct * 31.17) / 32 + 1
-        # else:
-        #     pct = 1 - pct
-
-        scene.add_object(obj_name, shape, pct)
+        scene.add_object(obj_name, shape, positions)
 
 
     result = { 'scene' : scene.serialize() }
     r_str = json.dumps(result, indent = 4, sort_keys = True,
                        cls = forward_model.TraceEncoder)
-    filename = os.path.basename(old_file)
+    filename = os.path.basename(src_file)
     out = os.path.join(dest, filename)
     with open(out, 'w') as f:
         f.write(r_str)
@@ -83,9 +84,8 @@ def main():
         description = 'Converts legacy json into current scene semantics',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-    parser.add_argument('src', type = str,
-                        help = 'Path to legacy jsons')
-    parser.add_argument('--destination', '-d', type = str, default = 'legacy',
+    parser.add_argument('--destination', '-d', type = str,
+                        default = 'legacy_converted',
                         help = 'Path to save converted scenes')
     args = parser.parse_args()
 
@@ -93,9 +93,13 @@ def main():
     if not os.path.isdir(out_path):
         os.mkdir(out_path)
 
-    legacy_scenes = glob(os.path.join(args.src, '*.json'))
+    src_path = os.path.join(CONFIG['PATHS', 'scenes'], 'galileo-legacy')
+    legacy_scenes = glob(os.path.join(src_path, '*.json'))
     for scene in legacy_scenes:
-        convert_scene(scene, out_path)
+        src_name = scene[:-5]
+        trace_file = os.path.join(CONFIG['PATHS', 'renders'], 'galileo-legacy',
+                                  src_name + '_pos.npy')
+        convert_scene(scene, trace_file, out_path)
 
 if __name__ == '__main__':
    main()

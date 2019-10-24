@@ -48,7 +48,7 @@ class LegacyRamp(ramp.RampScene):
         self.ramp_angle = ramp_angle
         self.objects = objects
 
-    def add_object(self, name, obj, place):
+    def add_object(self, name, obj, pos):
         z = obj.dimensions[-1]
         # on table
         if name == 'B':
@@ -62,8 +62,6 @@ class LegacyRamp(ramp.RampScene):
             target = self.ramp
             bounds = ramp_bounds
             angle = self.ramp_angle
-            # pos = pct_to_coord(obj, target, bounds, place)
-            pos = [14.37,  -4., 11.249]
         else:
             raise ValueError('Place not found')
 
