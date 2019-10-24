@@ -36,11 +36,13 @@ prior = Gen_Compose.DeferredPrior(latents,
 
 function run_inference(scene_data, positions)
     scene = Scene(trial_data, length(positions))
+    observations = Gen.choice_map()
+    set_value!(observations, positions, :pos)
     query = StaticQuery(latents,
                         (scene,),
                         prior,
                         generative_model,
-                        positions)
+                        observations)
     procedure = MH()
     iterations = 100
     results = static_monte_carlo(procedure, query, iterations)
