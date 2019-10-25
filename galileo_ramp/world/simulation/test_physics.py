@@ -77,9 +77,17 @@ def make_obj(params, p):
                      restitution = 1.0)
     return obj_id
 
+obj_params = {
+    'dims' : [1, 1, 1],
+    'position': [-5, 0, 6.5],
+    'orientation': [0, np.pi/4, 0],
+    'friction': 0.5,
+    'shape': 'Block',
+    'mass': 1.0
+        }
 class TestPhysics:
 
-    def __init__(self, shape = 'Block', debug = False):
+    def __init__(self, obj_data = None, debug = False):
         if debug:
             self.client = bc.BulletClient(connection_mode=pybullet.GUI)
         else:
@@ -87,14 +95,11 @@ class TestPhysics:
         self.debug = debug
         self.table_id = make_table(table_params, self.client)
         self.ramp_id = make_ramp(ramp_params, self.client)
-        obj_params = {
-            'dims' : [1, 1, 1],
-            'position': [-5, 0, 6.5],
-            'orientation': [0, np.pi/4, 0],
-            'friction': 0.5,
-            'shape': shape,
-            'mass': 1.0
-        }
+        if not obj_data is None:
+            obj_data = {}
+        for k in obj_params:
+            if !(k in obj_data):
+                obj_data[k] = obj_params[k]
         self.obj_id = make_obj(obj_params, self.client)
 
     #-------------------------------------------------------------------------#
@@ -177,3 +182,20 @@ class TestPhysics:
 
 
         return (positions, rotations, ang_vel, lin_vel)
+
+def run_full_trace(T):
+    t = TestPhysics()
+    return t.get_trace(T, fps = 6)
+
+def run_mc_trace(T = 1, pad = 1, fps = 6):
+    t = test_physics.TestPhysics()
+    traces = []
+    steps = 2*pad + 1
+    current_trace = t.get_trace(steps, fps = fps)
+    smooth_trace = lambda x: x[0]
+    traces.append(list(map(smooth_trace, current_trace)))
+    for _ in range(T-1):
+        current_trace = t.get_trace(steps, state = current_trace, fps = fps)
+        traces.append(list(map(smooth_trace, current_trace)))
+
+    return list(map(np.vstack, zip(*traces)))
