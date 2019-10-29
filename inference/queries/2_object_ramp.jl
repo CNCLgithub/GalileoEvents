@@ -20,7 +20,10 @@ end;
     data["gravity"] = @trace(draw(prior, :gravity))
     data["objects"]["A"]["friction"] = @trace(draw(prior, :ramp_friction))
 
-    state = forward_model.simulate(data, t, objs = scene.objects)
+    state = forward_model.simulate(data, t,
+                                   objs = scene.objects,
+                                   fps = 6,
+                                   legacy = true)
     pos = state[1]
     lin_vels = state[4]
     obs = Matrix{Float64}(pos[end, :, :])
@@ -34,7 +37,7 @@ prior = Gen_Compose.DeferredPrior(latents,
                                   [StaticDistribution{Float64}(uniform, (0.1, 20)),
                                    StaticDistribution{Float64}(uniform, (0.001, 0.999))])
 
-function run_inference(scene_data, positions)
+function run_inference(scene_data, positions, iterations = 100)
     scene = Scene(trial_data, length(positions))
     observations = Gen.choice_map()
     set_value!(observations, positions, :pos)
@@ -44,7 +47,6 @@ function run_inference(scene_data, positions)
                         generative_model,
                         observations)
     procedure = MH()
-    iterations = 100
     results = static_monte_carlo(procedure, query, iterations)
 end
 

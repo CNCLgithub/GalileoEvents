@@ -22,33 +22,16 @@ from galileo_ramp.world.simulation import test_physics
 
 CONFIG = config.Config()
 
-T = 24
-def run_full_trace():
-    t = test_physics.TestPhysics()
-    return t.get_trace(T, fps = 6)
-
-def run_mc_trace(debug, pad = 1, fps = 6):
-    t = test_physics.TestPhysics(debug = debug)
-    traces = []
-    steps = 2*pad + 1
-    current_trace = t.get_trace(steps, fps = fps)
-    smooth_trace = lambda x: x[0]
-    traces.append(list(map(smooth_trace, current_trace)))
-    for _ in range(T-1):
-        current_trace = t.get_trace(steps, state = current_trace, fps = fps)
-        traces.append(list(map(smooth_trace, current_trace)))
-
-    return list(map(np.vstack, zip(*traces)))
 
 def plot_differences(full, mc):
     fig, axes = plt.subplots(nrows = 2)
     ax = axes[0]
     ax.set_title('Differences in position')
     # delta = full[0][:,0] - mc[0][:,0]
-    delta = np.linalg.norm(full[0] - mc[0], axis = -1)
-    ax.plot(delta)
-    # ax.plot(full[0][:,0])
-    # ax.plot(mc[0][:,0])
+    # delta = np.linalg.norm(full[0] - mc[0], axis = -1)
+    # ax.plot(delta)
+    ax.plot(full[0][:,0])
+    ax.plot(mc[0][:,0])
     ax = axes[1]
     ax.set_title('Differences in velocity')
     ax.set_xlabel('Time')
@@ -69,10 +52,14 @@ def main():
                         help = 'Run in debug')
 
     args = parser.parse_args()
-
-    full_trace = run_full_trace()
-    mc_trace = run_mc_trace(args.debug)
+    t = 24
+    full_trace = test_physics.run_full_trace(t, {"friction": 0.2})
+    # mc_f = lambda s: test_physics.run_mc_trace(state = s)
+    mc_trace = test_physics.run_mc_trace(T = t, pad = 0, data = {"friction": 0.01})
+    print(full_trace[0][:, 0] - mc_trace[0][:, 0])
     plot_differences(full_trace, mc_trace)
+    mc_trace = test_physics.run_mc_trace(T = t, pad = 0, data = {"friction": 0.2})
+    print(full_trace[0][:, 0] - mc_trace[0][:, 0])
 
 
 if __name__ == '__main__':

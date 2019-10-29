@@ -2,6 +2,7 @@
 
 Contains one class: TestPhysics
 """
+import copy
 import time
 import numpy as np
 import operator as op
@@ -77,7 +78,7 @@ def make_obj(params, p):
                      restitution = 1.0)
     return obj_id
 
-obj_params = {
+obj_params_t = {
     'dims' : [1, 1, 1],
     'position': [-5, 0, 6.5],
     'orientation': [0, np.pi/4, 0],
@@ -95,11 +96,11 @@ class TestPhysics:
         self.debug = debug
         self.table_id = make_table(table_params, self.client)
         self.ramp_id = make_ramp(ramp_params, self.client)
-        if not obj_data is None:
+        obj_params = copy.deepcopy(obj_params_t)
+        if obj_data is None:
             obj_data = {}
-        for k in obj_params:
-            if !(k in obj_data):
-                obj_data[k] = obj_params[k]
+        for k in obj_data:
+            obj_params[k] = obj_data[k]
         self.obj_id = make_obj(obj_params, self.client)
 
     #-------------------------------------------------------------------------#
@@ -146,13 +147,20 @@ class TestPhysics:
 
         p.setGravity(0, 0, -10)
 
+
+        steps_per_frame = int(time_step / fps)
+        total_steps = int(max(steps_per_frame, steps_per_frame*frames ))
+
         positions = np.zeros((frames, 3))
         rotations = np.zeros((frames, 4))
         ang_vel = np.zeros((frames, 3))
         lin_vel = np.zeros((frames, 3))
 
-        steps_per_frame = int(time_step / fps)
-        total_steps = int(max(1, ((frames / fps) * time_step)))
+        pad_positions = np.zeros((steps_per_frame, 3))
+        pad_rotations = np.zeros((steps_per_frame, 4))
+        pad_ang_vel = np.zeros((steps_per_frame, 3))
+        pad_lin_vel = np.zeros((steps_per_frame, 3))
+
 
         if not state is None:
             self.apply_state(state)
@@ -165,33 +173,42 @@ class TestPhysics:
                 time.sleep(0.01)
             return
 
+        # print(total_steps, steps_per_frame)
         for step in range(total_steps):
             p.stepSimulation()
 
-            frame = np.floor(step / steps_per_frame).astype(int)
-
-            if step % steps_per_frame != 0:
-                continue
-
             pos, rot = p.getBasePositionAndOrientation(self.obj_id)
             l_vel, a_vel = p.getBaseVelocity(self.obj_id)
-            positions[frame] = pos
-            rotations[frame] = rot
-            ang_vel[frame] = a_vel
-            lin_vel[frame] = l_vel
 
+            pad_positions[step % steps_per_frame] = pos
+            pad_rotations[step % steps_per_frame] = rot
+            pad_ang_vel[step % steps_per_frame] = a_vel
+            pad_lin_vel[step % steps_per_frame] = l_vel
+
+            record = (step+1) % steps_per_frame == 0
+            if record:
+                frame = np.floor(step / steps_per_frame).astype(int)
+                # positions[frame] = np.mean(pad_positions, axis = 0)
+                # rotations[frame] = np.mean(pad_rotations, axis = 0)
+                positions[frame] = pad_positions[-1]
+                rotations[frame] = pad_rotations[-1]
+                ang_vel[frame] = pad_ang_vel[-1]
+                lin_vel[frame] = pad_lin_vel[-1]
+                # ang_vel[frame] = np.mean(pad_ang_vel, axis = 0)
+                # lin_vel[frame] = np.mean(pad_lin_vel, axis = 0)
 
         return (positions, rotations, ang_vel, lin_vel)
 
-def run_full_trace(T):
-    t = TestPhysics()
+def run_full_trace(T, data):
+    t = TestPhysics(obj_data = data)
     return t.get_trace(T, fps = 6)
 
-def run_mc_trace(T = 1, pad = 1, fps = 6):
-    t = test_physics.TestPhysics()
+def run_mc_trace(state = None, T = 1, pad = 1, fps = 6,
+                 data = None):
+    t = TestPhysics(obj_data = data)
     traces = []
     steps = 2*pad + 1
-    current_trace = t.get_trace(steps, fps = fps)
+    current_trace = t.get_trace(steps, fps = fps, state = state)
     smooth_trace = lambda x: x[0]
     traces.append(list(map(smooth_trace, current_trace)))
     for _ in range(T-1):
