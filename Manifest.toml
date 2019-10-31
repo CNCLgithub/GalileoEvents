@@ -47,9 +47,9 @@ version = "0.5.7"
 
 [[CSTParser]]
 deps = ["Tokenize"]
-git-tree-sha1 = "c69698c3d4a7255bc1b4bc2afc09f59db910243b"
+git-tree-sha1 = "99dda94f5af21a4565dc2b97edf6a95485f116c3"
 uuid = "00ebfdb7-1f24-5e51-bd34-a7502290713f"
-version = "0.6.2"
+version = "1.0.0"
 
 [[CSV]]
 deps = ["CategoricalArrays", "DataFrames", "Dates", "FilePathsBase", "LazyArrays", "Mmap", "Parsers", "PooledArrays", "Profile", "Tables", "Unicode", "WeakRefStrings"]
@@ -293,7 +293,7 @@ version = "0.3.1"
 
 [[Gen_Compose]]
 deps = ["Cairo", "Compose", "DataFrames", "Distributions", "Fontconfig", "Gadfly", "Gen"]
-git-tree-sha1 = "582b21352c5a448f68874cb313aa700f65c8be22"
+git-tree-sha1 = "82d2c01d4907b9f26e4e357de436789123aa922e"
 repo-rev = "master"
 repo-url = "https://github.com/CNCLgithub/Gen_Compose.git"
 uuid = "c1ef4dca-b0a6-4a35-b24b-46cbf3979a16"
