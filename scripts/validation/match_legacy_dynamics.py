@@ -9,11 +9,9 @@ import json
 import argparse
 import datetime
 import numpy as np
-from pprint import pprint
 
 from galileo_ramp.utils import config
 from galileo_ramp.inference.execute import initialize
-from galileo_ramp.world.simulation import exp2_physics
 
 CONFIG = config.Config()
 
@@ -34,11 +32,11 @@ def run_search(scene_json, scene_pos, out):
         A `dict` containing the inference trace.
     """
     positions = np.load(scene_pos)
+    positions = np.transpose(positions, (1, 0, 2))
     with open(scene_json, 'r') as f:
         scene_data = json.load(f)['scene']
 
-    inference(scene_data, positions,
-              exp2_physics.run_mc_trace, out)
+    inference(scene_data, positions, out)
 
 
 def main():
@@ -62,9 +60,10 @@ def main():
     if not os.path.isdir(out):
         os.mkdir(out)
 
+    out_path = os.path.join(out, trial_name)
     print('Saving results in {0!s}'.format(out))
     position_file = args.trial.replace('.json', '_pos.npy')
-    run_search(args.trial, position_file, out)
+    run_search(args.trial, position_file, out_path)
 
 
 if __name__ == '__main__':
