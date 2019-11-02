@@ -98,7 +98,7 @@ function run_inference(scene_data, positions, out_path)
     #
     # Additionally, this will be under the Sequential Monte-Carlo
     # paradigm.
-    n_particles = 50
+    n_particles = 5000
     ess = n_particles * 0.5
     # defines the random variables used in rejuvination
     procedure = ParticleFilter(n_particles,

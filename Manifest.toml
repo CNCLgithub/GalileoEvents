@@ -329,9 +329,9 @@ uuid = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
 
 [[Interpolations]]
 deps = ["AxisAlgorithms", "LinearAlgebra", "OffsetArrays", "Random", "Ratios", "SharedArrays", "SparseArrays", "StaticArrays", "WoodburyMatrices"]
-git-tree-sha1 = "02bc6d52471df58d4bbd0edf11a18b264ab86b88"
+git-tree-sha1 = "b55fc7d44f5be845aceb86a359fa072bb12fdc28"
 uuid = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"
-version = "0.12.3"
+version = "0.12.4"
 
 [[InvertedIndices]]
 deps = ["Test"]

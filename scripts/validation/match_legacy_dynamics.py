@@ -58,12 +58,18 @@ def main():
     out = os.path.join(CONFIG['PATHS', 'traces'], args.out)
     trial_name = os.path.basename(os.path.splitext(args.trial)[0])
     if not os.path.isdir(out):
-        os.mkdir(out)
+        try:
+            os.mkdir(out)
+        except:
+            print('{0!s} already exists'.format(out))
 
     out_path = os.path.join(out, trial_name)
     print('Saving results in {0!s}'.format(out))
     position_file = args.trial.replace('.json', '_pos.npy')
-    run_search(args.trial, position_file, out_path)
+    if os.path.isfile(out_path + '_trace.csv'):
+        print('Inference already complete')
+    else:
+        run_search(args.trial, position_file, out_path)
 
 
 if __name__ == '__main__':

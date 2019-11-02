@@ -5,6 +5,7 @@ Batches inference calls across a series of given trials.
 import os
 import argparse
 import datetime
+from glob import glob
 from pprint import pprint
 from itertools import repeat
 
@@ -31,9 +32,9 @@ def submit_sbatch(trials, size = 1000):
     extras = []
     resources = {
         'cpus-per-task' : '1',
-        'mem-per-cpu' : '2GB',
-        'time' : '30',
-        'partition' : 'scavange',
+        'mem-per-cpu' : '1GB',
+        'time' : '360',
+        'partition' : 'scavenge',
         'requeue' : None,
         'output' : os.path.join(CONFIG['PATHS', 'sout'], 'slurm-%A_%a.out')
     }
@@ -41,7 +42,7 @@ def submit_sbatch(trials, size = 1000):
                          resources)
     print("Template Job:")
     print('\n'.join(batch.job_file(chunk=njobs)))
-    # batch.run(n = njobs, check_submission = False)
+    batch.run(n = njobs, check_submission = False)
 
 
 def main():
@@ -51,12 +52,13 @@ def main():
         'the galileo ball-ramp-world.',
         formatter_class = argparse.ArgumentDefaultsHelpFormatter
     )
-    parser.add_argument('trials', type = str,
+    parser.add_argument('--trials', type = str, default = 'legacy_converted',
                         help = 'path to scene files')
 
     args = parser.parse_args()
 
-    files = glob(os.path.join(args.trials, '*.json'))
+    src_path = os.path.join(CONFIG['PATHS', 'scenes'], args.trials)
+    files = glob(os.path.join(src_path, '*.json'))
 
 
     submit_sbatch(files)
