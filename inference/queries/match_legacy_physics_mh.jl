@@ -155,7 +155,8 @@ function run_inference(scene_data, positions, out_path)
                         observations)
     procedure = HMC(update_step)
 
-    @time results = static_monte_carlo(procedure, query, 11000)
+    @time results = static_monte_carlo(procedure, query, 6000)
+    # @time results = static_monte_carlo(procedure, query, 10)
     plot = viz(results)
     plot |> SVG("$(out_path)_trace.svg",30cm, 30cm)
     df = to_frame(results)
@@ -164,8 +165,8 @@ function run_inference(scene_data, positions, out_path)
 end
 
 function main()
-    scene_json = "/home/mario/dev/data/galileo-ramp/scenes/legacy_converted/trial_10.json"
-    scene_pos = "/home/mario/dev/data/galileo-ramp/scenes/legacy_converted/trial_10_pos.npy"
+    scene_json = "../../data/galileo-ramp/scenes/legacy_converted/trial_10.json"
+    scene_pos = "../../data/galileo-ramp/scenes/legacy_converted/trial_10_pos.npy"
     scene_data = Dict()
     open(scene_json, "r") do f
         # dicttxt = readstring(f)

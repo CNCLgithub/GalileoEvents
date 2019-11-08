@@ -30,7 +30,7 @@ def submit_sbatch(trials, script, size = 1000):
     extras = []
     resources = {
         'cpus-per-task' : '1',
-        'mem-per-cpu' : '1GB',
+        'mem-per-cpu' : '2GB',
         'time' : '360',
         'partition' : 'scavenge',
         'requeue' : None,
