@@ -17,10 +17,8 @@ CONFIG = config.Config()
 
 root = CONFIG['PATHS', 'root']
 
-script = os.path.join(root, 'scripts', 'validation',
-                      'match_legacy_dynamics.py')
 
-def submit_sbatch(trials, size = 1000):
+def submit_sbatch(trials, script, size = 1000):
 
     njobs = min(size, len(trials))
 
@@ -54,14 +52,21 @@ def main():
     )
     parser.add_argument('--trials', type = str, default = 'legacy_converted',
                         help = 'path to scene files')
+    parser.add_argument('--inference', type = str, default = 'mh',
+                        help = 'inference procedure to apply')
 
     args = parser.parse_args()
 
     src_path = os.path.join(CONFIG['PATHS', 'scenes'], args.trials)
     files = glob(os.path.join(src_path, '*.json'))
 
-
-    submit_sbatch(files)
+    if args.inference == 'mh':
+        script = os.path.join(root, 'scripts', 'validation',
+                              'match_legacy_dynamics_mh.py')
+    else:
+        script = os.path.join(root, 'scripts', 'validation',
+                              'match_legacy_dynamics.py')
+    submit_sbatch(files, script)
 
 if __name__ == '__main__':
     main()
