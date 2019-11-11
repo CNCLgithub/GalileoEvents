@@ -30,11 +30,11 @@ end;
     data = deepcopy(scene.data)
     ramp_obj_fric = @trace(Gen_Compose.draw(prior, :friction_a))
     table_obj_fric = @trace(Gen_Compose.draw(prior, :friction_b))
-    ground_fric = @trace(Gen_Compose.draw(prior, :friction_ground))
+    # ground_fric = @trace(Gen_Compose.draw(prior, :friction_ground))
     data["objects"]["A"]["friction"] = ramp_obj_fric
     data["objects"]["B"]["friction"] = table_obj_fric
-    data["ramp"]["friction"] = ground_fric
-    data["table"]["friction"] = ground_fric
+    # data["ramp"]["friction"] = ground_fric
+    # data["table"]["friction"] = ground_fric
 
     new_state = scene.simulator(data, ["A", "B"], scene.n_frames)
     pos = new_state[1]
@@ -44,11 +44,10 @@ end;
 end
 
 
-latents = [:friction_ground, :friction_a, :friction_b]
+latents = [:friction_a, :friction_b]
 friction_rv = StaticDistribution{Float64}(uniform, (0.001, 0.999))
 prior = Gen_Compose.DeferredPrior(latents,
                                   [friction_rv,
-                                   friction_rv,
                                    friction_rv])
 
 function estimate_layer(estimate)
@@ -152,7 +151,7 @@ function run_inference(scene_data, positions, out_path)
                         observations)
     procedure = HMC(update_step)
 
-    @time results = static_monte_carlo(procedure, query, 6000)
+    @time results = static_monte_carlo(procedure, query, 1000)
     # @time results = static_monte_carlo(procedure, query, 10)
     plot = viz(results)
     plot |> SVG("$(out_path)_trace.svg",30cm, 30cm)
@@ -162,8 +161,8 @@ function run_inference(scene_data, positions, out_path)
 end
 
 function main()
-    scene_json = "../../data/galileo-ramp/scenes/legacy_converted/trial_10.json"
-    scene_pos = "../../data/galileo-ramp/scenes/legacy_converted/trial_10_pos.npy"
+    scene_json = "../data/galileo-ramp/scenes/legacy_converted/trial_88.json"
+    scene_pos = "../data/galileo-ramp/scenes/legacy_converted/trial_88_pos.npy"
     scene_data = Dict()
     open(scene_json, "r") do f
         # dicttxt = readstring(f)
