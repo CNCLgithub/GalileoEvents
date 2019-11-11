@@ -28,16 +28,13 @@ end;
                                addr)
     # Add the features from the latents to the scene descriptions
     data = deepcopy(scene.data)
-    # ramp_obj_fric = @trace(Gen_Compose.draw(prior, :friction_a))
-    # table_obj_fric = @trace(Gen_Compose.draw(prior, :friction_b))
-    # ground_fric = @trace(Gen_Compose.draw(prior, :friction_ground))
-    ramp_obj_fric = @trace(uniform(0.001, 0.999), :friction_a)
-    table_obj_fric = @trace(uniform(0.001, 0.999), :friction_b)
-    ground_fric = @trace(uniform(0.001, 0.999), :friction_ground)
+    ramp_obj_fric = @trace(Gen_Compose.draw(prior, :friction_a))
+    table_obj_fric = @trace(Gen_Compose.draw(prior, :friction_b))
+    ground_fric = @trace(Gen_Compose.draw(prior, :friction_ground))
     data["objects"]["A"]["friction"] = ramp_obj_fric
     data["objects"]["B"]["friction"] = table_obj_fric
-    data["ramp"]["friction"] = table_obj_fric
-    data["table"]["friction"] = table_obj_fric
+    data["ramp"]["friction"] = ground_fric
+    data["table"]["friction"] = ground_fric
 
     new_state = scene.simulator(data, ["A", "B"], scene.n_frames)
     pos = new_state[1]
