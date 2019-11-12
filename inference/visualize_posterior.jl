@@ -8,14 +8,14 @@ include("./queries/match_legacy_physics.jl")
 
 np = pyimport("numpy")
 
-#### DEFINE CONSTANTS
+### DEFINE CONSTANTS ###
 
 # Define data directories
 scene_dir = "/gpfs/milgram/project/yildirim/mario/data/galileo-ramp/scenes/legacy_converted"  # ground truth
-trace_dir = "/gpfs/milgram/project/yildirim/mario/data/galileo-ramp/traces/match_legacy"  # inference traces
+trace_dir = "/gpfs/milgram/project/yildirim/mario/data/galileo-ramp/traces/match_legacy_mh"  # inference traces
 
 # number of best-scoring SIDs to use for the forward simulations
-num_sids = 15
+num_sids = 1
 
 # Define color map for different materials
 color_dict = Dict{String,String}("Iron" => "silver",
@@ -78,8 +78,7 @@ function simulate_latents(forward_model, curr_state, params, trace_df::DataFrame
         params_cp = deepcopy(params)
         trace = trace_df[[sid], :]
         choices = choicemap((:friction_a, trace[!, :friction_a][1]),
-                            (:friction_b, trace[!, :friction_b][1]),
-                            (:friction_ground, trace[!, :friction_ground][1]))
+                            (:friction_b, trace[!, :friction_b][1]))
 
         prepend!(params_cp, [curr_state[sid]])
 
@@ -127,9 +126,9 @@ function main(num_sids)
         # Prepare usage of the generative model
         trace_df_path = joinpath(trace_dir, "trial_$(trial)_trace.csv")
         trace_df = CSV.read(trace_df_path, copycols=true)
-        trace_df = trace_df[trace_df.t .== maximum(trace_df.t), :]  # get MAP at last time step
-        sort!(trace_df, (:log_score), rev=(true))  # first entries have higher log scores
-        trace_df = trace_df[1:num_sids, :]  # take num_sids best-scoring entries
+        trace_df = trace_df[trace_df.iter .== maximum(trace_df.iter), :]  # get MAPs at last time step
+        # sort!(trace_df, (:log_score), rev=(true))  # first entries have higher log scores
+        # trace_df = trace_df[1:num_sids, :]  # take num_sids best-scoring entries
         curr_state = fill(nothing, num_sids)
         curr_pos = fill(pos[1, :, :], num_sids)
         scene = Scene(scene_data, first(size(pos)), gm.run_mc_trace, 0.2)
