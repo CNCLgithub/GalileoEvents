@@ -26,4 +26,17 @@ class Puck(Shape):
         :returns: the volume the shape holds
         :rtype: float
         """
-        return np.prod(dimensions)* np.pi * 0.25
+        return np.prod(self.dimensions)* np.pi * 0.25
+
+    @property
+    def dimensions(self):
+        return self._dimensions
+
+    # ----------------   setters   -----------------#
+
+    @dimensions.setter
+    def dimensions(self, value):
+        v = np.asarray(value)
+        if v.size != 3:
+            raise ValueError('Scale must represent xyz')
+        self._dimensions = v

@@ -3,25 +3,41 @@ using Distributions
 using Rotations
 
 # Observation noise
+struct RandomVec <: Gen.Distribution{Vector{Float64}} end
 
-struct NoisyMatrix <: Gen.Distribution{Matrix{Float64}} end
+const random_vec = RandomVec()
 
-const mat_noise = NoisyMatrix()
-
-function Gen.logpdf(::NoisyMatrix, x::Matrix{Float64}, mu::Matrix{U}, noise::T) where {U<:Real,T<:Real}
+function Gen.logpdf(::RandomVec, x::Vector{Float64}, mu::Vector{U}, noise::T) where {U<:Real,T<:Real}
     var = noise * noise
     diff = x - mu
     vec = diff[:]
     return -(vec' * vec)/ (2.0 * var) - 0.5 * log(2.0 * pi * var)
 end;
 
-function Gen.random(::NoisyMatrix, mu::Matrix{U}, noise::T) where {U<:Real,T<:Real}
+function Gen.random(::RandomVec, mu::Vector{U}, noise::T) where {U<:Real,T<:Real}
+    vec = copy(mu)
+    for i=1:length(mu)
+        vec[i] = mu[i] + randn() * noise
+    end
+    return vec
+end;
+(::RandomVec)(mu, noise) = random(RandomVec(), mu, noise)
+
+struct NoisyMatrix <: Gen.Distribution{Array{Float64}} end
+
+const mat_noise = NoisyMatrix()
+
+function Gen.logpdf(::NoisyMatrix, x::Array{Float64}, mu::Array{U}, noise::T) where {U<:Real,T<:Real}
+    var = noise * noise
+    diff = x - mu
+    vec = diff[:]
+    return -(vec' * vec)/ (2.0 * var) - 0.5 * log(2.0 * pi * var)
+end;
+
+function Gen.random(::NoisyMatrix, mu::Array{U}, noise::T) where {U<:Real,T<:Real}
     mat = copy(mu)
-    (w, h) = size(mu)
-    for i=1:w
-        for j=1:h
-            mat[i, j] = mu[i, j] + randn() * noise
-        end
+    for i in CartesianIndeces(mu)
+        mat[i] = mu[i] + randn() * noise
     end
     return mat
 end;

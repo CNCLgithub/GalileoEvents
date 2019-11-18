@@ -115,11 +115,12 @@ class RampScene:
         If the material is not defined within the blend file,
         the object is assigned `"Wood"`.
         """
-        if not mat in bpy.data.materials:
-            raise ValueError('Unknown material {}'.format(mat))
+        # if not mat in bpy.data.materials:
+        #     raise ValueError('Unknown material {}'.format(mat))
         if mat == 'Wood':
             mat = 'rough_wood_{0:d}'.format(1)
-        obj.active_material = bpy.data.materials[mat]
+        if mat in bpy.data.materials:
+            obj.active_material = bpy.data.materials[mat]
         bpy.context.view_layer.update()
 
     def create_block(self, name, object_d):
@@ -155,6 +156,9 @@ class RampScene:
         self.move_obj(ramp, ramp_d['position'])
         self.rotate_obj(ramp, ramp_d['orientation'])
         # Load Objects
+        obj_names = list(scene_dict['objects'].keys())
+        obj_names = sorted(obj_names)
+        self.obj_names = obj_names
         for name, data in scene_dict['objects'].items():
             self.create_block(name, data)
 
@@ -196,7 +200,8 @@ class RampScene:
         rotations = np.array(self.trace['orn'][frame])
         n_balls = len(positions)
         for ball_i in range(n_balls):
-            ball = bpy.data.objects['{0:d}'.format(ball_i)]
+            obj_name = self.obj_names[ball_i]
+            ball = bpy.data.objects[obj_name]
             self.move_obj(ball, positions[ball_i])
             self.rotate_obj(ball, rotations[ball_i])
             ball.keyframe_insert(data_path='location', index = -1)

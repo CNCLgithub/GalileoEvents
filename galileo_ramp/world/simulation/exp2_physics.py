@@ -107,7 +107,7 @@ class RampPhysics:
     Handles physics for block towers.
     """
 
-    def __init__(self, scene_json, loader = None, debug = True):
+    def __init__(self, scene_json, loader = None, debug = False):
         if loader is None:
             loader = Loader()
         self.loader = loader
@@ -117,6 +117,10 @@ class RampPhysics:
             self.client = bc.BulletClient(connection_mode=pybullet.DIRECT)
         self.debug = debug
         self.world = scene_json
+        if 'gravity' in scene_json:
+            self.client.setGravity(0, 0, scene_json['gravity'])
+        else:
+            self.client.setGravity(0, 0, -10)
 
     #-------------------------------------------------------------------------#
     # Attributes
@@ -162,7 +166,7 @@ class RampPhysics:
         and linear velocity for each object.
         """
         p = self.client
-        (positions, rotations, ang_vel, lin_vel) = state
+        (positions, rotations, ang_vel, lin_vel, _) = state
         for i, ob_id in enumerate(object_ids):
             p.resetBasePositionAndOrientation(ob_id,
                                               posObj = positions[i],
@@ -194,7 +198,6 @@ class RampPhysics:
             enableFileCaching = 0,
         )
 
-        p.setGravity(0, 0, -10)
 
         positions = np.zeros((frames, len(objects), 3))
         rotations = np.zeros((frames, len(objects), 4))
@@ -222,20 +225,33 @@ class RampPhysics:
             p.stepSimulation()
 
             frame = np.floor(step / steps_per_frame).astype(int)
+
             for c,(a,b) in enumerate(combinations(object_ids, 2)):
                 cp = len(p.getContactPoints(bodyA=a, bodyB=b))
                 collisions[frame, c] += cp
 
-            if step % steps_per_frame != 0:
-                continue
 
-            for c, obj_id in enumerate(object_ids):
-                pos, rot = p.getBasePositionAndOrientation(obj_id)
-                l_vel, a_vel = p.getBaseVelocity(obj_id)
-                positions[frame, c] = pos
-                rotations[frame, c] = rot
-                ang_vel[frame, c] = a_vel
-                lin_vel[frame, c] = l_vel
+            record = (step+1) % steps_per_frame == 0
+            if record:
+                for c, obj_id in enumerate(object_ids):
+                    pos, rot = p.getBasePositionAndOrientation(obj_id)
+                    l_vel, a_vel = p.getBaseVelocity(obj_id)
+                    positions[frame, c] = pos
+                    rotations[frame, c] = rot
+                    ang_vel[frame, c] = a_vel
+                    lin_vel[frame, c] = l_vel
 
 
         return (positions, rotations, ang_vel, lin_vel, collisions)
+
+def run_full_trace(data, objects, T = 1, fps = 6):
+    t = RampPhysics(data)
+    return t.get_trace(T, objects, fps = 6)
+
+def run_mc_trace(data, objects, state = None, pad = 0, fps = 6):
+    t = RampPhysics(data)
+    steps = 2*pad + 1
+    current_trace = t.get_trace(steps, objects,  fps = fps, state = state)
+    smooth_trace = lambda x: x[0]
+    trace = list(map(smooth_trace, current_trace))
+    return trace
