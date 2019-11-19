@@ -11,13 +11,13 @@ BUILDENV="false"
 
 . load_config.sh
 
-
 SING="${ENV[path]}"
 CONT="${ENV[cont]}"
 ENVPATH="${ENV[env]}"
 
 DEPPATH="https://www.dropbox.com/sh/exloazrievnjvey/AADXtso1A4WaPKQ09LX1alFAa?dl=0"
-BLENDPATH="https://www.dropbox.com/s/rg5hhphs4hdxzun/blender.tar.bz2?dl=0"
+#TODO At some point, this should point to Blender v2.8 in a Dropbox
+BLENDPATH="https://www.blender.org/download/Blender2.80/blender-2.80-linux-glibc217-x86_64.tar.bz2"
 JULIAPATH="https://www.dropbox.com/s/w04yhfn3jp9sndd/julia.tar.gz?dl=0"
 
 # 1) Create the singularity container (requires sudo)
