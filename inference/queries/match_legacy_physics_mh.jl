@@ -28,13 +28,13 @@ end;
                                addr)
     # Add the features from the latents to the scene descriptions
     data = deepcopy(scene.data)
-    ramp_obj_fric = @trace(Gen_Compose.draw(prior, :friction_a))
-    table_obj_fric = @trace(Gen_Compose.draw(prior, :friction_b))
-    # ground_fric = @trace(Gen_Compose.draw(prior, :friction_ground))
-    data["objects"]["A"]["friction"] = ramp_obj_fric
-    data["objects"]["B"]["friction"] = table_obj_fric
-    # data["ramp"]["friction"] = ground_fric
-    # data["table"]["friction"] = ground_fric
+    data["objects"]["A"]["mass"] = @trace(Gen_Compose.draw(prior, :mass_a))
+    data["objects"]["B"]["mass"] = @trace(Gen_Compose.draw(prior, :mass_b))
+    data["objects"]["A"]["friction"] = @trace(Gen_Compose.draw(prior, :friction_a))
+    data["objects"]["B"]["friction"] = @trace(Gen_Compose.draw(prior, :friction_b))
+    ground_fric = @trace(Gen_Compose.draw(prior, :friction_ground))
+    data["ramp"]["friction"] = ground_fric
+    data["table"]["friction"] = ground_fric
 
     new_state = scene.simulator(data, ["A", "B"], scene.n_frames)
     pos = new_state[1]
@@ -44,14 +44,8 @@ end;
 end
 
 
-latents = [:friction_a, :friction_b]
-friction_rv = StaticDistribution{Float64}(uniform, (0.001, 0.999))
-prior = Gen_Compose.DeferredPrior(latents,
-                                  [friction_rv,
-                                   friction_rv])
-
 function estimate_layer(estimate)
-    layer(x = :iter, y = estimate, Gadfly.Geom.beeswarm,
+    layer(x = estimate, color = :log_score, Gadfly.Geom.histogram,
           Gadfly.Theme(background_color = "white"))
 end
 
@@ -95,9 +89,6 @@ function Gen_Compose.step_procedure!(state::HMCTrace,
                          query::StaticQuery,
                          addr,
                          step_func)
-    # selection = Gen.select(query.latents...)
-    # state.current_trace, accepted = step_func(proc, state, selection)
-    # state.current_trace, accepted = step_func(proc, state, selection)
     state.current_trace = proc.update(state.current_trace)
     return nothing
 end
@@ -127,13 +118,6 @@ function Gen_Compose.mc_step!(proc::HMC,
     # Gen.hmc(state.current_trace, selection, proc.mass, proc.L, proc.eps)
 end
 
-friction_move = DynamicDistribution{Float64}(normal, x -> (x, 0.2))
-moves = [friction_move
-         friction_move
-         friction_move]
-
-# the rejuvination will follow Gibbs sampling
-update_step = gibbs_steps(moves, latents)
 
 
 
@@ -144,14 +128,35 @@ function run_inference(scene_data, positions, out_path)
 
     observations = Gen.choicemap()
     set_value!(observations, :pos, positions)
+
+    latents = [:mass_a, :mass_b, :friction_a, :friction_b, :friction_ground]
+    mass_rv = StaticDistribution{Float64}(uniform, (0.1, 200))
+    friction_rv = StaticDistribution{Float64}(uniform, (0.001, 0.999))
+    prior = Gen_Compose.DeferredPrior(latents,
+                                      [mass_rv,
+                                       mass_rv,
+                                       friction_rv,
+                                       friction_rv,
+                                       friction_rv])
+
     query = StaticQuery(latents,
                         prior,
                         generative_model,
                         (scene,),
                         observations)
+    mass_move = DynamicDistribution{Float64}(normal, x -> (x, 5.0))
+    friction_move = DynamicDistribution{Float64}(normal, x -> (x, 0.2))
+    moves = [mass_move
+             mass_move
+             friction_move
+             friction_move
+             friction_move]
+
+    # the rejuvination will follow Gibbs sampling
+    update_step = gibbs_steps(moves, latents)
     procedure = HMC(update_step)
 
-    @time results = static_monte_carlo(procedure, query, 1000)
+    @time results = static_monte_carlo(procedure, query, 100)
     # @time results = static_monte_carlo(procedure, query, 10)
     plot = viz(results)
     plot |> SVG("$(out_path)_trace.svg",30cm, 30cm)
@@ -161,8 +166,8 @@ function run_inference(scene_data, positions, out_path)
 end
 
 function main()
-    scene_json = "../data/galileo-ramp/scenes/legacy_converted/trial_88.json"
-    scene_pos = "../data/galileo-ramp/scenes/legacy_converted/trial_88_pos.npy"
+    scene_json = "../data/galileo-ramp/scenes/legacy_converted/trial_24.json"
+    scene_pos = "../data/galileo-ramp/scenes/legacy_converted/trial_24_pos.npy"
     scene_data = Dict()
     open(scene_json, "r") do f
         # dicttxt = readstring(f)

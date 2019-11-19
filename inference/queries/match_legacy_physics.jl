@@ -8,6 +8,7 @@ using CSV
 using JSON
 using Gadfly
 using PyCall
+using Compose
 using Gen_Compose
 
 include("../dist.jl")
@@ -29,14 +30,13 @@ end;
                                addr)
     # Add the features from the latents to the scene descriptions
     data = deepcopy(scene.data)
-    # data["gravity"] = @trace(Gen_Compose.draw(prior, :gravity))
-    ramp_obj_fric = @trace(Gen_Compose.draw(prior, :friction_a))
-    table_obj_fric = @trace(Gen_Compose.draw(prior, :friction_b))
+    data["objects"]["A"]["mass"] = @trace(Gen_Compose.draw(prior, :mass_a))
+    data["objects"]["B"]["mass"] = @trace(Gen_Compose.draw(prior, :mass_b))
+    data["objects"]["A"]["friction"] = @trace(Gen_Compose.draw(prior, :friction_a))
+    data["objects"]["B"]["friction"] = @trace(Gen_Compose.draw(prior, :friction_b))
     ground_fric = @trace(Gen_Compose.draw(prior, :friction_ground))
-    data["objects"]["A"]["friction"] = ramp_obj_fric
-    data["objects"]["B"]["friction"] = table_obj_fric
-    data["ramp"]["friction"] = table_obj_fric
-    data["table"]["friction"] = table_obj_fric
+    data["ramp"]["friction"] = ground_fric
+    data["table"]["friction"] = ground_fric
 
     new_state = scene.simulator(data, ["A", "B"], state = state)
     pos = new_state[1]
@@ -44,24 +44,8 @@ end;
     return new_state
 end
 
-
-latents = [:friction_ground, :friction_a, :friction_b]
-friction_rv = StaticDistribution{Float64}(uniform, (0.001, 0.999))
-prior = Gen_Compose.DeferredPrior(latents,
-                                  [friction_rv,
-                                   friction_rv,
-                                   friction_rv])
-friction_move = DynamicDistribution{Float64}(uniform, x -> (x-0.1, x+0.1))
-moves = [friction_move
-         friction_move
-         friction_move]
-
-# the rejuvination will follow Gibbs sampling
-rejuv = gibbs_steps(moves, latents)
-
 function estimate_layer(estimate, with_map = false)
-    l = layer(x = :t, y = estimate, Gadfly.Geom.histogram2d,
-              Gadfly.Theme(background_color = "white"))
+    l = layer(x = :t, y = estimate, Gadfly.Geom.histogram2d)
     return l
 end
 
@@ -73,6 +57,8 @@ function viz(results::Gen_Compose.SequentialTraceResult)
     # last log scores
     log_scores = Gadfly.plot(df, estimate_layer(:log_score))
     plot = vstack(estimates..., log_scores)
+    compose(compose(context(), rectangle(), fill("white")),
+            plot)
 end
 
 function run_inference(scene_data, positions, out_path)
@@ -87,6 +73,16 @@ function run_inference(scene_data, positions, out_path)
 
     observations = Gen.choicemap()
     set_value!(observations, :pos, obs)
+
+    latents = [:mass_a, :mass_b, :friction_a, :friction_b, :friction_ground]
+    mass_rv = StaticDistribution{Float64}(uniform, (0.1, 200))
+    friction_rv = StaticDistribution{Float64}(uniform, (0.001, 0.999))
+    prior = Gen_Compose.DeferredPrior(latents,
+                                      [mass_rv,
+                                       mass_rv,
+                                       friction_rv,
+                                       friction_rv,
+                                       friction_rv])
     query = SequentialQuery(latents,
                         prior,
                         generative_model,
@@ -98,9 +94,18 @@ function run_inference(scene_data, positions, out_path)
     #
     # Additionally, this will be under the Sequential Monte-Carlo
     # paradigm.
-    n_particles = 5000
+    n_particles = 20
     ess = n_particles * 0.5
     # defines the random variables used in rejuvination
+    mass_move = DynamicDistribution{Float64}(normal, x -> (x, 20.0))
+    friction_move = DynamicDistribution{Float64}(normal, x -> (x, 0.2))
+    moves = [mass_move
+             mass_move
+             friction_move
+             friction_move
+             friction_move]
+    # the rejuvination will follow Gibbs sampling
+    rejuv = gibbs_steps(moves, latents)
     procedure = ParticleFilter(n_particles,
                                ess,
                                rejuv)
@@ -115,8 +120,8 @@ end
 
 function main()
     sim = gm.run_mc_trace
-    scene_json = "/home/mario/dev/data/galileo-ramp/scenes/legacy_converted/trial_10.json"
-    scene_pos = "/home/mario/dev/data/galileo-ramp/scenes/legacy_converted/trial_10_pos.npy"
+    scene_json = "/home/mario/dev/data/galileo-ramp/scenes/legacy_converted/trial_24.json"
+    scene_pos = "/home/mario/dev/data/galileo-ramp/scenes/legacy_converted/trial_24_pos.npy"
     scene_data = Dict()
     open(scene_json, "r") do f
         # dicttxt = readstring(f)
@@ -124,8 +129,6 @@ function main()
     end
     pos = np.load(scene_pos)
     pos = permutedims(pos, [2, 1, 3])
-    run_inference(scene_data, pos, sim, "test")
+    run_inference(scene_data, pos, "test_pf")
     return nothing
 end
-
-# main()
