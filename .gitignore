@@ -21,7 +21,7 @@ doc/_index.rst
 # miscellaneous
 
 julia.tar.gz
-blender.tar.bz2
+blender_2.8.tar.bz2
 worker-*
 *.lock
 tmp*
