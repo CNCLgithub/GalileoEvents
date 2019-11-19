@@ -49,7 +49,7 @@ def main():
     parser.add_argument('trial', type = str, help = 'path to scene file')
     # misc
     parser.add_argument('--out', type = str, help = 'directory to save traces',
-                        default =  'match_legacy_mh')
+                        default =  'match_legacy_mh_mass')
 
     args = parser.parse_args()
 
