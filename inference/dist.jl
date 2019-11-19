@@ -36,7 +36,7 @@ end;
 
 function Gen.random(::NoisyMatrix, mu::Array{U}, noise::T) where {U<:Real,T<:Real}
     mat = copy(mu)
-    for i in CartesianIndeces(mu)
+    for i in CartesianIndices(mu)
         mat[i] = mu[i] + randn() * noise
     end
     return mat
