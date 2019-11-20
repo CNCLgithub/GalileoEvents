@@ -44,7 +44,9 @@ from: nvidia/cuda:10.0-cudnn7-devel
                      libc6 \
                      libgl1-mesa-dev \
                      mesa-utils \
-                     xvfb
+                     xvfb \
+                     gettext \
+                     gettext-base
 
 
 

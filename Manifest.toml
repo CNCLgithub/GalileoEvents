@@ -58,10 +58,11 @@ uuid = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 version = "0.5.14"
 
 [[Cairo]]
-deps = ["BinDeps", "Colors", "Compat", "Graphics", "Homebrew", "Libdl", "Pkg", "WinRPM"]
-git-tree-sha1 = "e577cb41e7e2641f4b97f1b6dbcb9a69c9288330"
+deps = ["BinaryProvider", "Colors", "Graphics", "Libdl"]
+git-tree-sha1 = "394dc757ccfd02e66056ca5b4fc551874d43ffb8"
 uuid = "159f3aea-2a34-519c-b102-8c37f9878175"
-version = "0.6.0"
+version = "0.8.0"
+
 
 [[Calculus]]
 deps = ["Compat"]
