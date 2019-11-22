@@ -14,9 +14,7 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 
 from galileo_ramp.utils import config
-from galileo_ramp.world.scene.ball import Ball
-from galileo_ramp.world.scene.ramp import RampScene
-from galileo_ramp.world.simulation import forward_model
+from galileo_ramp.world.simulation import exp2_physics
 
 CONFIG = config.Config()
 
@@ -32,8 +30,11 @@ def simulate_scene(src):
     """
     with open(src, 'r') as f:
         scene_data = json.load(f)['scene']
-    s = forward_model.simulate(scene_data, 200, debug = True, fps = 6,
-                               legacy = True)
+    s = exp2_physics.run_full_trace(scene_data,
+                                    ["A", "B"],
+                                    0.95,
+                                    fps = 60,
+                                    time_scale = 10.0)
     return s
     # print(np.sum(s[-1], axis = 0))
 
@@ -127,12 +128,9 @@ def main():
 
     args = parser.parse_args()
 
-    src = os.path.join(CONFIG['PATHS', 'scenes'], args.src)
-    src_name = os.path.basename(args.src)[:-5]
-    trace = os.path.join(CONFIG['PATHS', 'renders'], 'legacy', src_name,
-                         'galileo_positions.npy')
-    trace = np.load(trace)
-    sim = simulate_scene(src)
+    position_file = args.src.replace('.json', '_pos.npy')
+    trace = np.load(position_file)
+    sim = simulate_scene(args.src)
     compare_simulations(trace, sim[0])
 
 

@@ -72,17 +72,3 @@ function Gen.logpdf(::TruncNorm, x::Float64, mu::U, noise::T, low::T, high::T) w
                                 low, high)
     return Distributions.logpdf(d, x)
 end;
-
-
-# struct Partial <: Gen.Distribution{T} where T end
-# const partial{T} = Partial{T}()
-# function Gen.random(::Partial{T}, mu::U) where {U<:Real}
-#     d = Distributions.Truncated(Distributions.Normal(mu, noise),
-#                                 low, high)
-#     return Distributions.rand(d)
-# end;
-# function Gen.logpdf(::TruncNorm, x::Float64, mu::U, noise::T, low::T, high::T) where {U<:Real,T<:Real}
-#     d = Distributions.Truncated(Distributions.Normal(mu, noise),
-#                                 low, high)
-#     return Distributions.logpdf(d, x)
-# end;

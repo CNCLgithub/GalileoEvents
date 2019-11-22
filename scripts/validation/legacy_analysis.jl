@@ -38,7 +38,7 @@ end
 
 function main()
     proj_path = "../data/galileo-ramp"
-    trace_path = joinpath(proj_path, "traces", "match_legacy_mh")
+    trace_path = joinpath(proj_path, "traces", "match_legacy_mh_mass")
     traces = glob("trial_*.csv", trace_path)
     df = DataFrame()
     for trace in traces

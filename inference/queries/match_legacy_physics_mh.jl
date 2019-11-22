@@ -10,6 +10,7 @@ using Gadfly
 using PyCall
 using Compose
 using Gen_Compose
+import Cairo
 
 include("../dist.jl")
 
@@ -28,15 +29,13 @@ end;
                                addr)
     # Add the features from the latents to the scene descriptions
     data = deepcopy(scene.data)
-    data["objects"]["A"]["mass"] = @trace(Gen_Compose.draw(prior, :mass_a))
-    data["objects"]["B"]["mass"] = @trace(Gen_Compose.draw(prior, :mass_b))
-    data["objects"]["A"]["friction"] = @trace(Gen_Compose.draw(prior, :friction_a))
-    data["objects"]["B"]["friction"] = @trace(Gen_Compose.draw(prior, :friction_b))
-    ground_fric = @trace(Gen_Compose.draw(prior, :friction_ground))
-    data["ramp"]["friction"] = ground_fric
-    data["table"]["friction"] = ground_fric
+    data["objects"]["A"]["density"] = @trace(Gen_Compose.draw(prior, :density_a))
+    data["objects"]["A"]["mass"] = data["objects"]["A"]["density"] * data["objects"]["A"]["volume"]
+    data["objects"]["B"]["density"] = @trace(Gen_Compose.draw(prior, :density_b))
+    data["objects"]["B"]["mass"] = data["objects"]["B"]["density"] * data["objects"]["B"]["volume"]
 
-    new_state = scene.simulator(data, ["A", "B"], scene.n_frames)
+    new_state = scene.simulator(data, ["A", "B"], scene.n_frames * 1.0/60.0,
+                                fps = 60, time_scale = 10.0)
     pos = new_state[1]
     @trace(Gen.broadcasted_normal(pos, fill(scene.obs_noise, scene.n_frames)),
                                   addr)
@@ -129,49 +128,51 @@ function run_inference(scene_data, positions, out_path)
     observations = Gen.choicemap()
     set_value!(observations, :pos, positions)
 
-    latents = [:mass_a, :mass_b, :friction_a, :friction_b, :friction_ground]
-    mass_rv = StaticDistribution{Float64}(uniform, (0.1, 200))
-    friction_rv = StaticDistribution{Float64}(uniform, (0.001, 0.999))
+    latents = [:density_a, :density_b]
+    density_map = Dict()
+    density_map["Wood"] = 1.0
+    density_map["Brick"] = 2.0
+    density_map["Iron"] = 8.0
+
+    density_a = density_map[scene_data["objects"]["A"]["appearance"]]
+    density_b = density_map[scene_data["objects"]["B"]["appearance"]]
     prior = Gen_Compose.DeferredPrior(latents,
-                                      [mass_rv,
-                                       mass_rv,
-                                       friction_rv,
-                                       friction_rv,
-                                       friction_rv])
+                                      [StaticDistribution{Float64}(trunc_norm,
+                                                                   (density_a, 3.0, 0., 12.)),
+                                       StaticDistribution{Float64}(trunc_norm,
+                                                                   (density_b, 3.0, 0., 12.))])
 
     query = StaticQuery(latents,
                         prior,
                         generative_model,
                         (scene,),
                         observations)
-    mass_move = DynamicDistribution{Float64}(normal, x -> (x, 5.0))
-    friction_move = DynamicDistribution{Float64}(normal, x -> (x, 0.2))
+    mass_move = DynamicDistribution{Float64}(log_uniform, x -> (x, 0.1))
     moves = [mass_move
-             mass_move
-             friction_move
-             friction_move
-             friction_move]
+             mass_move]
 
     # the rejuvination will follow Gibbs sampling
     update_step = gibbs_steps(moves, latents)
     procedure = HMC(update_step)
 
-    @time results = static_monte_carlo(procedure, query, 1000)
+    @time results = static_monte_carlo(procedure, query, 100)
     plot = viz(results)
-    plot |> SVG("$(out_path)_trace.svg",30cm, 30cm)
+    plot |> PNG("$(out_path)_trace.png",30cm, 30cm)
     df = to_frame(results)
     CSV.write("$(out_path)_trace.csv", df)
     return df
 end
 
 function main()
-    scene_json = "../../data/galileo-ramp/scenes/legacy_converted/trial_24.json"
-    scene_pos = "../../data/galileo-ramp/scenes/legacy_converted/trial_24_pos.npy"
+    scene_json = "../data/galileo-ramp/scenes/legacy_converted/trial_89.json"
+    scene_pos = "../data/galileo-ramp/scenes/legacy_converted/trial_89_pos.npy"
     scene_data = Dict()
     open(scene_json, "r") do f
         # dicttxt = readstring(f)
         scene_data=JSON.parse(f)["scene"]
     end
+    println(scene_data["objects"]["A"]["mass"])
+    println(scene_data["objects"]["B"]["mass"])
     pos = np.load(scene_pos)
     pos = permutedims(pos, [2, 1, 3])
     run_inference(scene_data, pos, "test")

@@ -119,7 +119,6 @@ function run_inference(scene_data, positions, out_path)
 end
 
 function main()
-    sim = gm.run_mc_trace
     scene_json = "/home/mario/dev/data/galileo-ramp/scenes/legacy_converted/trial_24.json"
     scene_pos = "/home/mario/dev/data/galileo-ramp/scenes/legacy_converted/trial_24_pos.npy"
     scene_data = Dict()
