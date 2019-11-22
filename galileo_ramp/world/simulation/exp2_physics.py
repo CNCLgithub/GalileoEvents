@@ -96,8 +96,9 @@ class Loader:
         p.changeDynamics(obj_id, -1,
                          mass = params['mass'],
                          lateralFriction = params['friction'],
-                         rollingFriction = 0.05,
-                         restitution = 1.0)
+                         rollingFriction = 0.1,
+                         linearDamping =  0.006,
+                         restitution = 0.50)
         return obj_id
 
 
@@ -175,15 +176,15 @@ class RampPhysics:
                                 linearVelocity = lin_vel[i],
                                 angularVelocity = ang_vel[i])
 
-    def get_trace(self, frames, objects, time_step = 240, fps = 60,
-                  state = None):
+    def get_trace(self, dur, objects, time_step = 240, fps = 60,
+                  time_scale = 1.0, state = None):
         """Obtains world state from simulation.
 
         Currently returns the position of each rigid body.
         The total duration is equal to `frames / fps`
 
         Arguments:
-            frames (int): Number of frames to simulate.
+            dur (float): The amount of time in seconds to simulate
             objects ([str]): List of strings of objects to report
             time_step (int, optional): Number of physics steps per second
             fps (int, optional): Number of frames to report per second.
@@ -196,17 +197,19 @@ class RampPhysics:
         p = self.client
         p.setPhysicsEngineParameter(
             enableFileCaching = 0,
+            fixedTimeStep = 1/time_step
         )
 
+        # dur = dur / time_scale
+        # fps = int(np.ceil(fps / time_scale))
+        dt = 1.0 / fps * time_scale
+        frames = int(np.floor(dur * fps))
 
         positions = np.zeros((frames, len(objects), 3))
         rotations = np.zeros((frames, len(objects), 4))
         ang_vel = np.zeros((frames, len(objects), 3))
         lin_vel = np.zeros((frames, len(objects), 3))
         collisions = np.zeros((frames, ncr(len(objects), 2)))
-
-        steps_per_frame = int(time_step / fps)
-        total_steps = int(max(1, ((frames / fps) * time_step)))
 
         if not state is None:
             self.apply_state(object_ids, state)
@@ -221,32 +224,35 @@ class RampPhysics:
                 time.sleep(0.01)
             return
 
-        for step in range(total_steps):
-            p.stepSimulation()
-
-            frame = np.floor(step / steps_per_frame).astype(int)
+        for frame in range(frames):
+            self.step_simulation(dt, time_step)
 
             for c,(a,b) in enumerate(combinations(object_ids, 2)):
                 cp = len(p.getContactPoints(bodyA=a, bodyB=b))
                 collisions[frame, c] += cp
 
-
-            record = (step+1) % steps_per_frame == 0
-            if record:
-                for c, obj_id in enumerate(object_ids):
-                    pos, rot = p.getBasePositionAndOrientation(obj_id)
-                    l_vel, a_vel = p.getBaseVelocity(obj_id)
-                    positions[frame, c] = pos
-                    rotations[frame, c] = rot
-                    ang_vel[frame, c] = a_vel
-                    lin_vel[frame, c] = l_vel
-
+            for c, obj_id in enumerate(object_ids):
+                pos, rot = p.getBasePositionAndOrientation(obj_id)
+                l_vel, a_vel = p.getBaseVelocity(obj_id)
+                positions[frame, c] = pos
+                rotations[frame, c] = rot
+                ang_vel[frame, c] = a_vel
+                lin_vel[frame, c] = l_vel
 
         return (positions, rotations, ang_vel, lin_vel, collisions)
 
-def run_full_trace(data, objects, T = 1, fps = 6):
+
+    def step_simulation(self, dt, time_step):
+        current = 0.0
+        while current < dt:
+            self.client.stepSimulation()
+            current += 1.0/time_step
+
+
+
+def run_full_trace(data, objects, T = 1.0, fps = 60, time_scale = 1.0):
     t = RampPhysics(data)
-    return t.get_trace(T, objects, fps = 6)
+    return t.get_trace(T, objects, fps = fps, time_scale = time_scale)
 
 def run_mc_trace(data, objects, state = None, pad = 0, fps = 6):
     t = RampPhysics(data)
