@@ -8,7 +8,7 @@ latents = [:friction_a, :friction_b, :friction_ground]
 
 function extract_top_k(trace_path::AbstractString, k::Integer)
     df = sort(CSV.read(trace_path), :log_score, rev = true)
-    # first(df, k)
+    first(df, k)
 end
 
 """
@@ -23,15 +23,20 @@ function process_trace(trace_path::AbstractString, scene_json::AbstractString,
     open(scene_json, "r") do f
         scene_data=JSON.parse(f)["scene"]
     end
-    gt_friction_a = scene_data["objects"]["A"]["friction"]
-    gt_friction_b = scene_data["objects"]["B"]["friction"]
-    gt_friction_ground = 0.5
+    # add gt values
+    gt_mass_a = scene_data["objects"]["A"]["mass"]
+    gt_mass_b = scene_data["objects"]["B"]["mass"]
+    gt_mass_ratio = gt_mass_a / gt_mass_b
 
     df.trial_id = basename(trace_path)
-    df.gt_friction_a = fill(gt_friction_a, size(df, 1))
-    df.gt_friction_b = fill(gt_friction_b, size(df, 1))
-    df.gt_friction_ground = fill(gt_friction_ground, size(df, 1))
+    df.gt_mass_a = fill(gt_mass_a, size(df, 1))
+    df.gt_mass_b = fill(gt_mass_b, size(df, 1))
+    df.gt_mass_ratio = fill(gt_mass_ratio, size(df, 1))
 
+    # add estimates
+    df.mass_a = df.density_a * scene_data["objects"]["A"]["volume"]
+    df.mass_b = df.density_b * scene_data["objects"]["B"]["volume"]
+    df.mass_ratio = df.mass_a ./ df.mass_b
     return df
 end
 
@@ -48,7 +53,7 @@ function main()
         append!(df, process_trace(trace, gt_json))
     end
 
-    CSV.write(joinpath(trace_path, "summary_trace.csv"), df)
+    CSV.write("$(trace_path)_summary_map.csv", df)
 end
 
 main()

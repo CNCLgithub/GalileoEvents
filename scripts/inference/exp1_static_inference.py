@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
-Attempts to find physical settings that matches
-the current forward model to traces in the legacy model.
+Computes MH-MCMC over Exp1 scenes
 """
 import os
 import glob
@@ -17,7 +16,7 @@ CONFIG = config.Config()
 
 root = CONFIG['PATHS', 'root']
 module_path = os.path.join(root, 'inference',
-                           'queries', 'match_legacy_physics_mh.jl')
+                           'queries', 'exp1_static_inference.jl')
 inference = initialize(module_path)
 
 def run_search(scene_json, scene_pos, out):
@@ -32,11 +31,22 @@ def run_search(scene_json, scene_pos, out):
         A `dict` containing the inference trace.
     """
     positions = np.load(scene_pos)
+    distances = np.linalg.norm(positions[1] - positions[0], axis = -1)
     positions = np.transpose(positions, (1, 0, 2))
+    contacted = (distances[1:] - distances[:-1]) > 0
+    collision_frame = np.where(contacted)[0][0]
+    before = collision_frame - 1
+    just_after = collision_frame  + 12
+    half_way = int((len(positions) + collision_frame) / 2)
+    full = len(positions)
+    time_points = [before, just_after, half_way, full]
+    print(time_points)
     with open(scene_json, 'r') as f:
         scene_data = json.load(f)['scene']
 
-    inference(scene_data, positions, out)
+    for i,t in enumerate(time_points):
+        out_path = "{0!s}_{1:d}".format(out, i)
+        inference(scene_data, positions[:t, :, :], out_path)
 
 
 def main():
@@ -49,7 +59,7 @@ def main():
     parser.add_argument('trial', type = str, help = 'path to scene file')
     # misc
     parser.add_argument('--out', type = str, help = 'directory to save traces',
-                        default =  'match_legacy_mh_mass')
+                        default =  'exp1_static_inference')
 
     args = parser.parse_args()
 

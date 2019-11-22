@@ -61,8 +61,8 @@ def main():
     files = glob(os.path.join(src_path, '*.json'))
 
     if args.inference == 'mh':
-        script = os.path.join(root, 'scripts', 'validation',
-                              'match_legacy_dynamics_mh.py')
+        script = os.path.join(root, 'scripts', 'inference',
+                              'exp1_static_inference.py')
     else:
         script = os.path.join(root, 'scripts', 'validation',
                               'match_legacy_dynamics.py')
