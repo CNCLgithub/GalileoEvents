@@ -10,6 +10,7 @@ import datetime
 import numpy as np
 
 from galileo_ramp.utils import config
+from galileo_ramp.utils.dataset.exp1_dataset import Exp1Dataset
 from galileo_ramp.inference.execute import initialize
 
 CONFIG = config.Config()
@@ -19,7 +20,7 @@ module_path = os.path.join(root, 'inference',
                            'queries', 'exp1_static_inference.jl')
 inference = initialize(module_path)
 
-def run_search(scene_json, scene_pos, out):
+def run_search(scene_data, obs, time_points, out, iterations):
     """Runs a particle filter over the tower designated by the trial index
 
     Arguments:
@@ -30,23 +31,9 @@ def run_search(scene_json, scene_pos, out):
     Returns:
         A `dict` containing the inference trace.
     """
-    positions = np.load(scene_pos)
-    distances = np.linalg.norm(positions[1] - positions[0], axis = -1)
-    positions = np.transpose(positions, (1, 0, 2))
-    contacted = (distances[1:] - distances[:-1]) > 0
-    collision_frame = np.where(contacted)[0][0]
-    before = collision_frame - 1
-    just_after = collision_frame  + 12
-    half_way = int((len(positions) + collision_frame) / 2)
-    full = len(positions)
-    time_points = [before, just_after, half_way, full]
-    print(time_points)
-    with open(scene_json, 'r') as f:
-        scene_data = json.load(f)['scene']
-
     for i,t in enumerate(time_points):
         out_path = "{0!s}_{1:d}".format(out, i)
-        inference(scene_data, positions[:t, :, :], out_path)
+        inference(scene_data, obs[:t, :, :], out_path, iterations)
 
 
 def main():
@@ -56,7 +43,16 @@ def main():
         'the galileo ball-ramp-world.',
         formatter_class = argparse.ArgumentDefaultsHelpFormatter
     )
-    parser.add_argument('trial', type = str, help = 'path to scene file')
+    parser.add_argument('trial', type = int, help = 'index of scene file')
+    parser.add_argument('chains', type = int,
+                        help = 'number of chains')
+    parser.add_argument('--dataset', type = str,
+                        default = 'ramp_experiment_fixed_camera_fixed_ground_2018-04-30.hdf5',
+                        help = 'path to scene dataset')
+    parser.add_argument('--iterations', type = int,
+                        default = 1000,
+                        help = 'Number of iterations')
+
     # misc
     parser.add_argument('--out', type = str, help = 'directory to save traces',
                         default =  'exp1_static_inference')
@@ -66,20 +62,33 @@ def main():
     print('Initializing inference run')
     # assign unique name if new run
     out = os.path.join(CONFIG['PATHS', 'traces'], args.out)
-    trial_name = os.path.basename(os.path.splitext(args.trial)[0])
+    trial_name = 'trial_{0:d}'.format(args.trial)
+    scene_json = os.path.join(CONFIG['PATHS', 'scenes'], 'legacy_converted',
+                              trial_name + ".json")
     if not os.path.isdir(out):
         try:
             os.mkdir(out)
         except:
             print('{0!s} already exists'.format(out))
 
-    out_path = os.path.join(out, trial_name)
-    print('Saving results in {0!s}'.format(out))
-    position_file = args.trial.replace('.json', '_pos.npy')
-    if os.path.isfile(out_path + '_trace.csv'):
-        print('Inference already complete')
-    else:
-        run_search(args.trial, position_file, out_path)
+    dataset_file = os.path.join(CONFIG['PATHS', 'scenes'], args.dataset)
+    dataset = Exp1Dataset(dataset_file)
+    positions, time_points = dataset[args.trial]
+    positions = np.transpose(positions, (1, 0, 2))
+    with open(scene_json, 'r') as f:
+        scene_data = json.load(f)['scene']
+
+
+    for c in range(args.chains):
+        out_path = os.path.join(out, trial_name)
+        out_path = "{0!s}_chain_{1:d}".format(out_path, c)
+        print('Saving results in {0!s}'.format(out))
+        if os.path.isfile(out_path + '_trace.csv'):
+            print('Inference already complete')
+        else:
+            run_search(scene_data, positions, time_points,
+                       out_path,
+                       args.iterations)
 
 
 if __name__ == '__main__':

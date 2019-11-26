@@ -18,14 +18,14 @@ CONFIG = config.Config()
 root = CONFIG['PATHS', 'root']
 
 
-def submit_sbatch(trials, script, size = 1000):
+def submit_sbatch(trials, script, chains, size = 1000):
 
     njobs = min(size, len(trials))
 
     interpreter = '#!/bin/bash'
     func = 'cd {0!s} && '.format(CONFIG['PATHS', 'root']) +\
            './run.sh python3 -W ignore {0!s}'.format(script)
-    tasks = [(t,) for t in trials]
+    tasks = [(t,c) for t in trials for c in range(chains)]
     kargs=[]
     extras = []
     resources = {
@@ -54,6 +54,8 @@ def main():
                         help = 'path to scene files')
     parser.add_argument('--inference', type = str, default = 'mh',
                         help = 'inference procedure to apply')
+    parser.add_argument('--chains', type = int, default = 10,
+                        help = 'number of chains')
 
     args = parser.parse_args()
 
@@ -66,7 +68,7 @@ def main():
     else:
         script = os.path.join(root, 'scripts', 'validation',
                               'match_legacy_dynamics.py')
-    submit_sbatch(files, script)
+    submit_sbatch(files, script, args.chains)
 
 if __name__ == '__main__':
     main()

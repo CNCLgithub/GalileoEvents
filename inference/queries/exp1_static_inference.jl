@@ -43,7 +43,8 @@ end;
 end
 
 
-function run_inference(scene_data, positions, out_path)
+function run_inference(scene_data, positions, out_path,
+                       iter::Int = 100)
     t = first(size(positions))
     scene = Scene(scene_data, t, gm.run_full_trace, 0.2)
 
@@ -77,7 +78,7 @@ function run_inference(scene_data, positions, out_path)
     update_step = gibbs_steps(moves, latents)
     procedure = BatchInference(update_step)
 
-    @time results = static_monte_carlo(procedure, query, 100)
+    @time results = static_monte_carlo(procedure, query, iter)
     plot = viz(results)
     plot |> PNG("$(out_path)_trace.png",30cm, 30cm)
     df = to_frame(results)

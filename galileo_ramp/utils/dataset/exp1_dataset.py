@@ -1,16 +1,14 @@
 import io
 import os
 import json
+import h5py
 import time
 import argparse
+import numpy as np
 from copy import deepcopy
 from pprint import pprint
-
-import h5py
-import numpy as np
 from h5data import dataset
 
-from blockworld.towers import simple_tower
 import numpy as np
 
 # Defined for ratios
@@ -20,7 +18,12 @@ def get_array(bs):
     s = bs.tostring()
     f = io.BytesIO(s)
     v = np.load(f)
-return v
+    return v
+
+def is_moving(vs):
+    # Frames of ground movement
+    moving = np.greater(np.abs(vs.mean(axis=-1)), 5E-2).flatten()
+    return moving
 
 class Exp1Dataset(dataset.HDF5Dataset):
 
@@ -35,13 +38,16 @@ class Exp1Dataset(dataset.HDF5Dataset):
     (params, dims, pos, rots, cols, prnts)
     '''
 
-    def __init__(self, source, root = '/', no_check=True, ratio = True,
+    def __init__(self, source, no_check=True, ratio = True,
                  features = variables, n = 210):
         self.ratio = ratio
         self.features = features
         self.source = source
-        self.root = root
         self.size = n
+
+    @property
+    def root(self):
+        return '/training'
 
     @property
     def source(self):
@@ -66,12 +72,14 @@ class Exp1Dataset(dataset.HDF5Dataset):
         return self.size
 
     def trials(self, index, handle):
-        scene_idx = np.floor(index / 2).astype(int)
-        parts = {}
+        scene_idx = int(index)
         path = '{0:d}'.format(scene_idx)
-        tower = 'org-tower' if index % 2 == 0 else 'mut-tower'
-        parts['raw'] = os.path.join(path, tower)
-        parts['block'] = os.path.join(path, 'block')
+        scene_json =  'trial_{0:d}.json'.format(scene_idx)
+        parts = {}
+        parts['position'] = os.path.join(path, 'galileo_positions.npy')
+        parts['velocity'] = os.path.join(path, 'galileo_velocities.npy')
+        parts['col'] = os.path.join(path, 'galileo_collisions.npy')
+        parts['raw'] = os.path.join(path, scene_json)
         return parts
 
     @property
@@ -85,18 +93,22 @@ class Exp1Dataset(dataset.HDF5Dataset):
 
     def process_trial(self, parts):
 
-        pos = np.vstack(parts['position'])
-        vel = np.vstack(parts['velocity'])
-        col = np.vstack(parts['col']).flatten()
+        pos = parts['position']
+        vel = parts['velocity']
+        col = parts['col'].flatten()
 
-        moves_ramp = BlenderStimuli.tools.frames.moving(vel[0])
-        moves_ground = BlenderStimuli.tools.frames.moving(vel[1])
+        moves_ramp = is_moving(vel[0])
+        moves_ground = is_moving(vel[1])
         moves = np.logical_or(moves_ramp, moves_ground)
         ending = np.where(moves)[0][-1]
         contact = col[0]
         n_frames = len(pos[0])
 
-        return (contact, ending, n_frames)
+        time_points = [contact -1,
+                       contact + 12,
+                       int((contact + ending)/2),
+                       min(ending + 12, n_frames)]
+        return (pos, time_points)
 
     # def get_param(self, param):
 
@@ -141,6 +153,7 @@ def main():
     #     dataset[t]
     dataset[:]
     print('All trials accessed in {0:8.5f}s'.format(time.time() - init_time))
+    print(dataset[0])
 
 if __name__ == '__main__':
     main()
