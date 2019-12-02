@@ -63,7 +63,7 @@ from: nvidia/cuda:10.0-cudnn7-devel
  # Setup blender
  tar xvjf /blender.tar.bz2
  rm /blender.tar.bz2
- mv blender-2.80* /blender
+ mv blender-2.* /blender
  chmod +x blender/blender
 
  # Setup conda
