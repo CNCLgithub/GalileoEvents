@@ -27,7 +27,7 @@ def submit_sbatch(trials, script, chains, size = 1000):
     func = 'cd {0!s} && '.format(CONFIG['PATHS', 'root']) +\
            './run.sh python3 -W ignore {0!s}'.format(script)
     tasks = [(t,c) for t in trials for c in range(chains)]
-    kargs=[]
+    kargs= ["--iterations 1000"]
     extras = []
     resources = {
         'cpus-per-task' : '1',
