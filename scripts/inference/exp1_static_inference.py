@@ -32,7 +32,7 @@ def run_search(scene_data, obs, time_points, out, iterations):
         A `dict` containing the inference trace.
     """
     for i,t in enumerate(time_points):
-        out_path = "{0!s}_{1:d}".format(out, i)
+        out_path = "{0!s}_t_{1:d}".format(out, i)
         inference(scene_data, obs[:t, :, :], out_path, iterations)
 
 
@@ -79,10 +79,10 @@ def main():
         scene_data = json.load(f)['scene']
 
 
+    print('Saving results in {0!s}'.format(out))
     for c in range(args.chains):
         out_path = os.path.join(out, trial_name)
         out_path = "{0!s}_chain_{1:d}".format(out_path, c)
-        print('Saving results in {0!s}'.format(out))
         if os.path.isfile(out_path + '_trace.csv'):
             print('Inference already complete')
         else:

@@ -43,7 +43,7 @@ function main()
     trace_path = joinpath(proj_path, "traces", "exp1_static_inference")
     traces = glob("trial_*.csv", trace_path)
     df = DataFrame()
-    for idx = 0:209, tidx = 0:3
+    for idx = 0:209, tidx = 0:3, chain = 0:9
         trace = "$(trace_path)/trial_$(idx)_$(tidx)_trace.csv"
         gt_json  = joinpath(proj_path, "scenes", "legacy_converted",
                         "trial_$(idx).json")

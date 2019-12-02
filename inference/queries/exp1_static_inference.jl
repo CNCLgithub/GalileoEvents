@@ -8,11 +8,11 @@ using CSV
 using JSON
 using PyCall
 using Gen_Compose
-import Cairo
+# import Cairo
 
 include("../dist.jl")
 include("../procedures/static.jl")
-include("../visualize/plot_inference.jl")
+# include("../visualize/plot_inference.jl")
 
 np = pyimport("numpy")
 gm = pyimport("galileo_ramp.world.simulation.exp2_physics");
@@ -79,8 +79,8 @@ function run_inference(scene_data, positions, out_path,
     procedure = BatchInference(update_step)
 
     @time results = static_monte_carlo(procedure, query, iter)
-    plot = viz(results)
-    plot |> PNG("$(out_path)_trace.png",30cm, 30cm)
+    # plot = viz(results)
+    # plot |> PNG("$(out_path)_trace.png",30cm, 30cm)
     df = to_frame(results)
     df.t = t
     CSV.write("$(out_path)_trace.csv", df)

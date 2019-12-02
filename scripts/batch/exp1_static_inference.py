@@ -21,6 +21,7 @@ root = CONFIG['PATHS', 'root']
 def submit_sbatch(trials, script, chains, size = 1000):
 
     njobs = min(size, len(trials))
+    duration = 20 * chains
 
     interpreter = '#!/bin/bash'
     func = 'cd {0!s} && '.format(CONFIG['PATHS', 'root']) +\
@@ -31,7 +32,7 @@ def submit_sbatch(trials, script, chains, size = 1000):
     resources = {
         'cpus-per-task' : '1',
         'mem-per-cpu' : '2GB',
-        'time' : '360',
+        'time' : '{0:d}'.format(duration),
         'partition' : 'scavenge',
         'requeue' : None,
         'output' : os.path.join(CONFIG['PATHS', 'sout'], 'slurm-%A_%a.out')
@@ -60,7 +61,9 @@ def main():
     args = parser.parse_args()
 
     src_path = os.path.join(CONFIG['PATHS', 'scenes'], args.trials)
-    files = glob(os.path.join(src_path, '*.json'))
+    # only pair trials for now
+    # files = glob(os.path.join(src_path, '*.json'))
+    files = [os.path.join(src_path, 'trial_{0:d}.json') for i in range(120)]
 
     if args.inference == 'mh':
         script = os.path.join(root, 'scripts', 'inference',
