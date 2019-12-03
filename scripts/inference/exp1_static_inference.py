@@ -18,7 +18,7 @@ CONFIG = config.Config()
 root = CONFIG['PATHS', 'root']
 module_path = os.path.join(root, 'inference',
                            'queries', 'exp1_static_inference.jl')
-inference = initialize(module_path)
+# inference = initialize(module_path)
 
 def run_search(scene_data, obs, time_points, out, iterations):
     """Runs a particle filter over the tower designated by the trial index
@@ -77,12 +77,11 @@ def main():
     positions = np.transpose(positions, (1, 0, 2))
 
     # get proper time points
-    if args.trial < 120 & args.trial % 2 == 1:
-        _, time_points = datast[args.trial - 1]
+    if (args.trial < 120) and (args.trial % 2 == 1):
+        _, time_points = dataset[args.trial - 1]
 
     with open(scene_json, 'r') as f:
         scene_data = json.load(f)['scene']
-
 
     print('Saving results in {0!s}'.format(out))
     for c in range(args.chains):
