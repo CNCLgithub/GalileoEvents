@@ -75,6 +75,11 @@ def main():
     dataset = Exp1Dataset(dataset_file)
     positions, time_points = dataset[args.trial]
     positions = np.transpose(positions, (1, 0, 2))
+
+    # get proper time points
+    if args.trial < 120 & args.trial % 2 == 1:
+        _, time_points = datast[args.trial - 1]
+
     with open(scene_json, 'r') as f:
         scene_data = json.load(f)['scene']
 
