@@ -18,7 +18,7 @@ CONFIG = config.Config()
 root = CONFIG['PATHS', 'root']
 module_path = os.path.join(root, 'inference',
                            'queries', 'exp1_static_inference.jl')
-# inference = initialize(module_path)
+inference = initialize(module_path)
 
 def run_search(scene_data, obs, time_points, out, iterations):
     """Runs a particle filter over the tower designated by the trial index
