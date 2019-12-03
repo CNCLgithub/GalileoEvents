@@ -33,6 +33,7 @@ def run_search(scene_data, obs, time_points, out, iterations):
     """
     for i,t in enumerate(time_points):
         out_path = "{0!s}_t_{1:d}".format(out, i)
+        print(obs[:t, :, :].shape)
         inference(scene_data, obs[:t, :, :], out_path, iterations)
 
 
@@ -79,6 +80,12 @@ def main():
     # get proper time points
     if (args.trial < 120) and (args.trial % 2 == 1):
         _, time_points = dataset[args.trial - 1]
+        # need to pad the positions if the counterfactual ended later
+        if time_points[-1] > positions.shape[0]:
+            pad = np.tile(positions[-1],
+                          (time_points[-1] - positions.shape[0] - 1, 1, 1))
+            positions = np.concatenate((positions, pad), axis = 0)
+
 
     with open(scene_json, 'r') as f:
         scene_data = json.load(f)['scene']
