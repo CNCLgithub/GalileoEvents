@@ -26,8 +26,9 @@ def submit_sbatch(trials, script, chains, size = 1000):
     interpreter = '#!/bin/bash'
     func = 'cd {0!s} && '.format(CONFIG['PATHS', 'root']) +\
            './run.sh python3 -W ignore {0!s}'.format(script)
-    tasks = [(t,c) for t in trials for c in range(chains)]
-    kargs= ["--iterations 1000"]
+    tasks = [(t,) for t in trials]
+    kargs= ["--iterations 1000", 
+            "--chains {0:d}".format(chains)]
     extras = []
     resources = {
         'cpus-per-task' : '1',
@@ -63,7 +64,7 @@ def main():
     src_path = os.path.join(CONFIG['PATHS', 'scenes'], args.trials)
     # only pair trials for now
     # files = glob(os.path.join(src_path, '*.json'))
-    files = [os.path.join(src_path, 'trial_{0:d}.json') for i in range(120)]
+    trials = np.arange(120)
 
     if args.inference == 'mh':
         script = os.path.join(root, 'scripts', 'inference',
@@ -71,7 +72,7 @@ def main():
     else:
         script = os.path.join(root, 'scripts', 'validation',
                               'match_legacy_dynamics.py')
-    submit_sbatch(files, script, args.chains)
+    submit_sbatch(trials, script, args.chains)
 
 if __name__ == '__main__':
     main()

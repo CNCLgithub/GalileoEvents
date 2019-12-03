@@ -44,7 +44,7 @@ def main():
         formatter_class = argparse.ArgumentDefaultsHelpFormatter
     )
     parser.add_argument('trial', type = int, help = 'index of scene file')
-    parser.add_argument('chains', type = int,
+    parser.add_argument('--chains', type = int, default = 1,
                         help = 'number of chains')
     parser.add_argument('--dataset', type = str,
                         default = 'ramp_experiment_fixed_camera_fixed_ground_2018-04-30.hdf5',
