@@ -27,7 +27,7 @@ def submit_sbatch(trials, script, chains, size = 1000):
     func = 'cd {0!s} && '.format(CONFIG['PATHS', 'root']) +\
            './run.sh python3 -W ignore {0!s}'.format(script)
     tasks = [(t,) for t in trials]
-    kargs= ["--iterations 1000", 
+    kargs= ["--iterations 100", 
             "--chains {0:d}".format(chains)]
     extras = []
     resources = {
@@ -64,7 +64,7 @@ def main():
     src_path = os.path.join(CONFIG['PATHS', 'scenes'], args.trials)
     # only pair trials for now
     # files = glob(os.path.join(src_path, '*.json'))
-    trials = np.arange(120)
+    trials = np.arange(2)
 
     if args.inference == 'mh':
         script = os.path.join(root, 'scripts', 'inference',
