@@ -254,10 +254,11 @@ def run_full_trace(data, objects, T = 1.0, fps = 60, time_scale = 1.0):
     t = RampPhysics(data)
     return t.get_trace(T, objects, fps = fps, time_scale = time_scale)
 
-def run_mc_trace(data, objects, state = None, pad = 0, fps = 6):
+# def run_mc_trace(data, objects, state = None, pad = 0, fps = 6):
+def run_mc_trace(data, objects, state = None, T = 1.0, fps = 60, time_scale = 1.0):
     t = RampPhysics(data)
-    steps = 2*pad + 1
-    current_trace = t.get_trace(steps, objects,  fps = fps, state = state)
+    current_trace = t.get_trace(T, objects,  fps = fps, state = state,
+                                time_scale = time_scale)
     smooth_trace = lambda x: x[0]
     trace = list(map(smooth_trace, current_trace))
     return trace
