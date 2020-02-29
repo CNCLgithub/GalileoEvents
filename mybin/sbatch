@@ -1,9 +1,0 @@
-#!/bin/bash
-
-mysbatch() {
-    # echo "Call to sbatch";
-    # echo "ARGS $@";
-    ssh -y $HOSTNAME sbatch "$@"
-}
-
-mysbatch "$@"

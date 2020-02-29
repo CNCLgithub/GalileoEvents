@@ -1,9 +1,0 @@
-#!/bin/bash
-
-myscancel() {
-    # echo "Call to scancel";
-    # echo "$@";
-    ssh -y $HOSTNAME scancel "$@";
-}
-
-myscancel "$@"
