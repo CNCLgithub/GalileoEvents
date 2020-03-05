@@ -34,7 +34,8 @@ function initialize_state(params::Params,
         s.add_object(k, objects[i], init_pos[i])
     end
     initial_state = nothing
-    return (initial_state, s)
+    scene = physics.RampPhysics(s.serialize())
+    return (initial_state, scene)
 end
 
 function from_material_params(params)
@@ -57,16 +58,15 @@ function create_object(params, physical_props)
     return shape("", params["dims"], physical_props)
 end
 
-function forward_step(prev_state, s)
+function forward_step(prev_state, scene)
 
-    obj_names = ["$x" for x in 1:length(s.objects)]
-    scene_data = s.serialize()
-    trace  = physics.run_mc_trace(scene_data,
-                                  obj_names,
-                                  state = prev_state,
-                                  fps = 30,
-                                  time_scale = 10.0)
-    return trace
+    fps = 30.0
+    objects = ["$x" for x in 1:length(scene.world)]
+    trace =  scene.get_trace(1. / fps, objects,
+                             state = prev_state,
+                             fps = 30,
+                             time_scale = 10.0)
+    return [t[1, :, :] for t in trace]
 end
 
 ## Generative Model + components
