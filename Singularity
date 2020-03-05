@@ -1,73 +1,36 @@
-bootstrap: docker
-from: nvidia/cuda:10.0-cudnn7-devel
-
-%setup
-
- if [ -d ${SINGULARITY_ROOTFS}/mybin ];then
-    rm -r ${SINGULARITY_ROOTFS}/mybin
- fi
-
- if [ -d ${SINGULARITY_ROOTFS}/blender ];then
-     rm -r ${SINGULARITY_ROOTFS}/blender
- fi
-
-%files
- mybin /mybin
- blender.tar.bz2 /blender.tar.bz2
- julia.tar.gz /julia.tar.gz
+bootstrap:localimage
+from:base.sif
 
 %environment
- export PATH=$PATH:/mybin/
  export PATH=$PATH:/blender/blender
  export PATH=$PATH:/miniconda/bin
-
- export LANG=en_US.UTF-8
- export TMPDIR=$PWD/.tmp
-
- if [ -d ${PWD}/.tmp ];then
-    rm -rf ${PWD}/.tmp
- fi
- mkdir ${PWD}/.tmp
+ export PATH=$PATH:/julia-1.3.1/bin
 
 %runscript
   exec bash "$@"
 
 %post
- apt-get update
- apt-get install -y  build-essential \
-                     graphviz \
-                     git \
-                     wget \
-                     ffmpeg \
-                     libglu1 \
-                     libxi6 \
-                     libc6 \
-                     libgl1-mesa-dev \
-                     mesa-utils \
-                     xvfb \
-                     gettext \
-                     gettext-base
-
-
-
- apt-get clean
+ # Add an sbatch workaround
+ echo '#!/bin/bash\nssh -y "$HOSTNAME"  "cd $PWD && sbatch \"$@\""'  > /usr/bin/sbatch
+ chmod +x /usr/bin/sbatch
 
  # Install Julia
+ wget "https://julialang-s3.julialang.org/bin/linux/x64/1.3/julia-1.3.1-linux-x86_64.tar.gz" \
+      -O "/julia.tar.gz"
  tar xvzf "/julia.tar.gz"
- ln -s /julia-1.1.1/bin/julia /usr/bin/julia
+ ln -s /julia-1.3.1/bin/julia /usr/bin/julia
  chmod +x /usr/bin/julia
 
- # Setup /mybin
- chmod +x /mybin/*
-
  # Setup blender
- tar xvjf /blender.tar.bz2
- rm /blender.tar.bz2
+ wget "https://yale.box.com/shared/static/8wsh0mbvvxfds04xwaef034dcocjrq5w.gz" \
+      -O /blender.tar.gz
+ tar xf /blender.tar.gz
+ rm /blender.tar.gz
  mv blender-2.* /blender
  chmod +x blender/blender
 
  # Setup conda
- wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O conda.sh
+ wget "https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh" -O conda.sh
  bash conda.sh -b -p /miniconda
  rm conda.sh
 

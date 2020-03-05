@@ -8,40 +8,15 @@ using CSV
 using JSON
 using PyCall
 using Gen_Compose
-# import Cairo
+using ProfileView
 
 include("../dist.jl")
-# include("../procedures/static.jl")
-# include("../visualize/plot_inference.jl")
 
 np = pyimport("numpy")
-gm = pyimport("galileo_ramp.world.simulation.exp2_physics");
+gm = pyimport("physics.world.simulation.exp2_physics");
 
-struct Scene
-    data::Dict
-    n_frames::Int
-    simulator::T where T<:Function
-    density_a::Float64
-    density_b::Float64
-    obs_noise::Float64
-end;
 
-@gen function generative_model(state, t::Int, scene::Scene)
-    # Add the features from the latents to the scene descriptions
-    data = deepcopy(scene.data)
-    data["objects"]["A"]["density"] = @trace(trunc_norm(scene.density_a,
-                                                        3.0, 0., 12.), :density_a)
-    data["objects"]["A"]["mass"] = data["objects"]["A"]["density"] * data["objects"]["A"]["volume"]
-    data["objects"]["B"]["density"] = @trace(trunc_norm(scene.density_b,
-                                                        3.0, 0., 12.), :density_b)
-    data["objects"]["B"]["mass"] = data["objects"]["B"]["density"] * data["objects"]["B"]["volume"]
-    new_state = scene.simulator(data, ["A", "B"], scene.n_frames * 1.0/60.0,
-                                fps = 60, time_scale = 10.0)
-    pos = new_state[1][end, :]
-    @trace(Gen.broadcasted_normal(pos, fill(scene.obs_noise, scene.n_frames)),
-           (:pos, t))
-    return nothing
-end
+Gen.load_generated_functions()
 
 function run_inference(scene_data, positions, out_path,
                        iter::Int = 100)
@@ -63,10 +38,10 @@ function run_inference(scene_data, positions, out_path,
 
     density_a = density_map[scene_data["objects"]["A"]["appearance"]]
     density_b = density_map[scene_data["objects"]["B"]["appearance"]]
-    scene = Scene(scene_data, t, gm.run_full_trace,
+    scene = Scene(scene_data, t, gm.run_mc_trace,
                   density_a, density_b, 0.2)
 
-    args = [(scene,) for _ in 1:t]
+    args = [(i, scene) for i in 1:t]
     query = SequentialQuery(latents,
                             generative_model,
                             args,
@@ -84,7 +59,7 @@ function run_inference(scene_data, positions, out_path,
     #
     # Additionally, this will be under the Sequential Monte-Carlo
     # paradigm.
-    n_particles = 10
+    n_particles = 2
     ess = n_particles * 0.5
     # defines the random variables used in rejuvination
     procedure = ParticleFilter(n_particles,
@@ -92,13 +67,7 @@ function run_inference(scene_data, positions, out_path,
                                rejuv)
 
     @time results = sequential_monte_carlo(procedure, query)
-
-    # plot = viz(results)
-    # plot |> PNG("$(out_path)_trace.png",30cm, 30cm)
-    df = to_frame(results)
-    df.t = t
-    CSV.write("$(out_path)_trace.csv", df)
-    return df
+    # @profview sequential_monte_carlo(procedure, query)
 end
 
 function main()
@@ -113,7 +82,7 @@ function main()
     println(scene_data["objects"]["B"]["mass"])
     pos = np.load(scene_pos)
     pos = permutedims(pos, [2, 1, 3])
-    t = 50
+    t = 5
     run_inference(scene_data, pos[1:t, :, :], "test")
 end
 

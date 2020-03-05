@@ -1,22 +1,5 @@
+numpy
 scipy
-pandas
-joblib
-scipy
-pandas
-joblib
-h5py>=2.9.0rc1
-pillow
-matplotlib
-SQLAlchemy
-pydot
-pyyaml
-networkx
-shapely
-pyyaml
-graphviz
-dask[complete]
-bokeh
-dask_jobqueue
 pybullet
 pyquaternion
 julia
@@ -24,3 +7,4 @@ sympy
 sphinx
 -e deps/hdf5_dataset
 -e deps/slurm
+-e deps/ramp_physics
