@@ -25,17 +25,19 @@ const default_params = Params(2,
 
 obj_type = typeof(object)
 function initialize_state(params::Params,
-                          objects,
+                          obj_phys,
                           init_pos)
 
     s = pyscene.default_scene()
     for i = 1:params.n_objects
         k = "$i"
-        s.add_object(k, objects[i], init_pos[i])
+        obj = create_object(params.object_prior[i], obj_phys[i])
+        s.add_object(k, obj, init_pos[i])
     end
     initial_state = nothing
-    scene = physics.RampPhysics(s.serialize())
-    return (initial_state, scene)
+    return (initial_state, s.serialize())
+    # scene = physics.RampPhysics(s.serialize())
+    # return (initial_state, scene)
 end
 
 function from_material_params(params)
@@ -55,19 +57,30 @@ function create_object(params, physical_props)
     else
         shape = ball.Ball
     end
-    return shape("", params["dims"], physical_props)
+    obj = shape("", params["dims"], physical_props)
+    # obj_data = obj.serialize()
 end
+function forward_step(prev_state, s)
 
-function forward_step(prev_state, scene)
-
-    fps = 30.0
-    objects = ["$x" for x in 1:length(scene.world)]
-    trace =  scene.get_trace(1. / fps, objects,
-                             state = prev_state,
-                             fps = 30,
-                             time_scale = 10.0)
-    return [t[1, :, :] for t in trace]
+    objects = s["objects"]
+    obj_names = ["$x" for x in 1:length(objects)]
+    trace  = physics.run_mc_trace(s,
+                                  obj_names,
+                                  state = prev_state,
+                                  fps = 30,
+                                  time_scale = 10.0)
+    return trace
 end
+# function forward_step(prev_state, scene)
+
+#     fps = 30.0
+#     objects = ["$x" for x in 1:length(scene.world)]
+#     trace =  scene.get_trace(1. / fps, objects,
+#                              state = prev_state,
+#                              fps = 30,
+#                              time_scale = 10.0)
+#     return [t[1, :, :] for t in trace]
+# end
 
 ## Generative Model + components
 ##
@@ -87,8 +100,8 @@ end
     physical_props = Dict("density" => density,
                           "lateralFriction" => friction,
                           "restitution" => restitution)
-    obj = create_object(material_params, physical_props)
-    return obj
+    # obj = create_object(material_params, physical_props)
+    return physical_props
 end
 
 map_object_prior = Gen.Map(object_prior)
@@ -119,8 +132,7 @@ chain = Gen.Unfold(kernel)
     initial_pos = @trace(map_init_state(init_args), :initial_state)
     init_state = initialize_state(params, objects, initial_pos)
     states = @trace(chain(t, init_state[1], init_state[2]), :chain)
-    results = (init_state, states)
-    return results
+    return states
 end
 
 function test(n::Int)
