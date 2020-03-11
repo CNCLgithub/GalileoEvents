@@ -21,9 +21,16 @@ end
 
 const default_params = Params(2,
                               fill(Dict("shape" => "Block",
-                                        "dims" => [2,2,2]), 2))
+                                        "dims" => [3.0, 3.0, 1.5],
+                                        "material" => nothing),
+                                   2))
+const density_map = Dict("Wood" => 1.0,
+                         "Brick" => 2.0,
+                         "Iron" => 8.0)
+const friction_map = Dict("Wood" => 0.263,
+                          "Brick" => 0.323,
+                          "Iron" => 0.215)
 
-obj_type = typeof(object)
 function initialize_state(params::Params,
                           obj_phys,
                           init_pos)
@@ -36,14 +43,19 @@ function initialize_state(params::Params,
     end
     initial_state = nothing
     return (initial_state, s.serialize())
-    # scene = physics.RampPhysics(s.serialize())
-    # return (initial_state, scene)
 end
 
 function from_material_params(params)
-    # TODO: add material prior
-    density_prior = (4., 3.)
-    friction_prior = (0.3, 0.3)
+
+    mat = params["material"]
+    if isnothing(mat)
+        density_prior = (4., 3.)
+        friction_prior = (0.3, 0.3)
+    else
+        density_prior = (density_map[mat]..., 2.0)
+        friction_prior = (friction_map[mat]..., 0.3)
+    end
+
     return Dict("density" => density_prior,
                 "lateralFriction" => friction_prior)
 end
@@ -58,8 +70,8 @@ function create_object(params, physical_props)
         shape = ball.Ball
     end
     obj = shape("", params["dims"], physical_props)
-    # obj_data = obj.serialize()
 end
+
 function forward_step(prev_state, s)
 
     objects = s["objects"]
@@ -69,21 +81,11 @@ function forward_step(prev_state, s)
                                   state = prev_state,
                                   fps = 30,
                                   time_scale = 10.0)
-    return trace
 end
-# function forward_step(prev_state, scene)
-
-#     fps = 30.0
-#     objects = ["$x" for x in 1:length(scene.world)]
-#     trace =  scene.get_trace(1. / fps, objects,
-#                              state = prev_state,
-#                              fps = 30,
-#                              time_scale = 10.0)
-#     return [t[1, :, :] for t in trace]
-# end
 
 ## Generative Model + components
 ##
+
 @gen (static) function object_prior(material_params)
     mat_prop = from_material_params(material_params)
     dens_prior = mat_prop["density"]
@@ -100,7 +102,6 @@ end
     physical_props = Dict("density" => density,
                           "lateralFriction" => friction,
                           "restitution" => restitution)
-    # obj = create_object(material_params, physical_props)
     return physical_props
 end
 
