@@ -96,6 +96,7 @@ class Exp1Dataset(dataset.HDF5Dataset):
                                        time_scale = 1.0,
                                        debug = False)
         pos, rot, ang_vel, vel, col = trace
+        trace = dict(zip(['pos', 'orn', 'avl', 'lvl', 'col'], trace))
 
         moves_ramp = is_moving(vel[:,0])
         moves_ground = is_moving(vel[:,1])

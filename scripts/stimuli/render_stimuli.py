@@ -5,6 +5,7 @@
 import os
 import sys
 import json
+import h5py
 import argparse
 import subprocess
 import numpy as np
@@ -13,18 +14,15 @@ from itertools import repeat
 
 from slurmpy import sbatch
 
-from galileo_ramp.utils import config
-from galileo_ramp.world.render.interface import render
-from galileo_ramp.world.simulation import forward_model
+from physics.world.render.interface import render
 
-CONFIG = config.Config()
+from galileo_ramp.exp1_dataset import Exp1Dataset
 
-render_path = os.path.join(CONFIG['PATHS', 'root'],
-                           'galileo_ramp', 'world', 'render', 'render.py')
-scene_path = os.path.join(CONFIG['PATHS', 'root'],
-                           'galileo_ramp', 'world', 'render', 'new_scene.blend')
+base_path = '/project/deps/ramp_physics/physics/world/render/'
+render_path = base_path + 'render.py'
+scene_path = '/project/galileo_ramp/blend/new_scene.blend'
 
-def render_scene(src, out, res, mode,
+def render_trace(scene, trace, out, res, mode,
                  snapshot = False, gpu = False):
     """ Render tower with randomly sampled camera angle.
     For a given scene pair, render either the congruent or incongruent
@@ -38,26 +36,12 @@ def render_scene(src, out, res, mode,
     Returns
         Nothing
     """
-    parts = src.split(os.sep)
-    out_path = '{0!s}_{1!s}'.format(parts[-2],
-                                    parts[-1].replace('.json', ''))
-    out_path = os.path.join(out, out_path)
 
-    with open(src, 'r') as f:
-        data = json.load(f)
-
-    scene = data['scene']
-
-    if 'trace' in data:
-        trace = data['trace']
-    else:
-        trace = forward_model.simulate(data['scene'], 900)
-        trace = dict(zip(['pos', 'orn', 'lvl', 'avl', 'col'], trace))
     # Render
     kwargs = dict(
-        scene = src,
+        scene = {'scene': scene},
         trace = trace,
-        out = out_path,
+        out = out,
         render_mode = mode,
         resolution = res,
         theta = 1.5*np.pi,
@@ -70,16 +54,19 @@ def render_scene(src, out, res, mode,
         kwargs['gpu'] = None
     render(**kwargs)
 
+
 def main():
 
     parser = argparse.ArgumentParser(
         description = 'Evaluates a batch of blocks for stimuli generation.',
         formatter_class = argparse.ArgumentDefaultsHelpFormatter
     )
-    parser.add_argument('src', type = str, nargs = '+',
+    parser.add_argument('src', type = str,
                         help = 'Path to scenes')
+    parser.add_argument('--idx', type = int,
+                        help = 'scene idx')
     parser.add_argument('--resolution', type = int, nargs = 2,
-                        default = (854, 480),
+                        default = (600, 400),
                         help = 'Resolution for images')
     parser.add_argument('--run', type = str, default = 'local',
                         choices = ['batch', 'local'],
@@ -93,26 +80,36 @@ def main():
                         help = 'Size of sbatch array.')
     parser.add_argument('--gpu', action = 'store_true',
                         help = 'Use CUDA rendering')
-    parser.add_argument('--out', type = str, default = 'stimuli',
-                        help = 'Path to render individual scene.')
 
     args = parser.parse_args()
 
-    out = os.path.join(CONFIG['PATHS', 'renders'], args.out)
+    out = os.path.basename(args.src)
+    out = os.path.splitext(out)[0]
+    out = os.path.join('/project','output','renders', out)
     if not os.path.isdir(out):
         os.mkdir(out)
 
-
     if args.run == 'batch':
         # submit `--batch` sbatch jobs to render trials.
-        submit_sbatch(args, out)
+        submit_sbatch(args)
     else:
-        # compute rendering
-        for src in args.src:
-            render_scene(src, out, args.resolution, args.mode,
-                         args.snapshot, args.gpu)
+        dataset = Exp1Dataset(args.src)
+        if not args.idx is None:
+            scene_out = os.path.join(out, str(args.idx))
+            scene, trace, _ = dataset[args.idx]
+            print(scene)
+            render_trace(scene, trace, scene_out, args.resolution,
+                            args.mode, args.snapshot, args.gpu)
 
-def submit_sbatch(args, out, chunks = 100):
+
+        else:
+            for idx, scene in enumerate(dataset):
+                scene_out = os.path.join(out, str(idx))
+                scene, trace, _ = dataset[idx]
+                render_trace(scene, trace, scene_out, args.resolution,
+                             args.mode, args.snapshot, args.gpu)
+
+def submit_sbatch(args, chunks = 100):
     """ Helper function that submits sbatch jobs.
 
     Arguments:
@@ -120,35 +117,37 @@ def submit_sbatch(args, out, chunks = 100):
         out (str): Path to save trials
         trials (list): A list of trials to render
     """
-    chunks = min(chunks, len(args.src))
+    dataset = Exp1Dataset(args.src)
+
+    njobs = min(chunks, len(dataset))
+
+    tasks = [(args.src,'--idx ' +str(i))
+             for i in range(len(dataset))]
+    kwargs = ['--run local',
+              '--mode {0!s}'.format(args.mode)]
+    if args.snapshot:
+        kwargs += ['--snapshot',]
+    if args.gpu:
+        kwargs += ['--gpu',]
 
     interpreter = '#!/bin/bash'
     extras = []
     resources = {
-        'cpus-per-task' : '12',
+        'cpus-per-task' : '8',
         'mem-per-cpu' : '300MB',
-        'time' : '1-0',
-        'qos' : 'use-everything',
+        'time' : '200',
+        'partition' : 'scavenge',
         'requeue' : None,
-        'output' : os.path.join(CONFIG['PATHS', 'sout'], 'slurm-%A_%a.out'),
         # 'output' : '/dev/null',
     }
-    flags = ['--run local',
-             '--mode {0!s}'.format(args.mode),
-             '--out {0!s}'.format(out)]
-    if args.snapshot:
-        flags += ['--snapshot',]
-    if args.gpu:
-        flags += ['--gpu',]
-    jobs = [(f,) for f in args.src]
     path = os.path.realpath(__file__)
-    func = 'cd {0!s} && '.format(CONFIG['PATHS', 'root']) +\
-           './run.sh python3 {0!s}'.format(path)
-    batch = sbatch.Batch(interpreter, func, jobs, flags, extras,
+    path = os.path.join('/project/scripts/stimuli', os.path.basename(path))
+    func = 'bash {0!s}/run.sh {1!s}'.format(os.getcwd(), path)
+    batch = sbatch.Batch(interpreter, func, tasks, kwargs, extras,
                          resources)
     print("Template Job:")
-    print('\n'.join(batch.job_file(chunk=chunks)))
-    batch.run(n = chunks, check_submission = False)
+    print('\n'.join(batch.job_file(chunk=njobs)))
+    batch.run(n = njobs, check_submission = True)
 
 if __name__ == '__main__':
    main()

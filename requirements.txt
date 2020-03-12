@@ -8,3 +8,4 @@ sphinx
 -e deps/hdf5_dataset
 -e deps/slurm
 -e deps/ramp_physics
+-e .
