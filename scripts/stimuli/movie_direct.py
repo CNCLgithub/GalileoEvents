@@ -6,15 +6,10 @@ Creates a series of mp4s given timing points
 
 """
 import os
-import json
-import shlex
 import argparse
-import subprocess
 import numpy as np
-from pprint import pprint
 
-from galileo_ramp.utils import config, encoders, ffmpeg
-CONFIG = config.Config()
+from physics.utils import ffmpeg
 
 def main():
 
@@ -24,40 +19,38 @@ def main():
     )
     parser.add_argument('renders', type = str,
                         help = 'Paths to images')
-    parser.add_argument('timings', type = int, nargs = '+',
+    parser.add_argument('--timings', type = int, nargs = '+',
+                        default = [120],
                         help = 'Time points to cut video')
     parser.add_argument('--mask', action = 'store_true',
                         help = 'Add mask to non-terminal conditions')
     args = parser.parse_args()
 
-    render_src = os.path.join(CONFIG['PATHS', 'renders'], args.renders)
-
     # Set mask
-    if args.mask:
-        mask = os.path.join(CONFIG['PATHS', 'root'], 'galileo_ramp', 'world',
-                            'render', 'Textures', 'mask.mp4')
-    else:
-        mask = None
+    mase = None
+    # if args.mask:
+    #     # mask = os.path.join(CONFIG['PATHS', 'root'], 'galileo_ramp', 'world',
+    #     #                     'render', 'Textures', 'mask.mp4')
+    # else:
+    #     mask = None
 
-    movie_dir = os.path.join(CONFIG['PATHS', 'movies'], 'movies_mask_{0:d}')
+    movie_dir = '/movies/exp1_mask_{0:d}'
     movie_dir = movie_dir.format(args.mask)
     if not os.path.isdir(movie_dir):
         os.mkdir(movie_dir)
 
 
     # Create motion component
-    src_path = '{0!s}/%04d.png'.format(render_src)
-    src_path = os.path.join(render_src, src_path)
+    src_path = '{0!s}/renders/%04d.png'.format(args.renders)
 
     for t in args.timings:
-        out_path = args.renders.replace(os.sep, '_')
-        out_path = os.path.join(movie_dir, '{0!s}_t-{1:d}.mp4'.format(out_path, t))
+        out_path = os.path.basename(args.renders)
+        out_path = '{0!s}_t-{1:d}.mp4'.format(out_path, t)
+        out_path = os.path.join(move_dir, out_path)
 
         # Create raw video
-        ffmpeg.ffmpeg(src_path, out_path, vframes = t)
-        if not mask is None:
-            ffmpeg.ffmpeg_concat(out_path, mask, base = 0)
-
+        ffmpeg.continous_movie(args.renders, out_path, fps = 60,
+                               vfames = t)
 
 
 if __name__ == '__main__':

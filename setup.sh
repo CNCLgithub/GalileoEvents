@@ -10,7 +10,8 @@ julia=${3:-"false"}
 
 if [ "$build" = "true" ]; then
     echo "building..."
-    SINGULARITY_TMPDIR=/var/tmp sudo -E singularity build --sandbox "${ENV[cont]}" Singularity
+    SINGULARITY_TMPDIR=/var/tmp sudo -E singularity build "${ENV[cont]}" Singularity
+    # SINGULARITY_TMPDIR=/var/tmp sudo -E singularity build --sandbox "${ENV[cont]}" Singularity
     # SINGULARITY_TMPDIR=/var/tmp sudo -E singularity build base.sif Singularity.base
 fi
 
