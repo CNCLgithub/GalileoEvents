@@ -41,7 +41,7 @@ def sample_dimensions(base):
     return base * samples
 
 def sample_position():
-    return np.random.uniform(0.3, 0.7)
+    return np.random.uniform(0.3, 0.7) + 1
 
 def make_pair(material, density, shp):
     dims = sample_dimensions(obj_dims)
@@ -126,6 +126,11 @@ def main():
         os.mkdir(out_path)
     for i,s in enumerate(scenes):
         p = os.path.join(out_path, '{0:d}.json'.format(i))
+        # trace  = physics.run_full_trace(s.serialize(),
+        #                               ['A', 'B'],
+        #                               fps = 60,
+        #                               time_scale = 1.0,
+        #                               debug = True)
         data = {'scene' : s.serialize()}
         with open(p, 'w') as f:
             json.dump(data, f, indent = 2, cls = encoders.NpEncoder)
