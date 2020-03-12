@@ -109,7 +109,7 @@ def main():
                 render_trace(scene, trace, scene_out, args.resolution,
                              args.mode, args.snapshot, args.gpu)
 
-def submit_sbatch(args, chunks = 100):
+def submit_sbatch(args, chunks = 210):
     """ Helper function that submits sbatch jobs.
 
     Arguments:
