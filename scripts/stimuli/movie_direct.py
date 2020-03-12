@@ -41,16 +41,16 @@ def main():
 
 
     # Create motion component
-    src_path = '{0!s}/renders/%04d.png'.format(args.renders)
+    src_path = '{0!s}/render/%d.png'.format(args.renders)
 
     for t in args.timings:
         out_path = os.path.basename(args.renders)
         out_path = '{0!s}_t-{1:d}.mp4'.format(out_path, t)
-        out_path = os.path.join(move_dir, out_path)
+        out_path = os.path.join(movie_dir, out_path)
 
         # Create raw video
-        ffmpeg.continous_movie(args.renders, out_path, fps = 60,
-                               vfames = t)
+        ffmpeg.continous_movie(src_path, out_path, fps = 60,
+                               vframes = t)
 
 
 if __name__ == '__main__':
