@@ -18,9 +18,9 @@ from physics.world.render.interface import render
 
 from galileo_ramp.exp1_dataset import Exp1Dataset
 
-base_path = '/project/deps/ramp_physics/physics/world/render/'
+base_path = '/project/galileo_ramp/blend/'
 render_path = base_path + 'render.py'
-scene_path = '/project/galileo_ramp/blend/new_scene.blend'
+scene_path = base_path + 'new_scene.blend'
 
 def render_trace(scene, trace, out, res, mode,
                  snapshot = False, gpu = False):

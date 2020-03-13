@@ -1,5 +1,5 @@
 bootstrap: docker
-from: ubuntu:16.04
+from: ubuntu:18.04
 
 %environment
  export PATH=$PATH:/blender/blender
