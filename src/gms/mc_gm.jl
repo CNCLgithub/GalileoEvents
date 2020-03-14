@@ -1,16 +1,16 @@
-using Gen
+export Params,
+    default_params,
+    markov_generative_model
+
 using PyCall
 
-include("../distributions.jl")
-world = pyimport("physics.world");
-
-
-physics = pyimport("physics.world.simulation.physics")
-object = pyimport("physics.world.scene.shape")
-ball = pyimport("physics.world.scene.ball")
-puck = pyimport("physics.world.scene.puck")
-block = pyimport("physics.world.scene.block")
-pyscene = pyimport("physics.world.scene.ramp")
+# world = physics.world
+# physics = physics.world.simulation.physics
+# object = physics.world.scene.shape
+# ball = physics.world.scene.ball
+# puck = physics.world.scene.puck
+# block = physics.world.scene.block
+# pyscene = physics.world.scene.ramp
 
 ## Structs and helpers
 ##
@@ -21,8 +21,8 @@ end
 
 const default_params = Params(2,
                               fill(Dict("shape" => "Block",
-                                        "dims" => [3.0, 3.0, 1.5],
-                                        "material" => nothing),
+                                        "dims" => [0.3, 0.3, 0.15],
+                                        "appearance" => nothing),
                                    2))
 const density_map = Dict("Wood" => 1.0,
                          "Brick" => 2.0,
@@ -31,11 +31,24 @@ const friction_map = Dict("Wood" => 0.263,
                           "Brick" => 0.323,
                           "Iron" => 0.215)
 
+function create_object(params, physical_props)
+    cat = params["shape"]
+    if cat == "Block"
+        shape = physics.scene.block.Block
+    elseif cat == "Puck"
+        shape = physics.scene.puck.Puck
+    else
+        shape = physics.scene.ball.Ball
+    end
+    obj = shape("", params["dims"], physical_props)
+end
+
 function initialize_state(params::Params,
                           obj_phys,
                           init_pos)
 
-    s = pyscene.default_scene()
+    s = physics.scene.ramp.RampScene([3.5, 1.8], [3.5, 1.8],
+                                     ramp_angle = 35. * pi / 180.)
     for i = 1:params.n_objects
         k = "$i"
         obj = create_object(params.object_prior[i], obj_phys[i])
@@ -47,7 +60,7 @@ end
 
 function from_material_params(params)
 
-    mat = params["material"]
+    mat = params["appearance"]
     if isnothing(mat)
         density_prior = (4., 3.)
         friction_prior = (0.3, 0.3)
@@ -60,27 +73,16 @@ function from_material_params(params)
                 "lateralFriction" => friction_prior)
 end
 
-function create_object(params, physical_props)
-    cat = params["shape"]
-    if cat == "Block"
-        shape = block.Block
-    elseif cat == "Puck"
-        shape = puck.Puck
-    else
-        shape = ball.Ball
-    end
-    obj = shape("", params["dims"], physical_props)
-end
 
 function forward_step(prev_state, s)
 
     objects = s["objects"]
     obj_names = ["$x" for x in 1:length(objects)]
-    trace  = physics.run_mc_trace(s,
-                                  obj_names,
-                                  state = prev_state,
-                                  fps = 30,
-                                  time_scale = 10.0)
+    trace  = physics.physics.run_mc_trace(s,
+                                          obj_names,
+                                          state = prev_state,
+                                          fps = 60,
+                                          time_scale = 1)
 end
 
 ## Generative Model + components
@@ -124,7 +126,7 @@ end
 
 chain = Gen.Unfold(kernel)
 
-@gen (static) function generative_model(t::Int, params::Params)
+@gen (static) function markov_generative_model(t::Int, params::Params)
 
     objects = @trace(map_object_prior(params.object_prior),
                      :object_physics)
@@ -134,18 +136,4 @@ chain = Gen.Unfold(kernel)
     init_state = initialize_state(params, objects, initial_pos)
     states = @trace(chain(t, init_state[1], init_state[2]), :chain)
     return states
-end
-
-function test(n::Int)
-    Gen.load_generated_functions()
-    cm = choicemap()
-    cm[:initial_state => 1 => :init_pos] = 1.5
-    cm[:initial_state => 2 => :init_pos] = 0.5
-    cm[:object_physics => 1 => :friction] = 0.2
-    cm[:object_physics => 2 => :friction] = 0.2
-
-
-    trace, w = Gen.generate(generative_model, (n, default_params), cm)
-    println(get_choices(trace))
-    return get_retval(trace)
 end

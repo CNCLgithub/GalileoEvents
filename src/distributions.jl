@@ -1,27 +1,8 @@
-using Gen
 using Distributions
-using Rotations
 
-# Observation noise
-struct RandomVec <: Gen.Distribution{Vector{Float64}} end
-
-const random_vec = RandomVec()
-
-function Gen.logpdf(::RandomVec, x::Vector{Float64}, mu::Vector{U}, noise::T) where {U<:Real,T<:Real}
-    var = noise * noise
-    diff = x - mu
-    vec = diff[:]
-    return -(vec' * vec)/ (2.0 * var) - 0.5 * log(2.0 * pi * var)
-end;
-
-function Gen.random(::RandomVec, mu::Vector{U}, noise::T) where {U<:Real,T<:Real}
-    vec = copy(mu)
-    for i=1:length(mu)
-        vec[i] = mu[i] + randn() * noise
-    end
-    return vec
-end;
-(::RandomVec)(mu, noise) = random(RandomVec(), mu, noise)
+export mat_noise,
+    log_uniform,
+    trunc_norm
 
 struct NoisyMatrix <: Gen.Distribution{Array{Float64}} end
 

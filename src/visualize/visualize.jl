@@ -1,7 +1,6 @@
 using Luxor
 using JSON
 using Printf
-using Gen
 using DataFrames
 
 ### DEFINE CONSTANTS ###

@@ -1,13 +1,10 @@
-using Gadfly
-using Compose
-using DataFrames
-using Gen
+export extract_chain,
+    to_frame
+
 using JLD2
+using DataFrames
 using Gen_Compose
-import Cairo
-
 using Base.Filesystem
-
 
 function parse_trace(latent_maps, trace)
     choices = Gen.get_choices(trace)
@@ -55,7 +52,7 @@ function extract_chain(r::Gen_Compose.SequentialTraceResult,
     return extracts
 end
 
-function _to_frame(log_scores, estimates)
+function to_frame(log_scores, estimates)
 
     latents = keys(estimates)
     dims = size(log_scores)
@@ -65,9 +62,6 @@ function _to_frame(log_scores, estimates)
         :sid => repeat(collect(1:dims[2]), dims[1]),
         :log_score => collect(Base.Iterators.flatten(log_scores'))
     )
-    # df[:t] = repeat(samples, inner = dims[2])
-    # df[:sid] = repeat(collect(1:dims[2]), dims[1])
-
     for l in latents
         columns[l] = collect(Base.Iterators.flatten(estimates[l]'))
     end
@@ -76,19 +70,3 @@ function _to_frame(log_scores, estimates)
     return df
 end
 
-function plot_extract(e::Dict)
-    latents = collect(keys(e["weighted"]))
-    df = _to_frame(e["log_scores"], e["unweighted"])
-    # first the estimates
-    estimates = map(y -> Gadfly.plot(df,
-                                     y = y,
-                                     x = :t,
-                                     color = :log_score,
-                                     Gadfly.Geom.histogram2d),
-                    latents)
-    # last log scores
-    log_scores = Gadfly.plot(df, y = :log_score, x = :t,
-                             Gadfly.Geom.histogram2d)
-    plot = vstack(estimates..., log_scores)
-    compose(compose(context(), rectangle(), fill("white")), plot)
-end

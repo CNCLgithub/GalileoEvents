@@ -115,7 +115,6 @@ def main():
 
     # for each scene (pair or control) randomly pick an initial
     # positions for object `A`
-    # scenes = list(reduce(sum, map(lambda p: from_pair(base, p), pairs)))
     scenes = map(lambda p: from_pair(base, p), pairs)
     scenes = list(chain.from_iterable(scenes))
     scenes += list(map(lambda x: from_control(base, x), controls))
