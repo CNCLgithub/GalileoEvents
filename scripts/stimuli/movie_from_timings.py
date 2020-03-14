@@ -12,10 +12,21 @@ import shlex
 import argparse
 import subprocess
 import numpy as np
-from pprint import pprint
 
-from galileo_ramp.utils import config, encoders, ffmpeg
-CONFIG = config.Config()
+from physics.utils import ffmpeg
+from galileo_ramp.exp1_dataset import Exp1Dataset
+
+def noise_mask(src, out, dur, fps):
+    """ Creates white noise mask """
+    cmd = 'ffmpeg -y -f lavfi -r {0:d} -i nullsrc=s=600x400 -filter_complex "geq=random(1)*255:128:128" -t {1:f} -pix_fmt yuv420p {2!s}'
+    cmd = cmd.format(fps, dur, out)
+    return cmd
+
+def stimuli_with_mask(src, fps, dur, out):
+    cmds = ffmpeg.chain([noise_mask, ffmpeg.concat],
+                        [(dur, fps), (src, False)],
+                        src, out, 'e')
+    ffmpeg.run_cmd(cmds)
 
 def main():
 
@@ -23,54 +34,50 @@ def main():
         description = 'Generates stimuli based off inference timings',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-    parser.add_argument('on_ramp', type = int,
-                        help = 'Number of balls on ramp')
-    parser.add_argument('renders', type = str,
-                        help = 'Paths to the trial renderings')
+    parser.add_argument('dataset', type = str,
+                        help = 'Path to dataset')
     parser.add_argument('--mask', action = 'store_true',
                         help = 'Add mask to non-terminal conditions')
     args = parser.parse_args()
 
-    workdir = CONFIG['PATHS', 'scenes']
-    timing_file = '{0:d}_timings.json'.format(args.on_ramp)
-    timing_file = os.path.join(workdir, timing_file)
-    render_src = os.path.join(CONFIG['PATHS', 'renders'], args.renders)
-    # Load timings
-    with open(timing_file, 'r') as f:
-        timings = json.load(f)
+    dataset = Exp1Dataset(args.dataset)
 
-    # Set mask
-    if args.mask:
-        mask = os.path.join(CONFIG['PATHS', 'root'], 'galileo_ramp', 'world',
-                            'render', 'Textures', 'mask.mp4')
-    else:
-        mask = None
 
     # Movies will be saved within the inference directory
-    movie_dir = os.path.join(CONFIG['PATHS', 'movies'], 'movies_mask_{0:d}')
-    movie_dir = movie_dir.format(args.mask)
+    base_path = os.path.basename(args.dataset)
+    base_path = os.path.splitext(base_path)[0]
+    movie_dir = '/movies/{0!s}'.format(base_path)
     if not os.path.isdir(movie_dir):
         os.mkdir(movie_dir)
 
-    for trial_path, times in timings:
+    render_path = os.path.join('/renders', base_path)
 
-        parts = trial_path.split(os.sep)
-        trial = '{0!s}_{1!s}'.format(parts[-2],
-                                        parts[-1].replace('.json', ''))
-        trial_path = os.path.join(render_src, trial)
+    # for i in range(len(dataset)):
+    for i in [0]:
+        _, _, timings = dataset[i]
+        col = timings[0]
+        # -66ms -> +266ms @ 60fps
+        scale = 6
+        times = np.array([-1, 1, 2, 3]) * scale
+        times += col
 
-        # Create motion component
-        src_path = '{0!s}/render/%d.png'.format(trial_path)
-        src_path = os.path.join(render_src, src_path)
+        src_path = os.path.join(render_path, str(i), 'render',
+                                '%d.png')
 
         for cond, point in enumerate(times):
-            out_path = 'trial_{0!s}_cond_{1:d}.mp4'.format(trial, cond)
+            out_path = '{0:d}_cond_{1:d}'.format(i, cond)
             out_path = os.path.join(movie_dir, out_path)
 
-            # Create raw video
-            ffmpeg.ffmpeg(src_path, out_path, vframes = point)
-            if not mask is None:
-                ffmpeg.ffmpeg_concat(out_path, mask, base = 0)
+
+            # Create continous video
+            out_cont = out_path + '_continous'
+            ffmpeg.continous_movie(src_path, out_cont,
+                                   vframes = point)
+
+            # add mask
+            out_mask = out_path + '_mask'
+            dur = 2.0 - (point / 60.0)
+            stimuli_with_mask(out_cont + '.mp4', 60, dur, out_mask)
 
 
 

@@ -106,7 +106,7 @@ class Exp1Dataset(dataset.HDF5Dataset):
 
         n_frames = len(pos)
 
-        time_points = [contact -1,
+        time_points = [contact,
                        contact + 12,
                        int((contact + ending)/2),
                        min(ending + 12, n_frames)]
