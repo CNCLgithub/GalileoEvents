@@ -75,6 +75,17 @@ by_cond <- conditions %>%
   group_by(exp_cond) %>%
   right_join(trial_data, by = "path")
 
-View(by_cond %>%
-  group_by(scene) %>%
-  summarise(n()))
+by_cond %>%
+  ggplot(aes(x = log2(density), fill = congruent)) +
+  geom_histogram() + 
+  facet_grid(type + shape ~ exp_cond)
+
+by_cond %>%
+  ggplot(aes(x = scene)) +
+  geom_histogram(binwidth = 1) + 
+  facet_grid(.~ exp_cond)
+
+scene_counts <- by_cond %>%
+  group_by(exp_cond, scene) %>%
+  summarise(n())
+
