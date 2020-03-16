@@ -140,6 +140,13 @@ class RampScene:
             ob = bpy.context.object
             self.scale_obj(ob, object_d['dims'])
             self.rotate_obj(ob, object_d['orientation'])
+        elif object_d['shape'] == 'Puck':
+            bpy.ops.mesh.primitive_cylinder_add(
+                location=object_d['position'],
+                enter_editmode=False,)
+            ob = bpy.context.object
+            self.scale_obj(ob, object_d['dims'])
+            self.rotate_obj(ob, object_d['orientation'])
         else:
             raise ValueError('Not supported')
 
