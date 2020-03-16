@@ -41,10 +41,10 @@ class Exp1Dataset(dataset.HDF5Dataset):
     '''
 
     def __init__(self, source, no_check=True, ratio = True,
-                 n = 210):
+                 time_scale = 6):
         self.ratio = ratio
         self.source = source
-        self.size = n
+        self.time_scale = time_scale
 
     @property
     def root(self):
@@ -61,11 +61,11 @@ class Exp1Dataset(dataset.HDF5Dataset):
 
         with h5py.File(path, 'r') as f:
             if not 'info' in f['/']:
-                print('This dataset has no info')
-            else:
-                raw_info = f['/info'][()]
-                info = get_json(raw_info)
-                self.size = info['trials']
+                raise ValueError('This dataset has no info')
+
+            raw_info = f['/info'][()]
+            info = get_json(raw_info)
+            self.size = info['trials']
         self._source = path
 
     def __len__(self):
@@ -86,8 +86,6 @@ class Exp1Dataset(dataset.HDF5Dataset):
         }
 
     def process_trial(self, parts):
-
-
         scene = parts['scene']['scene']
         trace = physics.run_full_trace(scene,
                                        ['A', 'B'],
@@ -95,23 +93,10 @@ class Exp1Dataset(dataset.HDF5Dataset):
                                        fps = 60,
                                        time_scale = 1.0,
                                        debug = False)
-        pos, rot, ang_vel, vel, col = trace
         trace = dict(zip(['pos', 'orn', 'avl', 'lvl', 'col'], trace))
-
-        moves_ramp = is_moving(vel[:,0])
-        moves_ground = is_moving(vel[:,1])
-        moves = np.logical_or(moves_ramp, moves_ground)
-        ending = np.where(moves)[0][-1]
-        contact = np.nonzero(col)[0][0]
-
-        n_frames = len(pos)
-
-        time_points = [contact,
-                       contact + 12,
-                       int((contact + ending)/2),
-                       min(ending + 12, n_frames)]
+        contact = np.nonzero(trace['col'])[0][0]
+        time_points = np.array([-1, 1, 3, 5]) * self.time_scale + contact
         return (scene, trace, time_points)
-
 
 def main():
 
@@ -121,14 +106,12 @@ def main():
     parser.add_argument('dataset', type = str, help = 'Path to dataset')
     args = parser.parse_args()
 
-    dataset = Exp1Dataset(args.dataset, n = 210)
+    dataset = Exp1Dataset(args.dataset)
+    print(dataset[28])
     print('Dataset has size of {}'.format(len(dataset)))
     init_time = time.time()
-    # for t in range(len(dataset)):
-    #     dataset[t]
     dataset[:]
     print('All trials accessed in {0:8.5f}s'.format(time.time() - init_time))
-    print(dataset[0][-1])
 
 if __name__ == '__main__':
     main()

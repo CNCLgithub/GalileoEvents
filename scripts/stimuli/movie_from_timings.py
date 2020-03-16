@@ -36,8 +36,6 @@ def main():
     )
     parser.add_argument('dataset', type = str,
                         help = 'Path to dataset')
-    parser.add_argument('--mask', action = 'store_true',
-                        help = 'Add mask to non-terminal conditions')
     args = parser.parse_args()
 
     dataset = Exp1Dataset(args.dataset)
@@ -76,7 +74,7 @@ def main():
 
             # add mask
             out_mask = out_path + '_mask'
-            dur = 2.0 - (point / 60.0)
+            dur = 0.250
             stimuli_with_mask(out_cont + '.mp4', 60, dur, out_mask)
 
 
