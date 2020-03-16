@@ -50,8 +50,7 @@ def main():
 
     render_path = os.path.join('/renders', base_path)
 
-    # for i in range(len(dataset)):
-    for i in [0]:
+    for i in range(len(dataset)):
         _, _, timings = dataset[i]
         col = timings[0]
         # -66ms -> +266ms @ 60fps
@@ -63,7 +62,7 @@ def main():
                                 '%d.png')
 
         for cond, point in enumerate(times):
-            out_path = '{0:d}_cond_{1:d}'.format(i, cond)
+            out_path = '{0:d}_t-{1:d}'.format(i, cond)
             out_path = os.path.join(movie_dir, out_path)
 
 
@@ -73,9 +72,8 @@ def main():
                                    vframes = point)
 
             # add mask
-            out_mask = out_path + '_mask'
             dur = 0.250
-            stimuli_with_mask(out_cont + '.mp4', 60, dur, out_mask)
+            stimuli_with_mask(out_cont + '.mp4', 60, dur, out_path)
 
 
 
