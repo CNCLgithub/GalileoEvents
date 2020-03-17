@@ -15,7 +15,7 @@ from physics.world.simulation import physics
 from physics.utils import encoders
 
 surface_phys = {'density' : 0.0,
-                'friction': 0.34}
+                'friction': 0.3}
 obj_dims = np.array([3.0, 3.0, 1.5]) / 10.0
 density_map = {"Wood" : 1.0,
                "Brick" : 2.0,
@@ -41,7 +41,7 @@ def sample_dimensions(base):
     return base * samples
 
 def interpolate_positions(n):
-    return np.linspace(1.3, 1.7, num = n)
+    return np.linspace(1.5, 1.8, num = n)
 
 def make_pair(scene, material, shp, density, pos):
     dims = sample_dimensions(obj_dims)
@@ -80,7 +80,7 @@ def main():
                      ramp_phys = surface_phys,
                      table_phys = surface_phys)
     table_obj = canonical_object("Brick", Block, obj_dims)
-    base.add_object("B", table_obj, 0.4)
+    base.add_object("B", table_obj, 0.35)
 
     # materials have the same proportions of heavy/light perturbations
     densities = np.hstack((low_densities(5),
