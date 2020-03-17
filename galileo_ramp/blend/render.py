@@ -109,14 +109,7 @@ class RampScene:
 
     def set_appearance(self, obj, mat):
         """ Assigns a material to a block.
-
-        If the material is not defined within the blend file,
-        the object is assigned `"Wood"`.
         """
-        # if not mat in bpy.data.materials:
-        #     raise ValueError('Unknown material {}'.format(mat))
-        if mat == 'Wood':
-            mat = 'rough_wood_{0:d}'.format(1)
         if mat in bpy.data.materials:
             obj.active_material = bpy.data.materials[mat]
         bpy.context.view_layer.update()
