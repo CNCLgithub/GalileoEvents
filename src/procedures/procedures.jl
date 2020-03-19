@@ -1,1 +1,1 @@
-include("gibbs_step.jl")
+include("gibbs_rejuv.jl")

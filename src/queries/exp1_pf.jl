@@ -62,6 +62,6 @@ function run_exp1_trial(dpath::String, idx::Int, particles::Int,
 
     results = run_inference(args, cm, (0, params),
                             obs, particles)
-    save(results, out)
+    save_state(results, out)
     return results
 end

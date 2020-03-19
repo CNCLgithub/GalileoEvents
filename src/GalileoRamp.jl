@@ -17,6 +17,7 @@ end
 
 include("distributions.jl")
 include("gms/gms.jl")
+include("procedures/procedures.jl")
 include("queries/queries.jl")
 include("analysis.jl")
 
