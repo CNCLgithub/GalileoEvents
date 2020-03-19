@@ -1,5 +1,6 @@
 """"""
 using ArgParse
+using GalileoRamp
 
 function parse_commandline()
     s = ArgParseSettings()
