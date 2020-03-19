@@ -1,8 +1,5 @@
 using Gen
 
-
-Gen.load_generated_functions()
-
 function test(n::Int)
     cm = choicemap()
     cm[:initial_state => 1 => :init_pos] = 1.5
@@ -14,4 +11,4 @@ function test(n::Int)
     println(get_choices(trace))
 end
 
-test(10)
+test(10);
