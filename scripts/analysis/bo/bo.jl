@@ -16,10 +16,12 @@ model = ElasticGPE(2,                            # 2 input dimensions
                    capacity = 3000)              # the initial capacity of the GP is 3000 samples.
 set_priors!(model.mean, [Normal(1, 2)])
 
+
 # Optimize the hyperparameters of the GP using maximum a posteriori (MAP) estimates every 50 steps
 modeloptimizer = MAPGPOptimizer(every = 50, noisebounds = [-4, 3],       # bounds of the logNoise
                                 kernbounds = [[-1, -1, 0], [4, 4, 10]],  # bounds of the 3 parameters GaussianProcesses.get_param_names(model.kernel)
                                 maxeval = 40)
+
 opt = BOpt(g,
            model,
            UpperConfidenceBound(),                   # type of acquisition

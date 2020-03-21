@@ -52,6 +52,11 @@ from: ubuntu:18.04
  bash conda.sh -b -p /miniconda
  rm conda.sh
 
+
  # Add an sbatch workaround
  echo '#!/bin/bash\nssh -y "$HOSTNAME"  sbatch "$@"'  > /usr/bin/sbatch
  chmod +x /usr/bin/sbatch
+
+ # Add an srun workaround
+ echo '#!/bin/bash\nssh -y "$HOSTNAME"  srun "$@"'  > /usr/bin/srun
+ chmod +x /usr/bin/srun
