@@ -87,12 +87,14 @@ class Exp1Dataset(dataset.HDF5Dataset):
 
     def process_trial(self, parts):
         scene = parts['scene']['scene']
-        trace = physics.run_full_trace(scene,
-                                       ['A', 'B'],
+        client, obj_ids = physics.initialize_trace(scene)
+        trace = physics.run_full_trace(client,
+                                       obj_ids,
                                        T = 2,
                                        fps = 60,
                                        time_scale = 1.0,
                                        debug = False)
+        physics.clear_trace(client)
         trace = dict(zip(['pos', 'orn', 'avl', 'lvl', 'col'], trace))
         contact = np.nonzero(trace['col'])[0][0]
         time_points = np.array([-1, 1, 3, 5]) * self.time_scale

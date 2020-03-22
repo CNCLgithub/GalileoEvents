@@ -1,18 +1,19 @@
 export run_exp1_trial
 
 """
-Simple example of inferring density and friction with no visual prior
+Runs inference on Exp1 trials
 """
 
 Gen.load_generated_functions()
 
 function rejuv(trace)
-    (new_trace, _) = Gen.mh(trace, gibbs_step, tuple())
-    return new_trace
+    return trace
+    # (new_trace, _) = Gen.mh(trace, gibbs_step, tuple())
+    # return new_trace
 end
 
 function run_inference(args, init_obs, init_args,
-                       observations, iter::Int = 100)
+                       observations, n_particles::Int = 1)
 
     latents = Dict( :x => x -> :x )
     query = Gen_Compose.SequentialQuery(latents, #bogus for now
@@ -29,7 +30,6 @@ function run_inference(args, init_obs, init_args,
     #
     # Additionally, this will be under the Sequential Monte-Carlo
     # paradigm.
-    n_particles = iter
     ess = n_particles * 0.5
     # defines the random variables used in rejuvination
     procedure = ParticleFilter(n_particles,
@@ -37,11 +37,10 @@ function run_inference(args, init_obs, init_args,
                                rejuv)
 
     @time sequential_monte_carlo(procedure, query)
-    # @profview sequential_monte_carlo(procedure, query)
 end
 
 function run_exp1_trial(dpath::String, idx::Int, particles::Int,
-                        out::String="")
+                        out::Union{String, Nothing})
     d = galileo_ramp.Exp1Dataset(dpath)
     (scene, state, _) = get(d, idx)
     n = size(state["pos"], 1)
@@ -62,6 +61,8 @@ function run_exp1_trial(dpath::String, idx::Int, particles::Int,
 
     results = run_inference(args, cm, (0, params),
                             obs, particles)
-    save_state(results, out)
+    if !isnothing(out)
+        save_state(results, out)
+    end
     return results
 end
