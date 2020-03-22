@@ -54,8 +54,13 @@ function initialize_state(params::Params,
         obj = create_object(params.object_prior[i], obj_phys[i])
         s.add_object(k, obj, init_pos[i])
     end
-    initial_state = nothing
-    return (initial_state, s.serialize())
+    scene = s.serialize()
+    physics.physics.initialize_trace(scene)
+end
+
+function cleanup_state(client)
+    physics.physics.clear_trace(client)
+    return nothing
 end
 
 function from_material_params(params)
@@ -74,15 +79,9 @@ function from_material_params(params)
 end
 
 
-function forward_step(prev_state, s)
-
-    objects = s["objects"]
-    obj_names = ["$x" for x in 1:length(objects)]
-    trace  = physics.physics.run_mc_trace(s,
-                                          obj_names,
-                                          state = prev_state,
-                                          fps = 60,
-                                          time_scale = 1)
+function forward_step(prev_state, client, obj_map)
+    physics.physics.run_mc_trace(client, obj_map,
+                         state = prev_state)
 end
 
 ## Generative Model + components
@@ -116,8 +115,8 @@ end
 
 map_init_state = Gen.Map(state_prior)
 
-@gen (static) function kernel(t::Int, prev_state, scene)
-    next_state = forward_step(prev_state, scene)
+@gen (static) function kernel(t::Int, prev_state, client, obj_map)
+    next_state = forward_step(prev_state, client, obj_map)
     pos = next_state[1]
     next_pos = @trace(Gen.broadcasted_normal(pos, 0.1),
                       :positions)
@@ -133,7 +132,9 @@ chain = Gen.Unfold(kernel)
 
     init_args = fill(tuple(), params.n_objects)
     initial_pos = @trace(map_init_state(init_args), :initial_state)
-    init_state = initialize_state(params, objects, initial_pos)
-    states = @trace(chain(t, init_state[1], init_state[2]), :chain)
+    phys_init = initialize_state(params, objects, initial_pos)
+    states = @trace(chain(t, nothing, phys_init[1], phys_init[2]),
+                    :chain)
+    t = cleanup_state(phys_init[1])
     return states
 end

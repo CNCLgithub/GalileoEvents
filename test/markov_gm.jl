@@ -8,7 +8,7 @@ function test(n::Int)
     cm[:object_physics => 2 => :friction] = 0.2
     trace, w = Gen.generate(markov_generative_model,
                             (n, default_params), cm)
-    println(get_choices(trace))
+    # println(get_choices(trace))
 end
 
-test(10);
+@time test(120);
