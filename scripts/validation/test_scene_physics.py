@@ -7,7 +7,8 @@ from physics.world import physics
 
 def profile_scene(scene):
     state = None
-    client, obj_ids = physics.initialize_trace(scene)
+    client = physics.init_client()
+    obj_ids = physics.init_world(scene, client)
     for _ in range(120):
         physics.update_world(client, obj_ids, scene)
         state = physics.run_mc_trace(client, obj_ids,
@@ -15,7 +16,7 @@ def profile_scene(scene):
     physics.clear_trace(client)
 
 def get_scene(dataset):
-    scene,_,_ = dataset[0]
+    scene,state, _ = dataset[0]
     return scene
 
 

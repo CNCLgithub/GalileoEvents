@@ -68,6 +68,10 @@ class Exp1Dataset(dataset.HDF5Dataset):
             self.size = info['trials']
         self._source = path
 
+    @property
+    def trace_features(self):
+        return ['pos', 'orn', 'avl', 'lvl']
+
     def __len__(self):
         return self.size
 
@@ -87,15 +91,17 @@ class Exp1Dataset(dataset.HDF5Dataset):
 
     def process_trial(self, parts):
         scene = parts['scene']['scene']
-        client, obj_ids = physics.initialize_trace(scene)
-        trace = physics.run_full_trace(client,
-                                       obj_ids,
-                                       T = 2,
-                                       fps = 60,
-                                       time_scale = 1.0,
-                                       debug = False)
+        client = physics.init_client(direct = True)
+        obj_ids = physics.init_world(scene, client)
+        state,cols = physics.run_full_trace(client,
+                                            obj_ids,
+                                            T = 2,
+                                            fps = 60,
+                                            time_scale = 1.0,
+                                            debug = False)
         physics.clear_trace(client)
-        trace = dict(zip(['pos', 'orn', 'avl', 'lvl', 'col'], trace))
+        trace = {k:state[:,i] for i,k in enumerate(self.trace_features)}
+        trace['col'] = cols
         contact = np.nonzero(trace['col'])[0][0]
         time_points = np.array([-1, 1, 3, 5]) * self.time_scale + contact
         return (scene, trace, time_points)

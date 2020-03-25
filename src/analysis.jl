@@ -19,10 +19,8 @@ end
 Extracts latents from an inference chain in the form of
 a `Dict`.
 """
-function extract_chain(r::Gen_Compose.SequentialTraceResult,
+function extract_chain(r::Gen_Compose.SequentialChain,
                        latents::Dict)
-
-
     weighted = []
     unweighted = []
     log_scores = []

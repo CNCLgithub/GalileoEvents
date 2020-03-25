@@ -125,9 +125,9 @@ version = "2.2.0"
 
 [[CompilerSupportLibraries_jll]]
 deps = ["Libdl", "Pkg"]
-git-tree-sha1 = "aa832564f930a7fc9290972526908d01a35aefac"
+git-tree-sha1 = "067567a322fe466c5ec8d01413eee7127bd11699"
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
-version = "0.3.0+0"
+version = "0.3.1+0"
 
 [[Conda]]
 deps = ["JSON", "VersionParsing"]
@@ -201,9 +201,9 @@ version = "2.2.7+0"
 
 [[FileIO]]
 deps = ["Pkg"]
-git-tree-sha1 = "250ac7dfd54b5ce47372505b392756633d4e9732"
+git-tree-sha1 = "3d7cb2c4c850439f19c4d6d3fbe1dce6481cddb1"
 uuid = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
-version = "1.2.3"
+version = "1.2.4"
 
 [[FileWatching]]
 uuid = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
@@ -286,9 +286,7 @@ version = "0.3.2"
 
 [[Gen_Compose]]
 deps = ["DataFrames", "Distributions", "FileIO", "Fontconfig", "Gen", "JLD2", "ProfileView", "Revise"]
-git-tree-sha1 = "f50412c01a2bef7ae7bccdd88fdbd56d363ca18e"
-repo-rev = "master"
-repo-url = "https://github.com/CNCLgithub/Gen_Compose.git"
+path = "/project/.julia/dev/Gen_Compose"
 uuid = "c1ef4dca-b0a6-4a35-b24b-46cbf3979a16"
 version = "0.1.0"
 
@@ -512,10 +510,10 @@ uuid = "ae8d54c2-7ccd-5906-9d76-62fc9837b5bc"
 version = "1.11.0"
 
 [[MacroTools]]
-deps = ["DataStructures", "Markdown", "Random"]
-git-tree-sha1 = "07ee65e03e28ca88bc9a338a3726ae0c3efaa94b"
+deps = ["Markdown", "Random"]
+git-tree-sha1 = "f7d2e3f654af75f01ec49be82c231c382214223a"
 uuid = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
-version = "0.5.4"
+version = "0.5.5"
 
 [[MappedArrays]]
 git-tree-sha1 = "e2a02fe7ee86a10c707ff1756ab1650b40b140bb"
@@ -743,6 +741,12 @@ deps = ["OpenSpecFun_jll"]
 git-tree-sha1 = "e19b98acb182567bcb7b75bb5d9eedf3a3b5ec6c"
 uuid = "276daf66-3868-5448-9aa4-cd146d93841b"
 version = "0.10.0"
+
+[[StatProfilerHTML]]
+deps = ["Profile", "Test"]
+git-tree-sha1 = "1b039dcd0209c9541056af2c03850cff695913a5"
+uuid = "a8a75453-ed82-57c9-9e16-4cd1196ecbf5"
+version = "1.0.0"
 
 [[StaticArrays]]
 deps = ["LinearAlgebra", "Random", "Statistics"]
