@@ -4,16 +4,17 @@ export run_exp1_trial
 Runs inference on Exp1 trials
 """
 
-Gen.load_generated_functions()
+# Gen.load_generated_functions()
 
 function rejuv(trace)
-    return trace
-    # (new_trace, _) = Gen.mh(trace, gibbs_step, tuple())
-    # return new_trace
+    # return trace
+    (new_trace, _) = Gen.mh(trace, gibbs_step, tuple())
+    return new_trace
 end
 
 function run_inference(args, init_obs, init_args,
-                       observations, n_particles::Int = 1)
+                       observations, n_particles::Int = 1,
+                       out::Union{String,Nothing} = nothing)
 
     latents = Dict( :x => x -> :x )
     query = Gen_Compose.SequentialQuery(latents, #bogus for now
@@ -36,13 +37,14 @@ function run_inference(args, init_obs, init_args,
                                ess,
                                rejuv)
 
-    @time sequential_monte_carlo(procedure, query)
+    sequential_monte_carlo(procedure, query, path = out)
 end
 
 function run_exp1_trial(dpath::String, idx::Int, particles::Int,
                         out::Union{String, Nothing})
     d = galileo_ramp.Exp1Dataset(dpath)
     (scene, state, _) = get(d, idx)
+
     n = size(state["pos"], 1)
     cm = choicemap()
     cm[:initial_state => 1 => :init_pos] = scene["initial_pos"]["A"]
@@ -55,14 +57,16 @@ function run_exp1_trial(dpath::String, idx::Int, particles::Int,
         obs[t] = tcm
     end
 
-    params = Params(2, [scene["objects"]["A"],
-                        scene["objects"]["B"]])
+    obj_prior = [scene["objects"]["A"],
+                 scene["objects"]["B"]]
+    init_pos = [scene["initial_pos"]["A"],
+                scene["initial_pos"]["B"]]
+    cid = physics.physics.init_client()
+    params = Params(obj_prior, init_pos, cid)
     args = [(t, params) for t in 1:n]
 
     results = run_inference(args, cm, (0, params),
-                            obs, particles)
-    if !isnothing(out)
-        save_state(results, out)
-    end
+                            obs, particles, out)
+    physics.physics.clear_trace(cid)
     return results
 end

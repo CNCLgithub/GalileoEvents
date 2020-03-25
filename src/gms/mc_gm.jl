@@ -1,35 +1,46 @@
 export Params,
-    default_params,
     markov_generative_model
 
 using PyCall
 
-# world = physics.world
-# physics = physics.world.simulation.physics
-# object = physics.world.scene.shape
-# ball = physics.world.scene.ball
-# puck = physics.world.scene.puck
-# block = physics.world.scene.block
-# pyscene = physics.world.scene.ramp
 
 ## Structs and helpers
-##
-struct Params
-    n_objects::Int
-    object_prior::Vector{Dict}
-end
 
-const default_params = Params(2,
-                              fill(Dict("shape" => "Block",
-                                        "dims" => [0.3, 0.3, 0.15],
-                                        "appearance" => nothing),
-                                   2))
+
+const default_physics = Dict("density" => 2.0,
+                             "lateralFriction" => 0.3)
+const default_object = Dict("shape" => "Block",
+                            "dims" => [0.3, 0.3, 0.15],
+                            "appearance" => nothing,
+                            "physics" => default_physics)
 const density_map = Dict("Wood" => 1.0,
                          "Brick" => 2.0,
                          "Iron" => 8.0)
 const friction_map = Dict("Wood" => 0.263,
                           "Brick" => 0.323,
                           "Iron" => 0.215)
+
+struct Params
+    n_objects::Int
+    object_prior::Vector{Dict}
+    client::Int
+    object_map::Dict{String, Int}
+end
+
+# during inference
+function Params(client::Int, object_map::Dict{String, Int})
+    n = length(object_map)
+    prior = fill(default_object, n)
+    Params(n, prior, client, object_map)
+end
+# during init
+function Params(object_prior::Vector, init_pos::Vector{Float64},
+                cid::Int)
+    n = length(object_prior)
+    scene = initialize_state(object_prior, init_pos)
+    object_map = @pycall physics.physics.init_world(scene, cid)::Dict{String,Int}
+    Params(n, object_prior, cid, object_map)
+end
 
 function create_object(params, physical_props)
     cat = params["shape"]
@@ -43,28 +54,48 @@ function create_object(params, physical_props)
     obj = shape("", params["dims"], physical_props)
 end
 
-function initialize_state(params::Params,
-                          obj_phys,
-                          init_pos)
-
+function _init_state(object_prior::Vector,
+                     object_phys,
+                     init_pos)
     s = physics.scene.ramp.RampScene([3.5, 1.8], [3.5, 1.8],
                                      ramp_angle = 35. * pi / 180.)
-    for i = 1:params.n_objects
+    for i = 1:length(init_pos)
         k = "$i"
-        obj = create_object(params.object_prior[i], obj_phys[i])
+        obj = create_object(object_prior[i], object_phys[i])
         s.add_object(k, obj, init_pos[i])
     end
-    scene = s.serialize()
-    physics.physics.initialize_trace(scene)
+    scene::PyDict = s.serialize()
+    # @pycall s.serialize()::PyDict
 end
 
-function cleanup_state(client)
-    physics.physics.clear_trace(client)
-    return nothing
+# for client init
+function initialize_state(object_prior::Vector,
+                          init_pos::Vector{Float64})
+    phys = fill(default_physics, 2)
+    _init_state(object_prior, phys, init_pos)
 end
+
+# for inference
+obj_phys_type = Dict{String, Float64}
+function initialize_state(params::Params,
+                          object_phys,
+                          init_pos)
+    scene = _init_state(params.object_prior, object_phys,
+                        init_pos)
+    objs = scene["objects"]
+    obj_d = Dict{String, obj_phys_type}()
+    for k in keys(objs)
+        obj_d[k] = objs[k]["physics"]
+    end
+    return obj_d
+end
+
+# function cleanup_state(client)
+#     physics.physics.clear_trace(client)
+#     return nothing
+# end
 
 function from_material_params(params)
-
     mat = params["appearance"]
     if isnothing(mat)
         density_prior = (4., 3.)
@@ -78,10 +109,23 @@ function from_material_params(params)
                 "lateralFriction" => friction_prior)
 end
 
+function update_world(cid, obj_ids, scene)
+    # pyscene = convert(PyDict{String, PyDict{String, Float64}}, scene)
+    @pycall physics.physics.update_world(cid,
+                                         obj_ids,
+                                         scene)::PyObject
+    return nothing
+end
 
-function forward_step(prev_state, client, obj_map)
-    physics.physics.run_mc_trace(client, obj_map,
-                         state = prev_state)
+function step(cid, obj_ids, prev_state)
+    @pycall physics.physics.run_mc_trace(cid,
+                                         obj_ids,
+                                         state = prev_state)::Array{Float64,3}
+end
+
+function forward_step(prev_state, params::Params, belief::Dict)
+    update_world(params.client, params.object_map, belief)
+    step(params.client, params.object_map, prev_state)
 end
 
 ## Generative Model + components
@@ -115,9 +159,9 @@ end
 
 map_init_state = Gen.Map(state_prior)
 
-@gen (static) function kernel(t::Int, prev_state, client, obj_map)
-    next_state = forward_step(prev_state, client, obj_map)
-    pos = next_state[1]
+@gen (static) function kernel(t::Int, prev_state, params, belief)
+    next_state = forward_step(prev_state, params, belief)
+    pos = next_state[1, :, :]
     next_pos = @trace(Gen.broadcasted_normal(pos, 0.1),
                       :positions)
     return next_state
@@ -129,12 +173,10 @@ chain = Gen.Unfold(kernel)
 
     objects = @trace(map_object_prior(params.object_prior),
                      :object_physics)
-
     init_args = fill(tuple(), params.n_objects)
     initial_pos = @trace(map_init_state(init_args), :initial_state)
-    phys_init = initialize_state(params, objects, initial_pos)
-    states = @trace(chain(t, nothing, phys_init[1], phys_init[2]),
-                    :chain)
-    t = cleanup_state(phys_init[1])
+    physics_belief = initialize_state(params, objects, initial_pos)
+    states = @trace(chain(t, nothing, params, physics_belief), :chain)
+    # t = cleanup_state(phys_init[1])
     return states
 end
