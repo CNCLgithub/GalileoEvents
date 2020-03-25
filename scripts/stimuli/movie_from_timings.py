@@ -22,8 +22,17 @@ def noise_mask(src, out, dur, fps):
     cmd = cmd.format(fps, dur, out)
     return cmd
 
+def black_mask(src, out, dur, fps):
+    cmd = 'ffmpeg -y -f lavfi -r {0:d} -i color=black:600x400:d={1:f} -pix_fmt yuv420p {2!s}'
+    cmd = cmd.format(fps, dur, out)
+    return cmd
+
+
 def stimuli_with_mask(src, fps, dur, out):
-    cmds = ffmpeg.chain([noise_mask, ffmpeg.concat],
+    #cmds = ffmpeg.chain([black_mask, ffmpeg.concat],
+    #                    [(dur, fps), (src, False)],
+    #                    src, out, 'e')
+    cmds = ffmpeg.chain([black_mask, ffmpeg.concat],
                         [(dur, fps), (src, False)],
                         src, out, 'e')
     ffmpeg.run_cmd(cmds)
@@ -51,17 +60,11 @@ def main():
     render_path = os.path.join('/renders', base_path)
 
     for i in range(len(dataset)):
+    #for i in range(1):
         _, _, timings = dataset[i]
-        col = timings[0]
-        # -66ms -> +266ms @ 60fps
-        scale = 6
-        times = np.array([-1, 1, 2, 3]) * scale
-        times += col
-
         src_path = os.path.join(render_path, str(i), 'render',
                                 '%d.png')
-
-        for cond, point in enumerate(times):
+        for cond, point in enumerate(timings):
             out_path = '{0:d}_t-{1:d}'.format(i, cond)
             out_path = os.path.join(movie_dir, out_path)
 
