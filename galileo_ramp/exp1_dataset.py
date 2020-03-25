@@ -95,7 +95,8 @@ class Exp1Dataset(dataset.HDF5Dataset):
                                        debug = False)
         trace = dict(zip(['pos', 'orn', 'avl', 'lvl', 'col'], trace))
         contact = np.nonzero(trace['col'])[0][0]
-        time_points = np.array([-1, 1, 3, 5]) * self.time_scale + contact
+        time_points = np.array([-1, 1, 3, 5]) * self.time_scale
+        time_points += contact
         return (scene, trace, time_points)
 
 def main():
