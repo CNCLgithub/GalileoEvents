@@ -6,37 +6,48 @@ using ClusterManagers, Distributed
 #client = start(master_server)
 
 # adding workers
-addprocs_slurm(2, p="short", t="00:5:00", exename="julia.sh", dir="/gpfs/milgram/project/yildirim/eivinas/dev/galileo-ramp")
+addprocs_slurm(20, p="short", t="00:20:00", exename="julia.sh", dir="/gpfs/milgram/project/yildirim/eivinas/dev/galileo-ramp")
 
-"""
-for i in workers()
-    host, pid = fetch(@spawnat i (gethostname(), getpid()))
-end
-"""
 
 @everywhere begin
 using BayesianOptimization, GaussianProcesses, Distributions
+using SharedArrays
 
 # evaluation on individual trial
-function evaluation(trial)
-    # random number for now
-    return rand(Normal(0,1))
+function evaluation(measurement_noise, num_particles, trial)
+    # random function for now
+    return x[1]^2 + x[2]^3 + rand(Normal(0,1))
 end
     
-
 end
 
 
-function g(x)
+# full model evaluation
+# x[1] - measurement_noise
+# x[2] - num_particles
+function full_evaluation(x)
+
+    measurement_noise = x[1]
+    num_particles = x[2]
+
     #tasks = map(t -> inference(t, x), trials)
-    results = Array{Float64}(undef, 2)
-    for (i, worker) in enumerate(workers())
-        println(workers())
-        results[i] = fetch(remotecall(evaluation, worker, (i,)))
+    
+    results = SharedArray{Float64}(100)
+    @distributed for trial=1:100
+        #results[i] = remotecall_fetch(evaluation, workers()[i], measurement_noise, num_particles, i)
+        results[i] = evaluation(measurement_noise, num_particles, trial)
     end
+
     #results = client.collect(tasks)
-    return mean(results)
-    # return correlation(results, behavioural_data) 
+    
+    # mean value for now
+    # should be correlation(results, behavioural_data) 
+    result = mean(results)
+
+    println("input: $x")
+    println("result: $result")
+
+    return result
 end
 
 
@@ -55,7 +66,7 @@ modeloptimizer = MAPGPOptimizer(every = 50, noisebounds = [-4, 3],       # bound
                                 kernbounds = [[-1, -1, 0], [4, 4, 10]],  # bounds of the 3 parameters GaussianProcesses.get_param_names(model.kernel)
                                 maxeval = 40)
 
-opt = BOpt(g,
+opt = BOpt(full_evaluation,
            model,
            UpperConfidenceBound(),                   # type of acquisition
            modeloptimizer,                        
@@ -71,4 +82,6 @@ opt = BOpt(g,
 
 result = boptimize!(opt)
 
-
+for i in workers()
+    rmprocs(i)
+end
