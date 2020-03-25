@@ -23,23 +23,24 @@ const friction_map = Dict("Wood" => 0.263,
 struct Params
     n_objects::Int
     object_prior::Vector{Dict}
+    obs_noise::Float64
     client::Int
     object_map::Dict{String, Int}
 end
 
-# during inference
-function Params(client::Int, object_map::Dict{String, Int})
-    n = length(object_map)
-    prior = fill(default_object, n)
-    Params(n, prior, client, object_map)
-end
+# # for `test/markov_gm.jl`
+# function Params(client::Int, object_map::Dict{String, Int})
+#     n = length(object_map)
+#     prior = fill(default_object, n)
+#     Params(n, prior, 0.1, client, object_map)
+# end
 # during init
 function Params(object_prior::Vector, init_pos::Vector{Float64},
-                cid::Int)
+                obs_noise::Float64, cid::Int)
     n = length(object_prior)
     scene = initialize_state(object_prior, init_pos)
     object_map = @pycall physics.physics.init_world(scene, cid)::Dict{String,Int}
-    Params(n, object_prior, cid, object_map)
+    Params(n, object_prior, obs_noise, cid, object_map)
 end
 
 function create_object(params, physical_props)
@@ -162,7 +163,7 @@ map_init_state = Gen.Map(state_prior)
 @gen (static) function kernel(t::Int, prev_state, params, belief)
     next_state = forward_step(prev_state, params, belief)
     pos = next_state[1, :, :]
-    next_pos = @trace(Gen.broadcasted_normal(pos, 0.1),
+    next_pos = @trace(Gen.broadcasted_normal(pos, params.obs_noise),
                       :positions)
     return next_state
 end

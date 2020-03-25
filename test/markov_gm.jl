@@ -5,7 +5,7 @@ function test(n::Int)
     cid = GalileoRamp.physics.physics.init_client()
     obj_prior = fill(GalileoRamp.default_object, 2)
     init_pos = [1.5, 0.5]
-    params = Params(obj_prior, init_pos, cid)
+    params = Params(obj_prior, init_pos, 0.1, cid)
 
     cm = choicemap()
     cm[:initial_state => 1 => :init_pos] = init_pos[1]
