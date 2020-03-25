@@ -41,7 +41,7 @@ function run_inference(args, init_obs, init_args,
 end
 
 function run_exp1_trial(dpath::String, idx::Int, particles::Int,
-                        out::Union{String, Nothing})
+                        obs_noise::Float64, out::Union{String, Nothing})
     d = galileo_ramp.Exp1Dataset(dpath)
     (scene, state, _) = get(d, idx)
 
@@ -62,7 +62,7 @@ function run_exp1_trial(dpath::String, idx::Int, particles::Int,
     init_pos = [scene["initial_pos"]["A"],
                 scene["initial_pos"]["B"]]
     cid = physics.physics.init_client()
-    params = Params(obj_prior, init_pos, cid)
+    params = Params(obj_prior, init_pos, obs_noise, cid)
     args = [(t, params) for t in 1:n]
 
     results = run_inference(args, cm, (0, params),
