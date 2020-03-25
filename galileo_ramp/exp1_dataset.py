@@ -103,7 +103,8 @@ class Exp1Dataset(dataset.HDF5Dataset):
         trace = {k:state[:,i] for i,k in enumerate(self.trace_features)}
         trace['col'] = cols
         contact = np.nonzero(trace['col'])[0][0]
-        time_points = np.array([-1, 1, 3, 5]) * self.time_scale + contact
+        time_points = np.array([-1, 1, 3, 5]) * self.time_scale
+        time_points += contact
         return (scene, trace, time_points)
 
 def main():
