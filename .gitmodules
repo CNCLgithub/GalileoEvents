@@ -7,3 +7,6 @@
 [submodule "deps/ramp_physics"]
 	path = deps/ramp_physics
 	url = git@github.com:CNCLgithub/physics_change_detection.git
+[submodule "deps/Gen_Compose"]
+	path = deps/Gen_Compose
+	url = git@github.com:CNCLgithub/Gen_Compose.git
