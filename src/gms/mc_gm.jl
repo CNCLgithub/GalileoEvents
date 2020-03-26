@@ -28,12 +28,6 @@ struct Params
     object_map::Dict{String, Int}
 end
 
-# # for `test/markov_gm.jl`
-# function Params(client::Int, object_map::Dict{String, Int})
-#     n = length(object_map)
-#     prior = fill(default_object, n)
-#     Params(n, prior, 0.1, client, object_map)
-# end
 # during init
 function Params(object_prior::Vector, init_pos::Vector{Float64},
                 obs_noise::Float64, cid::Int)
@@ -52,17 +46,18 @@ function create_object(params, physical_props)
     else
         shape = physics.scene.ball.Ball
     end
-    obj = shape("", params["dims"], physical_props)
+    obj::PyObject = shape("", params["dims"], physical_props)
 end
 
 function _init_state(object_prior::Vector,
                      object_phys,
                      init_pos)
-    s = physics.scene.ramp.RampScene([3.5, 1.8], [3.5, 1.8],
-                                     ramp_angle = 35. * pi / 180.)
+    s::PyObject = physics.scene.ramp.RampScene([3.5, 1.8], [3.5, 1.8],
+                                               ramp_angle = 35. * pi / 180.)
+
     for i = 1:length(init_pos)
         k = "$i"
-        obj = create_object(object_prior[i], object_phys[i])
+        obj::PyObject = create_object(object_prior[i], object_phys[i])
         s.add_object(k, obj, init_pos[i])
     end
     scene::PyDict = s.serialize()
@@ -72,7 +67,7 @@ end
 function initialize_state(object_prior::Vector,
                           init_pos::Vector{Float64})
     phys = fill(default_physics, 2)
-    _init_state(object_prior, phys, init_pos)
+    _init_state(object_prior, phys, init_pos)::Dict
 end
 
 # for inference
@@ -89,11 +84,6 @@ function initialize_state(params::Params,
     end
     return obj_d
 end
-
-# function cleanup_state(client)
-#     physics.physics.clear_trace(client)
-#     return nothing
-# end
 
 function from_material_params(params)
     mat = params["appearance"]
@@ -177,6 +167,5 @@ chain = Gen.Unfold(kernel)
     initial_pos = @trace(map_init_state(init_args), :initial_state)
     physics_belief = initialize_state(params, objects, initial_pos)
     states = @trace(chain(t, nothing, params, physics_belief), :chain)
-    # t = cleanup_state(phys_init[1])
     return states
 end

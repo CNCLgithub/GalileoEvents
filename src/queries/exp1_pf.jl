@@ -4,10 +4,7 @@ export run_exp1_trial
 Runs inference on Exp1 trials
 """
 
-# Gen.load_generated_functions()
-
 function rejuv(trace)
-    # return trace
     (new_trace, _) = Gen.mh(trace, gibbs_step, tuple())
     return new_trace
 end
@@ -61,8 +58,7 @@ function run_exp1_trial(dpath::String, idx::Int, particles::Int,
                  scene["objects"]["B"]]
     init_pos = [scene["initial_pos"]["A"],
                 scene["initial_pos"]["B"]]
-    sid = physics.physics.init_server(key = idx)
-    cid = physics.physics.init_client(key = idx)
+    cid = physics.physics.init_client(direct = true)
     params = Params(obj_prior, init_pos, obs_noise, cid)
     args = [(t, params) for t in 1:n]
 
