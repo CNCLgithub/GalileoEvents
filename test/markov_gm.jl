@@ -2,7 +2,9 @@ using Gen
 
 function test(n::Int)
 
-    cid = GalileoRamp.physics.physics.init_client()
+    # sid = GalileoRamp.physics.physics.init_server(key = 1)
+    # cid = GalileoRamp.physics.physics.init_client(key = 1)
+    cid = GalileoRamp.physics.physics.init_client(direct = true)
     obj_prior = fill(GalileoRamp.default_object, 2)
     init_pos = [1.5, 0.5]
     params = Params(obj_prior, init_pos, 0.1, cid)
@@ -16,6 +18,7 @@ function test(n::Int)
                             (n, params), cm)
 
     GalileoRamp.physics.physics.clear_trace(cid)
+    # GalileoRamp.physics.physics.clear_trace(sid)
     return nothing
     # println(get_choices(trace))
 end
