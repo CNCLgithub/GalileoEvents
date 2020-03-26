@@ -66,7 +66,6 @@ function _init_state(object_prior::Vector,
         s.add_object(k, obj, init_pos[i])
     end
     scene::PyDict = s.serialize()
-    # @pycall s.serialize()::PyDict
 end
 
 # for client init

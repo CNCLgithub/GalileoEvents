@@ -6,6 +6,7 @@ import os
 import argparse
 from slurmpy import sbatch
 
+from galileo_ramp.exp1_dataset import Exp1Dataset
 
 def main():
 
@@ -13,7 +14,8 @@ def main():
         description = 'Evaluates a batch of blocks for stimuli generation.',
         formatter_class = argparse.ArgumentDefaultsHelpFormatter
     )
-    parser.add_argument('src', type = str,
+    parser.add_argument('--src', type = str,
+                        default = '/databases/exp1.hdf5',
                         help = 'Path to scenes')
     parser.add_argument('--particles', type = int,
                         default = 1,
@@ -28,7 +30,7 @@ def main():
 
     njobs = len(dataset)
 
-    tasks = [(str(i)) for i in range(len(dataset))]
+    tasks = [(str(i+1),) for i in range(njobs)]
     kwargs = ['--particles {0:d}'.format(args.particles),
               '--obs_noise {0:f}'.format(args.obs_noise)]
 
@@ -43,8 +45,10 @@ def main():
     }
     path = '/project/scripts/inference/exp1_pf.jl'
     sys_img = '/project/sys_galileo_ramp.so'
-    func = 'bash {0!s}/run.sh julia --sysimage {1!s} {2!s}'
-    func = func.format(os.getcwd(), sys_img, path)
+    func = 'bash {0!s}/run.sh julia {1!s}'
+    func = func.format(os.getcwd(), path)
+    # func = 'bash {0!s}/run.sh julia --sysimage {1!s} {2!s}'
+    # func = func.format(os.getcwd(), sys_img, path)
     batch = sbatch.Batch(interpreter, func, tasks, kwargs, extras,
                          resources)
     print("Template Job:")

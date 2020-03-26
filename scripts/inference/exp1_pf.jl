@@ -1,4 +1,3 @@
-""""""
 using ArgParse
 using GalileoRamp
 using Base.Filesystem
@@ -41,16 +40,18 @@ function parse_commandline()
 end
 
 function main()
-    parsed_args = parse_commandline()
-
-
-    dataset_name = basename(args["dataset"])
+    args = parse_commandline()
+   
+    dataset_name = first(splitext(basename(args["dataset"])))
     idx = args["idx"]
-    out_dir = "traces/$dataset_name"
+    particles = args["particles"]
+    out_dir = "/traces/$(dataset_name)_p_$(particles)"
     out = "$out_dir/$(idx).jld2"
-    isdir(dataset_name) || mkdir(out_dir)
-    args["reset"] && isfile(out) && rm(out)
+    isdir(out_dir) || mkdir(out_dir)
+    # args["restart"] && isfile(out) && rm(out)
+    isfile(out) && rm(out)
 
+    println(out)
     run_exp1_trial(args["dataset"], idx, args["particles"],
                    args["obs_noise"], out)
     return nothing
