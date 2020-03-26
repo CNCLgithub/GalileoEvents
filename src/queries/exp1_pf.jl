@@ -61,7 +61,8 @@ function run_exp1_trial(dpath::String, idx::Int, particles::Int,
                  scene["objects"]["B"]]
     init_pos = [scene["initial_pos"]["A"],
                 scene["initial_pos"]["B"]]
-    cid = physics.physics.init_client()
+    sid = physics.physics.init_server(key = idx)
+    cid = physics.physics.init_client(key = idx)
     params = Params(obj_prior, init_pos, obs_noise, cid)
     args = [(t, params) for t in 1:n]
 
