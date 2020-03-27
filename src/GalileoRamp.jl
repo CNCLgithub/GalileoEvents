@@ -20,5 +20,6 @@ include("gms/gms.jl")
 include("procedures/procedures.jl")
 include("queries/queries.jl")
 include("analysis.jl")
+include("visualize/visualize.jl")
 
 end # module

@@ -6,7 +6,7 @@ using FileIO
 using DataFrames
 
 density_map = Dict(
-    "density" => cm -> cm[:object_physics => 1 => :density]
+    :density => cm -> cm[:object_physics => 1 => :density]
 )
 
 function parse_chain(chain_path, time_points)

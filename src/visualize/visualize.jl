@@ -1,7 +1,6 @@
+export visualize
+
 using Luxor
-using JSON
-using Printf
-using DataFrames
 
 ### DEFINE CONSTANTS ###
 
@@ -13,7 +12,7 @@ color_dict = Dict{String,String}("Iron" => "silver",
                                  "table" => "black")
 
 # global scaling
-scale_fac = -10
+scale_fac = -100
 
 ########################
 
@@ -31,47 +30,21 @@ end
 
 function draw_groundtruth(scene_data, obj_positions)
     data = deepcopy(scene_data)
+    # add ramp and table
+    obj = data["table"]
+    pos = Point(obj["position"][1], obj["position"][3])
+    orientation = obj["orientation"][2]
+    draw_box(obj, pos, orientation)
+    obj = data["ramp"]
+    pos = Point(obj["position"][1], obj["position"][3])
+    orientation = obj["orientation"][2]
+    draw_box(obj, pos, orientation)
     # loop through objects
-    for item in keys(data)
-        if item != "objects"
-            obj = data[item]
-            pos = Point(obj["position"][1], obj["position"][3])
-            orientation = obj["orientation"][2]
-            draw_box(obj, pos, orientation)
-        else
-            for (idx, sub_item) in enumerate(sort(collect(keys(data[item]))))
-                obj = data[item][sub_item]
-                pos = Point(obj_positions[idx, 1], obj_positions[idx, 3])
-                draw_box(obj, pos, 0)
-            end
-        end
-    end
-end
-
-
-"""
-Returns a `Gen.ChoiceMap` to be used a constraints in
-prediction
-"""
-function package_latents(df::DataFrameRow)
-    constraint = Gen.choicemap()
-    for latent in names(df)
-        constraint[latent] = df[latent]
-    end
-    return constraint
-end
-
-"""
-Writes model predictions into an array
-"""
-function make_predictions!(predictions::AbstractArray,
-                           forward_model,
-                           params::Tuple,
-                           trace_df::DataFrame)
-    for (sid, trace_row) = enumerate(eachrow(trace_df))
-        constraints = package_latents(trace_row)
-        (trace, _) = generate(forward_model, Tuple(params), constraints)
-        predictions[sid, :, :, :] = get_choices(trace)[:pos]
+    objects = data["objects"]
+    for (idx, item) in enumerate(sort(collect(keys(objects))))
+        obj = objects[item]
+        pos = Point(obj_positions[idx, 1], obj_positions[idx, 3])
+        draw_box(obj, pos, 0)
     end
 end
 
@@ -92,10 +65,10 @@ end
 
 
 function visualize(gt,
-                   observations::AbstractArray,
-                   predictions::AbstractArray,
-                   gt_sim::AbstractArray,
-                   path::AbstractString)
+                   observations::T,
+                   predictions::Array{Float64, 4},
+                   gt_sim::Union{T,Nothing},
+                   path::String) where {T<:Array{Float64, 3}}
     scene_length = first(size(observations))
     mov = Movie(750, 300, "visualization", 1:scene_length)
     backdrop(scene, framenumber) = background("white")
@@ -103,15 +76,15 @@ function visualize(gt,
         origin()
         translate(Point(0.,100.))
         draw_groundtruth(gt, observations[framenumber, :, :])
-        draw_predictions(predictions[:, framenumber, :, :], false)
-        draw_predictions(gt_sim[:, framenumber, :, :], true)
+        draw_predictions(predictions[framenumber, :, :, :], false)
+        isnothing(gt_sim) || draw_predictions(gt_sim[:, framenumber, :, :], true)
     end
     animate(mov,
             [Luxor.Scene(mov, backdrop, 1:scene_length),
              Luxor.Scene(mov, frame, 1:scene_length)],
             creategif=true,
             usenewffmpeg=false,
-            pathname="$(path).gif")
+            pathname=path)
 end
 
 
