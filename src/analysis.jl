@@ -5,12 +5,12 @@ using JLD2
 using DataFrames
 using Gen_Compose
 using Base.Filesystem
+using Base.Iterators:flatten
 
 function parse_trace(latent_maps, trace)
-    choices = Gen.get_choices(trace)
     d = Dict()
     for (k,f) in latent_maps
-        d[k] = f(choices)
+        d[k] = f(trace)
     end
     return d
 end
@@ -19,12 +19,11 @@ end
 Extracts latents from an inference chain in the form of
 a `Dict`.
 """
-function extract_chain(r::Gen_Compose.SequentialChain,
-                       latents::Dict)
+function extract_chain(path::String, latents::Dict)
     weighted = []
     unweighted = []
     log_scores = []
-    jldopen(r.path, "r") do chain
+    jldopen(path, "r") do chain
         states = chain["state"]
         for t = 1:length(keys(states))
             state = states["$t"]
@@ -49,8 +48,12 @@ function extract_chain(r::Gen_Compose.SequentialChain,
                     "log_scores" => log_scores)
     return extracts
 end
+function extract_chain(r::Gen_Compose.SequentialChain,
+                       latents::Dict)
+    extract_chain(r.path, latents)
+end
 
-function to_frame(log_scores, estimates)
+function to_frame(log_scores, estimates; exclude = nothing)
 
     latents = keys(estimates)
     dims = size(log_scores)
@@ -58,10 +61,12 @@ function to_frame(log_scores, estimates)
     columns = Dict(
         :t => repeat(samples, inner = dims[2]),
         :sid => repeat(collect(1:dims[2]), dims[1]),
-        :log_score => collect(Base.Iterators.flatten(log_scores'))
+        :log_score => collect(flatten(log_scores'))
     )
     for l in latents
-        columns[l] = collect(Base.Iterators.flatten(estimates[l]'))
+        # (l in exclude) || columns[l] = collect(flatten(estimates[l]'))
+        (l in exclude) || setindex!(columns, collect(flatten(estimates[l]')), l)
+
     end
 
     df = DataFrame(columns)
