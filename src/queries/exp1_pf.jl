@@ -5,7 +5,18 @@ Runs inference on Exp1 trials
 """
 
 function rejuv(trace)
-    (new_trace, _) = Gen.mh(trace, gibbs_step, tuple())
+    # return trace
+    (t,_) = get_args(trace)
+    # println("ran rejuv at time $t")
+    # choices = Gen.get_choices(trace)
+    # addr = :object_physics => 1 => :density
+    # density1 = choices[addr]
+    (new_trace, accepted) = Gen.mh(trace, exp1_gibbs, tuple())
+    # choices = Gen.get_choices(new_trace)
+    # addr = :object_physics => 1 => :density
+    # density2 = choices[addr]
+    # winner = accepted ? density2 : density1
+    # println("$density1 $density2 $winner $accepted")
     return new_trace
 end
 
@@ -29,6 +40,7 @@ function run_inference(args, init_obs, init_args,
     # Additionally, this will be under the Sequential Monte-Carlo
     # paradigm.
     ess = n_particles * 0.5
+    # ess = n_particles * 0.
     # defines the random variables used in rejuvination
     procedure = ParticleFilter(n_particles,
                                ess,
@@ -42,10 +54,21 @@ function run_exp1_trial(dpath::String, idx::Int, particles::Int,
     d = galileo_ramp.Exp1Dataset(dpath)
     (scene, state, _) = get(d, idx)
 
+    # n = 20
     n = size(state["pos"], 1)
     cm = choicemap()
     cm[:initial_state => 1 => :init_pos] = scene["initial_pos"]["A"]
     cm[:initial_state => 2 => :init_pos] = scene["initial_pos"]["B"]
+    objects = scene["objects"]
+    cm[:object_physics => 2 => :density] = objects["B"]["physics"]["density"]
+    cm[:object_physics => 2 => :friction] = objects["B"]["physics"]["lateralFriction"]
+    cm[:object_physics => 2 => :restitution] = objects["B"]["physics"]["restitution"]
+    cm[:object_physics => 1 => :friction] = objects["A"]["physics"]["lateralFriction"]
+    cm[:object_physics => 1 => :restitution] = objects["A"]["physics"]["restitution"]
+    # FOR DEBUGGING
+    # cm[:object_physics => 1 => :density] = objects["A"]["physics"]["density"]
+    # cm[:object_physics => 1 => :density] = 2.0
+
     obs = Vector{Gen.ChoiceMap}(undef, n)
     for t = 1:n
         tcm = choicemap()

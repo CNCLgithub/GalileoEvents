@@ -13,6 +13,7 @@ def profile_scene(scene):
         physics.update_world(client, obj_ids, scene)
         state = physics.run_mc_trace(client, obj_ids,
                                      state = state)
+
     physics.clear_trace(client)
 
 def get_scene(dataset):
@@ -22,8 +23,8 @@ def get_scene(dataset):
 
 def main():
     dataset = Exp1Dataset("/databases/exp1.hdf5")
-    scene = get_scene(dataset)
-    profile_scene(scene)
+    scene,state, _ = dataset[0]
+    mc_state = profile_scene(scene)
 
 if __name__ == '__main__':
    main()

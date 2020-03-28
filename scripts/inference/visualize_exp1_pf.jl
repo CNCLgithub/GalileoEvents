@@ -12,14 +12,18 @@ function extract_pos(t)
     pos = ret[1, :, :]
     pos = reshape(pos, (1, 1, size(pos)...))
     return pos
-    # pos = map(state -> state[1,:,:], ret) |> collect
-    # println(size(pos))
-    # return pos
-    # (Gen.get_retval(t) |> map(state -> state[1,:,:]) |> vcat)
 end
+
+function extract_phys(t, feat)
+    d = Vector{Float64}(undef, 1)
+    d[1] = Gen.get_choices(t)[:object_physics => 1 => feat]
+    reshape(d, (1,1,1))
+end
+
 extract_map = Dict(
     :pos => extract_pos,
-    :density => t -> Gen.get_choices(t)[:object_physics => 1 => :density]
+    :density => t -> extract_phys(t, :density),
+    # :friction => t -> extract_phys(t, :friction),
 )
 
 function plot_chain(df, latents, path)
@@ -27,7 +31,6 @@ function plot_chain(df, latents, path)
     estimates = map(y -> Gadfly.plot(df,
                                      y = y,
                                      x = :t,
-                                     # color = :log_score,
                                      Gadfly.Geom.histogram2d),
                     latents)
     # last log scores
@@ -45,10 +48,11 @@ function process_trial(dataset_path,
 
     chain_path = "$trace_path/$trial.jld2"
     extracted = extract_chain(chain_path, extract_map)
+    println(size(extracted["weighted"][:density]))
 
-    df = to_frame(extracted["log_scores"], extracted["weighted"],
+    df = to_frame(extracted["log_scores"], extracted["unweighted"],
                   exclude = [:pos])
-    println(df)
+    sort!(df, :t)
     plot_path = "$trace_path/$(trial)_plot.png"
     plot_chain(df, [:density], plot_path)
 
@@ -61,4 +65,4 @@ function process_trial(dataset_path,
     return nothing;
 end
 
-process_trial("/databases/exp1.hdf5", "/traces/exp1_p_10", 1);
+process_trial("/databases/exp1.hdf5", "/traces/exp1_p_10", 0);
