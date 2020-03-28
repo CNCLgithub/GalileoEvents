@@ -31,6 +31,7 @@ function extract_chain(path::String, latents::Dict)
             w_traces = Gen.get_traces(state)
             uw_traces = Gen.sample_unweighted_traces(state, n)
 
+            # println("T: $t, N: $n")
             parsed = map(t -> parse_trace(latents, t), w_traces)
             parsed = merge(hcat, parsed...)
             push!(weighted, parsed)
@@ -59,13 +60,13 @@ function to_frame(log_scores, estimates; exclude = nothing)
     dims = size(log_scores)
     samples = collect(1:dims[1])
     columns = Dict(
-        :t => repeat(samples, inner = dims[2]),
-        :sid => repeat(collect(1:dims[2]), dims[1]),
+        :t => repeat(samples, dims[2]),
+        :sid => repeat(collect(1:dims[2]), inner = dims[1]),
         :log_score => collect(flatten(log_scores'))
     )
     for l in latents
-        # (l in exclude) || columns[l] = collect(flatten(estimates[l]'))
-        (l in exclude) || setindex!(columns, collect(flatten(estimates[l]')), l)
+        (l in exclude) ||
+            setindex!(columns, collect(flatten(vcat(estimates[l]...))), l)
 
     end
 
