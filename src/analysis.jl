@@ -23,6 +23,7 @@ function extract_chain(path::String, latents::Dict)
     weighted = []
     unweighted = []
     log_scores = []
+    ml_est = []
     jldopen(path, "r") do chain
         states = chain["state"]
         for t = 1:length(keys(states))
@@ -31,22 +32,23 @@ function extract_chain(path::String, latents::Dict)
             w_traces = Gen.get_traces(state)
             uw_traces = Gen.sample_unweighted_traces(state, n)
 
-            # println("T: $t, N: $n")
             parsed = map(t -> parse_trace(latents, t), w_traces)
             parsed = merge(hcat, parsed...)
             push!(weighted, parsed)
             parsed = map(t -> parse_trace(latents, t), uw_traces)
             parsed = merge(hcat, parsed...)
             push!(unweighted, parsed)
-            push!(log_scores, get_log_weights(state))
+            push!(log_scores, get_log_weights(state)')
+            push!(ml_est, log_ml_estimate(state))
         end
     end
     weighted = merge(vcat, weighted...)
     unweighted = merge(vcat, unweighted...)
-    log_scores = hcat(log_scores...)'
+    log_scores = vcat(log_scores...)
     extracts = Dict("weighted" => weighted,
                     "unweighted" => unweighted,
-                    "log_scores" => log_scores)
+                    "log_scores" => log_scores,
+                    "ml_est" => ml_est)
     return extracts
 end
 function extract_chain(r::Gen_Compose.SequentialChain,
@@ -62,7 +64,7 @@ function to_frame(log_scores, estimates; exclude = nothing)
     columns = Dict(
         :t => repeat(samples, dims[2]),
         :sid => repeat(collect(1:dims[2]), inner = dims[1]),
-        :log_score => collect(flatten(log_scores'))
+        :log_score => collect(flatten(log_scores))
     )
     for l in latents
         (l in exclude) ||
