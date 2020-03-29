@@ -26,17 +26,29 @@ extract_map = Dict(
     # :friction => t -> extract_phys(t, :friction),
 )
 
-function plot_chain(df, latents, path)
+function plot_chain(df, ml_est, latents, col_t, path)
     # first the estimates
     estimates = map(y -> Gadfly.plot(df,
                                      y = y,
                                      x = :t,
-                                     Gadfly.Geom.histogram2d),
+                                     xintercept = col_t,
+                                     Gadfly.Geom.histogram2d(xbincount=120,ybincount=10),
+                                     Gadfly.Geom.vline,
+                                     Scale.x_continuous(minvalue = 0, maxvalue = 120)),
                     latents)
     # last log scores
-    log_scores = Gadfly.plot(df, y = :log_score, x = :t,
-                             Gadfly.Geom.histogram2d)
-    plot = vstack(estimates..., log_scores)
+    # log_scores = Gadfly.plot(x = 1:120,
+    #                          y = ml_est,
+    #                          xintercept = [col_t],
+    #                          Gadfly.Geom.point,
+    #                          Gadfly.Geom.vline,
+    #                          Scale.x_continuous(minvalue = 0, maxvalue = 120))
+    # log_scores = Gadfly.plot(df, y = :log_score, x = :t, xintercept = [col_t],
+    #                          Gadfly.Geom.histogram2d(ybincount=20),
+    #                          Gadfly.Geom.vline,
+    #                          Scale.x_continuous(minvalue = 0, maxvalue = 120))
+    # plot = vstack(estimates..., log_scores)
+    plot = vstack(estimates...)
     compose(compose(context(), rectangle(), fill("white")), plot) |>
         PNG(path);
 end
@@ -45,19 +57,18 @@ function process_trial(dataset_path,
                        trace_path::String,
                        trial::Int)
 
+    dataset = GalileoRamp.galileo_ramp.Exp1Dataset(dataset_path)
+    (scene, state, cols) = get(dataset, trial)
 
     chain_path = "$trace_path/$trial.jld2"
     extracted = extract_chain(chain_path, extract_map)
-    println(size(extracted["weighted"][:density]))
 
     df = to_frame(extracted["log_scores"], extracted["unweighted"],
                   exclude = [:pos])
     sort!(df, :t)
     plot_path = "$trace_path/$(trial)_plot.png"
-    plot_chain(df, [:density], plot_path)
+    plot_chain(df, extracted["ml_est"], [:density], cols, plot_path)
 
-    dataset = GalileoRamp.galileo_ramp.Exp1Dataset(dataset_path)
-    (scene, state, _) = get(dataset, trial)
     gt_pos = state["pos"]
     preds = extracted["unweighted"][:pos]
     viz_path = "$trace_path/$(trial)_viz.gif"
