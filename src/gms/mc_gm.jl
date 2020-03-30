@@ -32,9 +32,11 @@ end
 
 # during init
 function Params(object_prior::Vector, init_pos::Vector{Float64},
+                scene::Dict,
                 obs_noise::Float64, cid::Int)
     n = length(object_prior)
-    scene = initialize_state(object_prior, init_pos)
+    # scene = initialize_state(scene)
+    # scene = initialize_state(object_prior, init_pos)
     object_map = @pycall physics.physics.init_world(scene, cid)::Dict{String,Int}
     Params(n, object_prior, obs_noise, cid, object_map)
 end
@@ -59,8 +61,7 @@ function _init_state(object_prior::Vector,
                                                ramp_phys = surface_phys,
                                                table_phys = surface_phys)
 
-    for i = 1:length(init_pos)
-        k = "$i"
+    for (i,k) = enumerate(["A", "B"])
         obj::PyObject = create_object(object_prior[i], object_phys[i])
         s.add_object(k, obj, init_pos[i])
     end
@@ -73,6 +74,17 @@ function initialize_state(object_prior::Vector,
     phys = [d["physics"] for d in object_prior]
     _init_state(object_prior, phys, init_pos)::Dict
 end
+function initialize_state(scene::Dict)
+    new_d = Dict(
+        "ramp" => scene["ramp"],
+        "table" => scene["table"],
+        "initial_pos" => scene["initial_pos"],
+        "objects" => Dict(
+            "1" => scene["objects"]["A"],
+            "2" => scene["objects"]["B"],
+        )
+    )
+end
 
 # for inference
 obj_phys_type = Dict{String, Float64}
@@ -84,9 +96,10 @@ function initialize_state(params::Params,
     objs = scene["objects"]
     obj_d = Dict{String, obj_phys_type}()
     init_mat = zeros(4, 2, 3)
-    for (o,k) in enumerate(keys(objs))
+    for (o,k) in enumerate(["A", "B"])
         obj_d[k] = objs[k]["physics"]
         init_mat[1,o,:] = objs[k]["position"]
+        init_mat[2,o,:] = objs[k]["orientation"]
     end
     return (init_mat, obj_d)
 end
@@ -121,7 +134,6 @@ end
 function forward_step(prev_state, params::Params, belief::Dict)
     update_world(params.client, params.object_map, belief)
     state = step(params.client, params.object_map, prev_state)
-    # println("$(prev_state[1,1,1]) -> $(state[1, 1, 1])")
     return state
 end
 
