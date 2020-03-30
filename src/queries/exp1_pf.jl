@@ -7,16 +7,7 @@ Runs inference on Exp1 trials
 function rejuv(trace)
     # return trace
     (t,_) = get_args(trace)
-    # println("ran rejuv at time $t")
-    # choices = Gen.get_choices(trace)
-    # addr = :object_physics => 1 => :density
-    # density1 = choices[addr]
     (new_trace, accepted) = Gen.mh(trace, exp1_gibbs, tuple())
-    # choices = Gen.get_choices(new_trace)
-    # addr = :object_physics => 1 => :density
-    # density2 = choices[addr]
-    # winner = accepted ? density2 : density1
-    # println("$density1 $density2 $winner $accepted")
     return new_trace
 end
 
@@ -54,7 +45,6 @@ function run_exp1_trial(dpath::String, idx::Int, particles::Int,
     d = galileo_ramp.Exp1Dataset(dpath)
     (scene, state, _) = get(d, idx)
 
-    # n = 20
     n = size(state["pos"], 1)
     cm = choicemap()
     cm[:initial_state => 1 => :init_pos] = scene["initial_pos"]["A"]
@@ -82,7 +72,7 @@ function run_exp1_trial(dpath::String, idx::Int, particles::Int,
     init_pos = [scene["initial_pos"]["A"],
                 scene["initial_pos"]["B"]]
     cid = physics.physics.init_client(direct = true)
-    params = Params(obj_prior, init_pos, obs_noise, cid)
+    params = Params(obj_prior, init_pos, scene, obs_noise, cid)
     args = [(t, params) for t in 1:n]
 
     results = run_inference(args, cm, (0, params),
