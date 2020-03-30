@@ -52,8 +52,8 @@ function main()
     isfile(out) && rm(out)
 
     println(out)
-    run_exp1_trial(args["dataset"], idx, args["particles"],
-                   args["obs_noise"], out)
+    seq_inference(args["dataset"], idx, args["particles"],
+                  args["obs_noise"]; out = out)
     return nothing
 end
 
