@@ -7,10 +7,9 @@ user.conf
 
 # container + python env
 
-cont
-env
-.env
-galileo_ramp.egg-info
+*.sif
+.pyenv
+*.egg-info
 .julia/
 
 # docs
