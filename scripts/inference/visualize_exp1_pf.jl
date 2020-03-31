@@ -59,4 +59,6 @@ function process_trial(dataset_path,
     return nothing;
 end
 
-process_trial("/databases/exp1.hdf5", "/traces", 1);
+for i = 0:209
+    process_trial("/databases/exp1.hdf5", "/traces/exp1_p_10", i);
+end

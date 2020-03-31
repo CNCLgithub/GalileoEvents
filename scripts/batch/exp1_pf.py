@@ -30,7 +30,7 @@ def main():
 
     njobs = len(dataset)
 
-    tasks = [(str(i+1),) for i in range(njobs)]
+    tasks = [(str(i),) for i in range(njobs)]
     kwargs = ['--particles {0:d}'.format(args.particles),
               '--obs_noise {0:f}'.format(args.obs_noise)]
 
@@ -39,7 +39,7 @@ def main():
     resources = {
         'cpus-per-task' : '1',
         'mem-per-cpu' : '1GB',
-        'time' : '30',
+        'time' : '40',
         'partition' : 'scavenge',
         'requeue' : None,
     }
