@@ -38,7 +38,7 @@ def main():
     extras = []
     resources = {
         'cpus-per-task' : '1',
-        'mem-per-cpu' : '1GB',
+        'mem-per-cpu' : '2GB',
         'time' : '40',
         'partition' : 'scavenge',
         'requeue' : None,
