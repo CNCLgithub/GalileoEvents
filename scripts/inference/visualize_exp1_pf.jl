@@ -43,7 +43,7 @@ function process_trial(dataset_path,
     dataset = GalileoRamp.galileo_ramp.Exp1Dataset(dataset_path)
     (scene, state, cols) = get(dataset, trial)
 
-    chain_path = "$trace_path/$trial.jld2"
+    chain_path = "$trace_path/$(trial).jld2"
     extracted = extract_chain(chain_path)
 
     df = to_frame(extracted["log_scores"], extracted["unweighted"],
@@ -59,6 +59,7 @@ function process_trial(dataset_path,
     return nothing;
 end
 
-for i = 0:209
-    process_trial("/databases/exp1.hdf5", "/traces/exp1_p_10", i);
-end
+process_trial("/databases/exp1.hdf5", "/traces", 1);
+# for i = 0:209
+#     process_trial("/databases/exp1.hdf5", "/traces/exp1_p_10", i);
+# end
