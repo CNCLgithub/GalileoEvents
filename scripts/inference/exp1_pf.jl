@@ -52,9 +52,8 @@ function main()
     # args["restart"] && isfile(out) && rm(out)
     isfile(out) && rm(out)
 
-    println(out)
     seq_inference(args["dataset"], idx, args["particles"],
-                  args["obs_noise"]; out = out)
+                  args["obs_noise"]; out = out, resume = true)
     return nothing
 end
 
