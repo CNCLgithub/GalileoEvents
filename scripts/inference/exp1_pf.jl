@@ -45,7 +45,8 @@ function main()
     dataset_name = first(splitext(basename(args["dataset"])))
     idx = args["idx"]
     particles = args["particles"]
-    out_dir = "/traces/$(dataset_name)_p_$(particles)"
+    obs_noise = args["obs_noise"]
+    out_dir = "/traces/$(dataset_name)_p_$(particles)_n_$(obs_noise)"
     out = "$out_dir/$(idx).jld2"
     isdir(out_dir) || mkdir(out_dir)
     # args["restart"] && isfile(out) && rm(out)
