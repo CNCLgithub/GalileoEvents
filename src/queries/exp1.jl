@@ -1,20 +1,14 @@
 export static_inference, seq_inference
 
+using Base.Filesystem
+
 """
 """
 
-function rejuv(trace)
-    # return trace
-    (new_trace, accepted) = Gen.mh(trace, exp1_gibbs, tuple())
-    return new_trace
-end
 
-function run_inference(query::StaticQuery, proc, out::Union{String, Nothing})
-    static_monte_carlo(proc, query, path = out)
-end
-function run_inference(query::SequentialQuery, proc, out::Union{String, Nothing})
-    sequential_monte_carlo(proc, query, path = out)
-end
+######################################################################
+# Helpers
+######################################################################
 
 function load_trial(dpath::String, idx::Int, obs_noise::Float64)
     d = galileo_ramp.Exp1Dataset(dpath)
@@ -51,6 +45,19 @@ function load_trial(dpath::String, idx::Int, obs_noise::Float64)
     return (params, cm, obs)
 end
 
+function resume_pf(chain_path)
+    chain = extract_chain(chain_path)
+    addr = :object_physics => 1 => :density
+    temp = chain["weighted"][:ramp_density]
+    t = size(temp, 1)
+    estimates = Dict(addr => temp)
+    return (t, estimates)
+end
+
+######################################################################
+# LatentMaps
+######################################################################
+
 function extract_pos(t)
     ret = Gen.get_retval(t)
     all_pos = [reshape(state[1, :, :], (1,2,3)) for state in ret]
@@ -72,6 +79,16 @@ const seq_latent_map = LatentMap(Dict(
     :ramp_pos => t -> reshape(extract_pos(t)[:, end, :, :], (1,1,2,3)),
     :ramp_density => t -> extract_phys(t, :density),
 ))
+
+######################################################################
+# Inference Calls
+######################################################################
+
+function rejuv(trace)
+    # return trace
+    (new_trace, accepted) = Gen.mh(trace, exp1_gibbs, tuple())
+    return new_trace
+end
 
 """
 Static estimation of full posterior
@@ -101,9 +118,11 @@ Sequentail estimation of markovian posterior
 """
 function seq_inference(dpath::String, idx::Int, particles::Int,
                        obs_noise::Float64;
+                       resume::Bool = false,
                        out::Union{String, Nothing} = nothing)
     params, constraints, obs = load_trial(dpath, idx, obs_noise)
-    args = [(t, params) for t in 1:length(obs)]
+    nt = length(obs)
+    args = [(t, params) for t in 1:nt]
     query = Gen_Compose.SequentialQuery(seq_latent_map,
                                         markov_generative_model,
                                         (0, params),
@@ -114,6 +133,18 @@ function seq_inference(dpath::String, idx::Int, particles::Int,
     proc= ParticleFilter(particles,
                          ess,
                          rejuv)
-    run_inference(query, proc, out)
+
+    if (isnothing(out) || isfile(out) && resume)
+        leftoff, choices  = resume_pf(out)
+        println("Resuming trace $out at $(leftoff+1)")
+        sequential_monte_carlo(proc, query, leftoff + 1, choices,
+                               path = out)
+    else
+        println("New trace at $out")
+        sequential_monte_carlo(proc, query,
+                               path = out)
+
+    end
+
     physics.physics.clear_trace(params.client)
 end
