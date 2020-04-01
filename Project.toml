@@ -4,6 +4,10 @@ authors = ["belledon"]
 version = "0.1.0"
 
 [deps]
+BayesianOptimization = "4c6ed407-134f-591c-93fa-e0f7c164a0ec"
+ClusterManagers = "34f1f09b-3a8b-5176-ab39-66d58a4d544e"
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+GaussianProcesses = "891a1506-143c-57d2-908e-e1f8e92e6de9"
 ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
 Cairo = "159f3aea-2a34-519c-b102-8c37f9878175"
 Compose = "a81c6b42-2e10-5240-aca2-a61377ecd94b"
