@@ -9,15 +9,12 @@ using FileIO
 
 
 
-function plot_chain(df, ml_est, latents, col_t, path)
+function plot_chain(df, latents, col_t, path)
     # first the estimates
-    estimates = map(y -> Gadfly.plot(df,
-                                     y = y,
-                                     x = :t,
-                                     xintercept = col_t,
-                                     Gadfly.Geom.histogram2d(xbincount=120,ybincount=10),
-                                     Gadfly.Geom.vline,
-                                     Scale.x_continuous(minvalue = 0, maxvalue = 120)),
+    estimates = map(l -> Gadfly.plot(df,
+                                     x = l,
+                                     # xintercept = col_t,
+                                     Gadfly.Geom.histogram),
                     latents)
     # last log scores
     # log_scores = Gadfly.plot(x = 1:120,
@@ -44,19 +41,31 @@ function process_trial(dataset_path,
     (scene, state, cols) = get(dataset, trial)
 
     chain_path = "$trace_path/$trial.jld2"
-    extracted = extract_chain(chain_path)
+    extracted = extract_mh_chain(chain_path)
 
-    df = to_frame(extracted["log_scores"], extracted["unweighted"],
+    df = mh_to_frame(120, extracted["log_scores"], extracted["estimates"],
                   exclude = [:ramp_pos])
     sort!(df, :t)
     plot_path = "$trace_path/$(trial)_plot.png"
-    plot_chain(df, extracted["ml_est"], [:ramp_density], cols, plot_path)
+    plot_chain(df, [:ramp_density], cols, plot_path)
 
+    n = 100
+    sorted = reverse(sortperm(extracted["log_scores"]))[1:n]
+    println(extracted["log_scores"][sorted])
+    preds = extracted["estimates"][:ramp_pos][sorted, :, :, :]
+    println(size(preds))
+    # println(size(permutedims(preds, (1, 0, 2, 3))))
+    pred_pos = []
+    for t = 1:120
+        push!(pred_pos, reshape(preds[:,t,:,:], (1,n,2,3)))
+    end
+    pred_pos = vcat(pred_pos...)
+    println(size(pred_pos))
     gt_pos = state["pos"]
-    preds = extracted["unweighted"][:ramp_pos]
+    # preds = extracted["unweighted"][:ramp_pos]
     viz_path = "$trace_path/$(trial)_viz.gif"
-    visualize(scene, gt_pos, preds, nothing, viz_path)
+    visualize(scene, gt_pos, pred_pos, nothing, viz_path)
     return nothing;
 end
 
-process_trial("/databases/exp1.hdf5", "/traces", 1);
+process_trial("/databases/exp1.hdf5", "/traces", 0);
