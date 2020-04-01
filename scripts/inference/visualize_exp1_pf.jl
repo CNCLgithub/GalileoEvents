@@ -15,7 +15,7 @@ function plot_chain(df, ml_est, latents, col_t, path)
                                      y = y,
                                      x = :t,
                                      xintercept = col_t,
-                                     Gadfly.Geom.histogram2d(xbincount=120,ybincount=10),
+                                     Gadfly.Geom.histogram2d(xbincount=120),
                                      Gadfly.Geom.vline,
                                      Scale.x_continuous(minvalue = 0, maxvalue = 120)),
                     latents)
@@ -59,7 +59,7 @@ function process_trial(dataset_path,
     return nothing;
 end
 
-process_trial("/databases/exp1.hdf5", "/traces", 1);
-# for i = 0:209
-#     process_trial("/databases/exp1.hdf5", "/traces/exp1_p_10", i);
-# end
+# process_trial("/databases/exp1.hdf5", "/traces", 1);
+for i = 0:209
+    process_trial("/databases/exp1.hdf5", "/traces/exp1_p_300_n_0.8", i);
+end
