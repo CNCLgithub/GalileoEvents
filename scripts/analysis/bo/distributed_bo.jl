@@ -1,4 +1,6 @@
-using ClusterManagers, Distributed
+using ClusterManagers
+using Distributed
+using Base.Filesystem
 
 # initialize master
 #master_server = start_master(n_workers)
@@ -6,7 +8,7 @@ using ClusterManagers, Distributed
 #client = start(master_server)
 
 # adding workers
-addprocs_slurm(20, p="short", t="00:20:00", exename="julia.sh", dir="/gpfs/milgram/project/yildirim/eivinas/dev/galileo-ramp")
+addprocs_slurm(20, p="short", t="00:20:00", exename="julia.sh", dir=cwd())
 
 
 @everywhere begin

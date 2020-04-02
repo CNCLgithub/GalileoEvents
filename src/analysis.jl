@@ -2,7 +2,7 @@ export extract_chain,
     extract_mh_chain,
     to_frame,
     mh_to_frame,
-    digest_pf_chain,
+    digest_pf_trial,
     fit_pf
 
 using JLD2
@@ -110,7 +110,7 @@ function to_frame(log_scores, estimates; exclude = nothing)
         :log_score => collect(flatten(log_scores))
     )
     for l in latents
-        (l in exclude) ||
+        (!isnothing(exclude) && (l in exclude)) ||
             setindex!(columns, collect(flatten(vcat(estimates[l]...))), l)
 
     end
@@ -125,10 +125,11 @@ Returns a tibble of average model estimates for each time point.
 function digest_pf_trial(chain, tps)
     extracted = extract_chain(chain)
     df = to_frame(extracted["log_scores"], extracted["unweighted"])
-    df = df[in.(df.t, Ref(cols)),:]
+    df = df[in.(df.t, Ref(tps)),:]
     sort!(df, :t)
     aggregate(groupby(df, :t), mean)
 end
+
 
 """
 Computes RMSE of model predictions on human judgements.
@@ -140,5 +141,5 @@ function fit_pf(data)
                 filter(row -> row[:scene] >= 60, data))
     preds = predict(model, filter(row -> row[:scene] < 60, data))
     resids = residuals(preds)
-    rmse = sqrt((1.0/length(resids) * rss(redis))
+    rmse = sqrt((1.0/length(resids)) * rss(redis))
 end

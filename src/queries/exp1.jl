@@ -79,6 +79,9 @@ const seq_latent_map = LatentMap(Dict(
     :ramp_pos => t -> reshape(extract_pos(t)[:, end, :, :], (1,1,2,3)),
     :ramp_density => t -> extract_phys(t, :density),
 ))
+const light_seq_map = LatentMap(Dict(
+    :ramp_density => t -> extract_phys(t, :density),
+))
 
 ######################################################################
 # Inference Calls
@@ -141,17 +144,20 @@ function seq_inference(dpath::String, idx::Int, particles::Int,
     buffer_size = bo ? 120 : 40
     out = bo ? nothing : out
 
-    if (isnothing(out) || isfile(out) && resume)
+    if ((isnothing(out) || isfile(out)) && resume)
         leftoff, choices  = resume_pf(out)
         println("Resuming trace $out at $(leftoff+1)")
-        sequential_monte_carlo(proc, query, leftoff + 1, choices,
-                               path = out)
+        results = sequential_monte_carlo(proc, query, leftoff + 1, choices,
+                                         path = out,
+                                         buffer_size = buffer_size)
     else
         println("New trace at $out")
-        sequential_monte_carlo(proc, query,
-                               path = out)
+        results = sequential_monte_carlo(proc, query,
+                                         path = out,
+                                         buffer_size = buffer_size)
 
     end
 
     physics.physics.clear_trace(params.client)
+    return results
 end
