@@ -119,20 +119,27 @@ Sequentail estimation of markovian posterior
 function seq_inference(dpath::String, idx::Int, particles::Int,
                        obs_noise::Float64;
                        resume::Bool = false,
-                       out::Union{String, Nothing} = nothing)
+                       out::Union{String, Nothing} = nothing,
+                       bo::Bool = false)
     params, constraints, obs = load_trial(dpath, idx, obs_noise)
     nt = length(obs)
     args = [(t, params) for t in 1:nt]
-    query = Gen_Compose.SequentialQuery(seq_latent_map,
+
+    lm = bo ? light_seq_map : seq_latent_map
+    query = Gen_Compose.SequentialQuery(lm,
                                         markov_generative_model,
                                         (0, params),
                                         constraints,
                                         args,
                                         obs)
+
     ess = particles * 0.5
     proc= ParticleFilter(particles,
                          ess,
                          rejuv)
+
+    buffer_size = bo ? 120 : 40
+    out = bo ? nothing : out
 
     if (isnothing(out) || isfile(out) && resume)
         leftoff, choices  = resume_pf(out)

@@ -14,11 +14,14 @@ using BayesianOptimization, GaussianProcesses, Distributions
 using SharedArrays
 
 # evaluation on individual trial
-function evaluation(measurement_noise, num_particles, trial)
-    # random function for now
-    return x[1]^2 + x[2]^3 + rand(Normal(0,1))
-end
-    
+function evaluation(obs_noise, num_particles, trial)
+    # out = "/traces/exp1_pf_bo_p_$(particles)_n_$(obs_noise)"
+    # clean up previous run
+    # isfile(out) || rm(out)
+    chain = seq_inference(dataset, trial, particles, obs_noise;
+                          bo = true)
+    # returns tibble of: | :t | :ramp_density_mean | :log_score_mean
+    digest_pf_trial(chain)
 end
 
 
@@ -31,23 +34,23 @@ function full_evaluation(x)
     num_particles = x[2]
 
     #tasks = map(t -> inference(t, x), trials)
-    
-    results = SharedArray{Float64}(100)
-    @distributed for trial=1:100
-        #results[i] = remotecall_fetch(evaluation, workers()[i], measurement_noise, num_particles, i)
-        results[i] = evaluation(measurement_noise, num_particles, trial)
+
+    # | :scene | :t | :ramp_density_mean | :log_score_mean
+    results = DataFrame()
+    @distributed for trial=1:210
+        df = evaluation(measurement_noise, num_particles, trial)
+        if trial < 120
+            df.scene = floor(trial/2)
+            df.congruent = (trial % 2) == 0
+        else
+            df.scene = trial - 60
+            df.congruent = true
+        end
+        results = vcat(results, df)
     end
 
-    #results = client.collect(tasks)
-    
-    # mean value for now
-    # should be correlation(results, behavioural_data) 
-    result = mean(results)
-
-    println("input: $x")
-    println("result: $result")
-
-    return result
+    results = join(results, human_respones, on = [:scene, :congruent])
+    rmse = digest_pf_trial(results)
 end
 
 

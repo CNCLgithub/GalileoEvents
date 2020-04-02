@@ -38,22 +38,15 @@ version = "3.5.0+2"
 
 [[ArrayInterface]]
 deps = ["LinearAlgebra", "Requires", "SparseArrays"]
-<<<<<<< HEAD
-
-git-tree-sha1 = "8683deff18ed6cd123e2b4d4147d2dc21f19391b"
+git-tree-sha1 = "3ffa20ffa495e9a4c823cb026164d8c0f95f72aa"
 uuid = "4fba245c-0d91-5ea0-9b3e-6abc04ee57a9"
-version = "2.6.1"
+version = "2.6.2"
 
 [[ArrayLayouts]]
 deps = ["FillArrays", "LinearAlgebra"]
 git-tree-sha1 = "bc779df8d73be70e4e05a63727d3a4dfb4c52b1f"
 uuid = "4c555306-a7a7-4459-81d9-ec55ddd5c99a"
 version = "0.1.5"
-=======
->>>>>>> exp1_inference
-git-tree-sha1 = "3ffa20ffa495e9a4c823cb026164d8c0f95f72aa"
-uuid = "4fba245c-0d91-5ea0-9b3e-6abc04ee57a9"
-version = "2.6.2"
 
 [[AxisAlgorithms]]
 deps = ["LinearAlgebra", "Random", "SparseArrays", "WoodburyMatrices"]
@@ -297,7 +290,7 @@ git-tree-sha1 = "e1b4190be75ba8d03ce2bec3a6cfc7a939c713ea"
 uuid = "2e619515-83b5-522b-bb60-26c02a35a201"
 version = "2.2.7+0"
 
-[[Fftw]]
+[[FFTW]]
 deps = ["AbstractFFTs", "FFTW_jll", "IntelOpenMP_jll", "Libdl", "LinearAlgebra", "MKL_jll", "Reexport"]
 git-tree-sha1 = "109d82fa4b00429f9afcce873e9f746f11f018d3"
 uuid = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
@@ -335,12 +328,6 @@ deps = ["LinearAlgebra", "Random", "SparseArrays"]
 git-tree-sha1 = "3eb5253af6186eada40de3df524a1c10f0c6bfa2"
 uuid = "1a297f60-69ca-5386-bcde-b61e274b549b"
 version = "0.8.6"
-
-[[FiniteDiff]]
-deps = ["ArrayInterface", "LinearAlgebra", "Requires", "SparseArrays", "StaticArrays"]
-git-tree-sha1 = "f60e5d6944975f7140bde67278e10b6b01fb4f29"
-uuid = "6a86dc24-6348-571c-b903-95158fe2bd41"
-version = "2.3.0"
 
 [[FiniteDiff]]
 deps = ["ArrayInterface", "LinearAlgebra", "Requires", "SparseArrays", "StaticArrays"]
