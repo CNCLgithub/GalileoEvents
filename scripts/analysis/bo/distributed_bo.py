@@ -1,17 +1,23 @@
-#!/usr/bin/env python
-from sklearn.metrics import mean_squared_error
+#!/usr/bin/env python-jl
+
+import numpy as np
 from math import sqrt
+from galileo_ramp import execute
+from sklearn.metrics import mean_squared_error
 
 def eval_trial(obs_noise, particles, trial):
+    gr = execute.initialize()
     return gr.evaluation(obs_noise, particles, trial)
 
 def f(obs_noise, particles):
     g = lambda t: eval_trial(obs_noise, particles, t)
     tasks = client.map(g, np.arange(210), pure = False)
     results = client.gather(tasks)
-    slope, intercept, _, _, _ = stats.linregress(results[60:], responses[60:])
-    preds = results[:60] * slope + intercept
-    return sqrt(mean_squared_error(responses[:60], preds))
+    slope, intercept, _, _, _ = stats.linregress(np.flatten(results[60:]),
+                                                 np.flatten(responses[60:]))
+    preds = np.flatten(results[:60]) * slope + intercept
+    mse = mean_squared_error(np.flatten(responses[:60]), preds)
+    return sqrt(mse)
 
 
 def initialize_dask(n, slurm = False):

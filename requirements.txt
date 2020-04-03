@@ -6,6 +6,10 @@ julia
 sympy
 sphinx
 pandas
+sklearn
+dask
+distributed
+dask-jobqueue
 -e deps/hdf5_dataset
 -e deps/slurm
 -e deps/ramp_physics
