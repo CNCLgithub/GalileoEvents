@@ -3,9 +3,21 @@
 import numpy as np
 from math import sqrt
 from galileo_ramp import execute
+from bayes_opt import BayesianOptimization
 from sklearn.metrics import mean_squared_error
 
+
+# path to human responses
+responses = "/databases/exp1_avg_human_responses.csv"
+# load julia modules for master
+gr = execute.initialize()
+
+# Bounded region of parameter space
+pbounds = {'obs_noise': (0.001, 0.8),
+           'particles': (1, 300)}
+
 def eval_trial(obs_noise, particles, trial):
+    # load julia modules for worker
     gr = execute.initialize()
     return gr.evaluation(obs_noise, particles, trial)
 
@@ -13,12 +25,24 @@ def f(obs_noise, particles):
     g = lambda t: eval_trial(obs_noise, particles, t)
     tasks = client.map(g, np.arange(210), pure = False)
     results = client.gather(tasks)
-    slope, intercept, _, _, _ = stats.linregress(np.flatten(results[60:]),
-                                                 np.flatten(responses[60:]))
-    preds = np.flatten(results[:60]) * slope + intercept
-    mse = mean_squared_error(np.flatten(responses[:60]), preds)
-    return sqrt(mse)
+    rmse = gr.merge_evaluation(results, responses)
+    return rmse
 
+def main():
+
+    optimizer = BayesianOptimization(
+        f=f,
+        pbounds=pbounds,
+        verbose=2,
+        random_state=1)
+
+    optimizer.maximize(
+        init_points=2,
+        n_iter=3,
+    )
+
+if __name__ == "__main__":
+    main()
 
 def initialize_dask(n, slurm = False):
 

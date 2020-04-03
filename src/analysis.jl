@@ -3,10 +3,12 @@ export extract_chain,
     to_frame,
     mh_to_frame,
     digest_pf_trial,
-    fit_pf
+    evaluation,
+    merge_evaluation
 
 using JLD2
 using DataFrames
+using DataFramesMeta
 using StatsModels
 using Base.Iterators:flatten
 
@@ -130,16 +132,49 @@ function digest_pf_trial(chain, tps)
     aggregate(groupby(df, :t), mean)
 end
 
+function evaluation(obs_noise, num_particles, trial)
+    chain = seq_inference(dataset, trial, particles, obs_noise;
+                          bo = true)
+    # returns tibble of: | :t | :ramp_density_mean | :log_score_mean
+    df = digest_pf_trial(chain)
+    return df.ramp_density_mean
+end
+
+function merge_evaluation(evals, responses)
+    # | :scene | :congurent | :t | avg_human_response | log(v1/m2)
+    human_responses = DataFrame(CSV.File(responses))
+    # | :scene | :congurent | :t | :ramp_density_mean | :log_score_mean
+    results = DataFrame()
+    for trial=1:210
+        df = evals[trial]
+        if trial < 120
+            df.scene = floor(trial/2)
+            df.congruent = (trial % 2) == 0
+        else
+            df.scene = trial - 60
+            df.congruent = true
+        end
+        results = vcat(results, df)
+    end
+    results = join(results, human_respones, on = [:scene, :congruent, :t])
+    @linq results |>
+        transform(avg_model_estimates = log(ramp_density_mean) + v1_m2)
+    rmse = fit_pf(results)
+end
 
 """
 Computes RMSE of model predictions on human judgements.
 The linear model is fit using the control trials.
 """
 function fit_pf(data)
+    train = @linq data |>
+        where(:control)
     model = fit(LinearModel,
                 @formula(avg_human_response ~ avg_model_estimates),
-                filter(row -> row[:scene] >= 60, data))
-    preds = predict(model, filter(row -> row[:scene] < 60, data))
+                train)
+    test = @linq data |>
+        where(!(:control))
+    preds = predict(model, test)
     resids = residuals(preds)
     rmse = sqrt((1.0/length(resids)) * rss(redis))
 end
