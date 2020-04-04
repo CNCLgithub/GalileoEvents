@@ -13,7 +13,7 @@ img_path = os.path.join(mod_path, "sys.so")
 #     return jl
 
 
-def initialize():
+def initialize(init_julia = True):
     """ Initializes the Gen inference module
     :param module_path: path to inference module
     :return a function that runs inference
@@ -21,7 +21,7 @@ def initialize():
 
     # Import the julia interface
     from julia.api import Julia
-    jl = Julia(compiled_modules=False)
+    jl = Julia(compiled_modules=False, init_julia = init_julia)
     jl.eval("@eval Main import GalileoRamp")
     from julia import GalileoRamp
     return GalileoRamp

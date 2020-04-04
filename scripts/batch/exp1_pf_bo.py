@@ -10,6 +10,7 @@ from bayes_opt import BayesianOptimization
 from sklearn.metrics import mean_squared_error
 
 
+# Use if workers crash
 # logging_config = {
 #     "version": 1,
 #     "handlers": {
@@ -44,20 +45,19 @@ dataset = "/databases/exp1.hdf5"
 # path to human responses
 responses = "/databases/exp1_avg_human_responses.csv"
 
-
-# import galileo_ramp.execute
-# gr = galileo_ramp.execute.initialize()
+INIT_JULIA = True
 
 def eval_trial(obs_noise, particles, trial):
     """ Runs inference for a given trial"""
     # load julia modules for worker
     import galileo_ramp.execute
-    gr = galileo_ramp.execute.initialize()
+    gr = galileo_ramp.execute.initialize(INIT_JULIA)
     return gr.evaluation(obs_noise, particles, dataset, trial)
 
 def merge(results):
+    """ Merges inference runs and returns RMSE """
     import galileo_ramp.execute
-    gr = galileo_ramp.execute.initialize()
+    gr = galileo_ramp.execute.initialize(INIT_JULIA)
     return gr.merge_evaluation(results, responses)
 
 
@@ -75,6 +75,11 @@ def f(obs_noise, particles, client):
 def initialize_dask(n, slurm = False):
 
     if not slurm:
+        # must initialize julia globalyy
+        import galileo_ramp.execute
+        galileo_ramp.execute.initialize()
+        global INIT_JULIA
+        INIT_JULIA = False
         cores =  len(os.sched_getaffinity(0))
         cluster = distributed.LocalCluster(n_workers = 1,
                                            threads_per_worker = 1,
@@ -92,10 +97,10 @@ def initialize_dask(n, slurm = False):
             'python' : py,
             'cores' : 1,
             'memory' : '2GB',
-            'walltime' : '1-0',
+            'walltime' : '120',
             'processes' : 1,
             'job_extra' : [
-                '--partition scavenge',
+                '--partition short',
                 '--array 0-{0:d}'.format(n - 1),
                 '--requeue',
                 # '--output "/dev/null"'
@@ -123,8 +128,10 @@ def main():
     client = initialize_dask(1)
 
     print(sys.executable)
-    black_box = lambda n,p: f(n, p, client)
-    black_box(0.1, 1)
+    def black_box(obs_noise = 0.1, particles = 1):
+        return f(obs_noise, int(particles), client)
+
+    # black_box(0.1, 1)
 
     # Bounded region of parameter space
     pbounds = {'obs_noise': (0.001, 0.8),

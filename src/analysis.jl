@@ -6,10 +6,12 @@ export extract_chain,
     evaluation,
     merge_evaluation
 
+using CSV
 using JLD2
 using DataFrames
 using DataFramesMeta
 using StatsModels
+using GLM
 using Base.Iterators:flatten
 
 function extract_mh_chain(path::String)
@@ -132,33 +134,38 @@ function digest_pf_trial(chain, tps)
     aggregate(groupby(df, :t), mean)
 end
 
-function evaluation(obs_noise, num_particles, trial)
+function evaluation(obs_noise::Float64, particles::Int,
+                    dataset::String, trial::Int)
+    d = galileo_ramp.Exp1Dataset(dataset)
+    (_,_, tps) = get(d, trial)
     chain = seq_inference(dataset, trial, particles, obs_noise;
                           bo = true)
     # returns tibble of: | :t | :ramp_density_mean | :log_score_mean
-    df = digest_pf_trial(chain)
-    return df.ramp_density_mean
+    df = digest_pf_trial(chain, tps)
+    return (trial, df.ramp_density_mean)
 end
 
 function merge_evaluation(evals, responses)
-    # | :scene | :congurent | :t | avg_human_response | log(v1/m2)
+    # | :scene | :congruent | :t | avg_human_response | log(v1/m2)
     human_responses = DataFrame(CSV.File(responses))
-    # | :scene | :congurent | :t | :ramp_density_mean | :log_score_mean
+    # | :scene | :congruent | :t | :ramp_density_mean | :log_score_mean
     results = DataFrame()
-    for trial=1:210
-        df = evals[trial]
+    for tidx=1:length(evals)
+        trial, estimates = evals[tidx]
+        df = DataFrame(ramp_density_mean = estimates,
+                       cond = 0:3)
         if trial < 120
-            df.scene = floor(trial/2)
+            df.scene = Int(floor(trial/2))
             df.congruent = (trial % 2) == 0
         else
-            df.scene = trial - 60
+            df.scene = Int(trial - 60)
             df.congruent = true
         end
         results = vcat(results, df)
     end
-    results = join(results, human_respones, on = [:scene, :congruent, :t])
-    @linq results |>
-        transform(avg_model_estimates = log(ramp_density_mean) + v1_m2)
+    results = join(results, human_responses, on = [:scene, :congruent, :cond])
+    results = @linq results |>
+        transform(avg_model_estimates = log.(:ramp_density_mean) + :v_m2)
     rmse = fit_pf(results)
 end
 
@@ -167,14 +174,15 @@ Computes RMSE of model predictions on human judgements.
 The linear model is fit using the control trials.
 """
 function fit_pf(data)
+    println(data)
     train = @linq data |>
-        where(:control)
-    model = fit(LinearModel,
-                @formula(avg_human_response ~ avg_model_estimates),
-                train)
+        where(:control .== 1)
+    println(train)
+    model = lm(@formula(avg_human_response ~ avg_model_estimates),
+               train)
     test = @linq data |>
-        where(!(:control))
+        where(:control .!= 1)
     preds = predict(model, test)
-    resids = residuals(preds)
-    rmse = sqrt((1.0/length(resids)) * rss(redis))
+    resids = (test.avg_human_response - preds).^2
+    rmse = sqrt((1.0/length(resids)) * sum(resids))
 end
