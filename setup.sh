@@ -3,23 +3,25 @@
 . load_config.sh
 
 
-build=${1:-"false"}
-conda=${2:-"false"}
-julia=${3:-"false"}
+cont=${1:-""}
+conda=${2:-""}
+julia=${3:-""}
 
-
-if [ "$build" = "true" ]; then
-    echo "building..."
+# container setup
+[ -z "$cont" ] || [ "$cont" = "false" ] && echo "Not touching container"
+[ "$cont" = "pull" ] && wget "https://yale.box.com/shared/static/i5vxp5xghtfb2931fhd4b0ih4ya62o2s.sif"
+[ "$cont" = "build" ] || [ "$cont" = "true" ] && echo "building container" && \
     SINGULARITY_TMPDIR=/var/tmp sudo -E singularity build "${ENV[cont]}" Singularity
-fi
 
-if [ "$conda" = "true" ]; then
-    echo "Setting up the Conda environment"
-    singularity exec ${ENV[cont]} bash -c "yes | conda create -p $PWD/${ENV[env]} python=3.6"
+
+# conda setup
+[ -z "$conda" ] || [ "$conda" = "false" ] && echo "Not touching conda"
+[ "$conda" = "build" ] || [ "$conda" = "true" ] && echo "building conda env" && \
+    singularity exec ${ENV[cont]} bash -c "yes | conda create -p $PWD/${ENV[env]} python=3.6" && \
     ./run.sh python -m pip install -r requirements.txt
-fi
 
-if [ "$julia" = "true" ]; then
-    echo "Setting up julia env..."
+# julia setup
+
+[ -z "$julia" ] || [ "$julia" = "false" ] && echo "Not touching julia"
+[ "$julia" = "build" ] || [ "$julia" = "true" ] && echo "building julia env" && \
     ./run.sh julia -e '"using Pkg; Pkg.instantiate()"'
-fi

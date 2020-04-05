@@ -57,6 +57,10 @@ from: ubuntu:18.04
  echo '#!/bin/bash\nssh -y "$HOSTNAME"  sbatch "$@"'  > /usr/bin/sbatch
  chmod +x /usr/bin/sbatch
 
+ # Add an scancel workaround
+ echo '#!/bin/bash\nssh -y "$HOSTNAME"  scancel "$@"'  > /usr/bin/scancel
+ chmod +x /usr/bin/scancel
+
  # Add an srun workaround
  echo '#!/bin/bash\nssh -y "$HOSTNAME"  srun "$@"'  > /usr/bin/srun
  chmod +x /usr/bin/srun
