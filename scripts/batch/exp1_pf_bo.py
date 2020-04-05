@@ -61,8 +61,8 @@ def merge(results):
     return gr.merge_evaluation(results, responses)
 
 
-# trials = list(range(210))
-trials = [0,1,120,121]
+trials = list(range(210))
+# trials = [0,1,120,121]
 
 def f(obs_noise, particles, client):
     """ The black box function that returns RMSE """
@@ -132,11 +132,9 @@ def main():
     client = initialize_dask(len(trials))
     # client = initialize_dask(1)
 
-    print(sys.executable)
     def black_box(obs_noise = 0.1 ):
         return f(obs_noise, 10, client)
 
-    # black_box(0.1, 1)
 
     # Bounded region of parameter space
     pbounds = {
@@ -151,7 +149,7 @@ def main():
 
     optimizer.maximize(
         init_points=2,
-        n_iter=3,
+        n_iter=50,
     )
     client.close()
 
