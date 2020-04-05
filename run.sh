@@ -32,6 +32,7 @@ ${SING} ${BS} ${CONT} bash -c "source activate /project/${ENV[env]} \
         && export JULIA_DEPOT_PATH=/project/${ENV[julia_depot]} \
         && export JULIA_PROJECT=${PWD} \
         && export PYCALL_JL_RUNTIME_PYTHON=/project/${ENV[env]}/bin/python3 \
+        && export TMPDIR=${PATHS[tmp]} \
         && cd $PWD \
         && exec $COMMAND \
         && source deactivate"

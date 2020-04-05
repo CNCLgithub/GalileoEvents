@@ -70,10 +70,12 @@ def f(obs_noise, particles, client):
     tasks = client.map(g, trials, pure = False)
     results = client.gather(tasks)
     rmse = client.submit(merge, results)
-    return rmse.result()
+    return rmse.result() * -1.0
 
-def initialize_dask(n, slurm = False):
+def initialize_dask(n):
 
+    slurm = n > 1
+   
     if not slurm:
         # must initialize julia globalyy
         import galileo_ramp.execute
@@ -90,10 +92,12 @@ def initialize_dask(n, slurm = False):
     else:
         n = min(500, n)
         path = os.path.abspath(__file__)
-        path_splits = os.path.split(path)
+        path_splits = path.split(os.path.sep)
         root = os.path.join(*path_splits[:-3])
-        py = os.path.join(root, 'run.sh python-jl')
+        py = os.path.join('/'+root, 'run.sh python')
         params = {
+            'death_timeout': 200,
+            'nanny' : False,
             'python' : py,
             'cores' : 1,
             'memory' : '2GB',
@@ -101,21 +105,21 @@ def initialize_dask(n, slurm = False):
             'processes' : 1,
             'job_extra' : [
                 '--partition short',
-                '--array 0-{0:d}'.format(n - 1),
+                # '--array 0-{0:d}'.format(n - 1),
                 '--requeue',
                 # '--output "/dev/null"'
                 # ('--output ' + os.path.join(CONFIG['PATHS', 'sout'], 'slurm-%A_%a.out')),
             ],
-            'env_extra' : [
-                'JOB_ID=${SLURM_ARRAY_JOB_ID%;*}_${SLURM_ARRAY_TASK_ID%;*}',
+            #'env_extra' : [
+            #    'JOB_ID=${SLURM_ARRAY_JOB_ID%;*}_${SLURM_ARRAY_TASK_ID%;*}',
 
                 # 'source /etc/profile.d/modules.sh',
                 # 'cd {0!s}'.format(CONFIG['PATHS', 'root']),
-            ]
+            # ]
         }
         cluster = SLURMCluster(**params)
         print(cluster.job_script())
-        cluster.scale(1)
+        cluster.scale(n)
 
     # print(cluster.dashboard_link)
     return distributed.Client(cluster)
@@ -125,17 +129,20 @@ def main():
 
     # print(sys.executable)
     set_executable('/project/.pyenv/bin/python-jl')
-    client = initialize_dask(1)
+    client = initialize_dask(len(trials))
+    # client = initialize_dask(1)
 
     print(sys.executable)
-    def black_box(obs_noise = 0.1, particles = 1):
-        return f(obs_noise, int(particles), client)
+    def black_box(obs_noise = 0.1 ):
+        return f(obs_noise, 10, client)
 
     # black_box(0.1, 1)
 
     # Bounded region of parameter space
-    pbounds = {'obs_noise': (0.001, 0.8),
-               'particles': (1, 2)} # start with a small set of particles for now
+    pbounds = {
+        'obs_noise': (0.001, 1.0),
+    #    'particles': (1, 2),
+    }
     optimizer = BayesianOptimization(
         f=black_box,
         pbounds=pbounds,
