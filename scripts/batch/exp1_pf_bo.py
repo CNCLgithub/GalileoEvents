@@ -4,10 +4,11 @@ import os
 import sys
 import dask
 import numpy as np
-from math import sqrt
 from multiprocessing import set_executable
 from bayes_opt import BayesianOptimization
-from sklearn.metrics import mean_squared_error
+from bayes_opt.logger import JSONLogger
+from bayes_opt.event import Events
+
 
 
 # Use if workers crash
@@ -101,7 +102,7 @@ def initialize_dask(n):
             'python' : py,
             'cores' : 1,
             'memory' : '2GB',
-            'walltime' : '120',
+            'walltime' : '0-6',
             'processes' : 1,
             'job_extra' : [
                 '--partition short',
@@ -121,25 +122,25 @@ def initialize_dask(n):
         print(cluster.job_script())
         cluster.scale(n)
 
-    # print(cluster.dashboard_link)
+    print(cluster.dashboard_link)
     return distributed.Client(cluster)
 
 def main():
-
-
     # print(sys.executable)
     set_executable('/project/.pyenv/bin/python-jl')
     client = initialize_dask(len(trials))
-    # client = initialize_dask(1)
 
-    def black_box(obs_noise = 0.1 ):
-        return f(obs_noise, 10, client)
+    # run function once for julia JIT
+    f(0.1, 1, client)
 
+    # partial application of fitness function
+    def black_box(obs_noise = 0.1, particles = 1):
+        return f(obs_noise, int(particles), client)
 
     # Bounded region of parameter space
     pbounds = {
         'obs_noise': (0.001, 1.0),
-    #    'particles': (1, 2),
+        'particles': (1, 100),
     }
     optimizer = BayesianOptimization(
         f=black_box,
@@ -147,9 +148,12 @@ def main():
         verbose=2,
         random_state=1)
 
+    logger = JSONLogger(path="/traces/exp1_pf_bo_logs.json")
+    optimizer.subscribe(Events.OPTIMIZATION_STEP, logger)
+    
     optimizer.maximize(
         init_points=2,
-        n_iter=50,
+        n_iter=10,
     )
     client.close()
 

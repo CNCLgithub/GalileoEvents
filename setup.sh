@@ -9,7 +9,7 @@ julia=${3:-""}
 
 # container setup
 [ -z "$cont" ] || [ "$cont" = "false" ] && echo "Not touching container"
-[ "$cont" = "pull" ] && wget "https://yale.box.com/shared/static/i5vxp5xghtfb2931fhd4b0ih4ya62o2s.sif"
+[ "$cont" = "pull" ] && wget "https://yale.box.com/shared/static/i5vxp5xghtfb2931fhd4b0ih4ya62o2s.sif" -O "${ENV[cont]}" 
 [ "$cont" = "build" ] || [ "$cont" = "true" ] && echo "building container" && \
     SINGULARITY_TMPDIR=/var/tmp sudo -E singularity build "${ENV[cont]}" Singularity
 
