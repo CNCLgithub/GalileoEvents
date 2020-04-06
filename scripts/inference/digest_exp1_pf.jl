@@ -1,7 +1,9 @@
 using GalileoRamp
 using FileIO
 using CSV
+using Glob
 using DataFrames
+using Statistics
 
 function process_trial(dataset_path::String,
                        trace_path::String,
@@ -10,24 +12,25 @@ function process_trial(dataset_path::String,
     dataset = GalileoRamp.galileo_ramp.Exp1Dataset(dataset_path)
     (scene, state, tps) = get(dataset, trial)
 
-    chain_paths = glob("$trace_path/$(trial)_c*.jld2")
+    chain_paths = glob("$(trial)_c_*.jld2", "$(trace_path)")
+    chain_paths = isempty(chain_paths) ? ["$(trace_path)/$(trial).jld2"] : chain_paths
     extracts = map(extract_chain, chain_paths)
-    merged = merge(hcat, extracts...)
-
-    df = to_frame(extracted["log_scores"], extracted["unweighted"])
+    densities = hcat(map(e -> e["unweighted"][:ramp_density], extracts)...)
+    merged = Dict("log_scores" => merge(hcat, extracts...)["log_scores"],
+                  "unweighted" => Dict(:ramp_density => densities))
+    df = to_frame(merged["log_scores"], merged["unweighted"])
     df = df[in.(df.t, Ref(tps)),:]
-    sort!(df, :t)
-    aggregate(groupby(df, :t), mean)
-
+    df = aggregate(groupby(df, :t), mean)
     sort(df, :t)
 end
 
 particles = [4, 10, 300];
 noises = [0.1, 0.2, 0.5];
-model = 1;
-df = DataFrame()
+let model = 1
+dfs = []
 for ps in particles
     for noise in noises
+        println(ps, noise)
         traces = "/traces/exp1_p_$(ps)_n_$(noise)"
         for i = 0:209
             t = process_trial("/databases/exp1.hdf5", traces, i)
@@ -41,9 +44,11 @@ for ps in particles
             t.particles = ps
             t.noise = noise
             t.model = model
-            df = vcat(df, t)
+            push!(dfs, t)
         end
         model += 1
     end
-    CSV.write("traces/exp1_digest.csv", df)
+    df = vcat(dfs...)
+    CSV.write("/traces/exp1_digest.csv", df)
+end
 end
