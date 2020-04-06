@@ -22,7 +22,10 @@ def main():
                         help = 'Number of particles')
     parser.add_argument('--obs_noise', type = float,
                         default = 0.1,
-                        help = 'Number of particles')
+                        help = 'observation noise')
+    parser.add_argument('--chains', type = int,
+                        default = 1,
+                        help = 'Number of chains')
     args = parser.parse_args()
 
     dataset = Exp1Dataset(args.src)
@@ -32,7 +35,8 @@ def main():
 
     tasks = [(str(i),) for i in range(njobs)]
     kwargs = ['--particles {0:d}'.format(args.particles),
-              '--obs_noise {0:f}'.format(args.obs_noise)]
+              '--obs_noise {0:f}'.format(args.obs_noise),
+              '--chains {0:d}'.format(args.chains)]
 
     interpreter = '#!/bin/bash'
     extras = []
@@ -40,7 +44,7 @@ def main():
         'cpus-per-task' : '1',
         'mem-per-cpu' : '2GB',
         'time' : '40',
-        'partition' : 'scavenge',
+        'partition' : 'short',
         'requeue' : None,
     }
     path = '/project/scripts/inference/exp1_pf.jl'

@@ -46,13 +46,15 @@ function main()
     idx = args["idx"]
     particles = args["particles"]
     obs_noise = args["obs_noise"]
-    out_dir = "/traces/$(dataset_name)_p_$(particles)_n_$(obs_noise)"
-    out = "$out_dir/$(idx).jld2"
-    isdir(out_dir) || mkdir(out_dir)
-    isfile(out) && rm(out)
+    for chain in 1:args["chains"]
+        out_dir = "/traces/$(dataset_name)_p_$(particles)_n_$(obs_noise)"
+        out = "$out_dir/$(idx)_c_$(chain).jld2"
+        isdir(out_dir) || mkdir(out_dir)
+        isfile(out) && rm(out)
 
-    seq_inference(args["dataset"], idx, args["particles"],
-                  args["obs_noise"]; out = out, resume = true)
+        seq_inference(args["dataset"], idx, args["particles"],
+                      args["obs_noise"]; out = out, resume = true)
+    end
     return nothing
 end
 
