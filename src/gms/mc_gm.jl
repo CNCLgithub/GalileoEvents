@@ -146,7 +146,7 @@ end
     fric_prior = mat_prop["lateralFriction"]
     density = @trace(trunc_norm(dens_prior[1],
                                 dens_prior[2],
-                                0., 10.),
+                                0., 150.),
                      :density)
     friction = @trace(trunc_norm(fric_prior[1],
                                  fric_prior[2],

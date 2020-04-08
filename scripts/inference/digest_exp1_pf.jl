@@ -13,6 +13,7 @@ function process_trial(dataset_path::String,
     (scene, state, tps) = get(dataset, trial)
 
     chain_paths = glob("$(trial)_c_*.jld2", "$(trace_path)")
+    println(chain_paths)
     chain_paths = isempty(chain_paths) ? ["$(trace_path)/$(trial).jld2"] : chain_paths
     extracts = map(extract_chain, chain_paths)
     densities = hcat(map(e -> e["unweighted"][:ramp_density], extracts)...)
@@ -25,7 +26,7 @@ function process_trial(dataset_path::String,
 end
 
 particles = [4, 10, 300];
-noises = [0.1, 0.2, 0.5];
+noises = [0.01, 0.02, 0.05];
 let model = 1
 dfs = []
 for ps in particles

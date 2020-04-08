@@ -28,6 +28,12 @@ def main():
                         help = 'Number of chains')
     args = parser.parse_args()
 
+    # create out dir early to prevent conflicts
+    out_path = '/traces/exp1_p_{0:d}_n_{1:.2f}'.format(args.particles, 
+                                                       args.obs_noise)
+    os.path.isdir(out_path) or os.mkdir(out_path)
+
+
     dataset = Exp1Dataset(args.src)
 
 
