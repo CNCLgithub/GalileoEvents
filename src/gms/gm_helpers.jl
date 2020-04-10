@@ -9,7 +9,6 @@ export GMParams,
 
 using PyCall
 
-
 const surface_phys = Dict("density" => 0,
                           "lateralFriction" => 0.5)
 const default_physics = Dict("density" => 2.0,
@@ -114,8 +113,8 @@ function from_material_params(params)
         density_prior = (4., 4.)
         friction_prior = (0.3, 0.4)
     else
-        density_prior = (density_map[mat]..., 4.0)
-        friction_prior = (friction_map[mat]..., 0.4)
+        density_prior = (density_map[mat]..., 0.5)
+        friction_prior = (friction_map[mat]..., 0.2)
     end
 
     return Dict("density" => density_prior,
@@ -127,6 +126,8 @@ function update_world(cid, obj_ids, belief)
     for (o,k) in enumerate(["A", "B"])
         scene[k] = belief[o]
     end
+    println(scene["A"])
+    println(obj_ids)
     @pycall physics.physics.update_world(cid,
                                          obj_ids,
                                          scene)::PyObject

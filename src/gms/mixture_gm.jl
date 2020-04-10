@@ -3,9 +3,6 @@ export mixture_generative_model
 
 ## Generative Model + components
 
-@gen (static) function object_physics(density, friction, c)
-end
-
 const incongruent_mat = Dict( "density" => (4.0, 20.0),
                               "lateralFriction" => (0.3, 0.5))
 
@@ -15,12 +12,10 @@ const incongruent_mat = Dict( "density" => (4.0, 20.0),
     prior = congruent ? from_mat : incongruent_mat
     density = prior["density"]
     friction = prior["lateralFriction"]
-    dens = @trace(trunc_norm(density[1], density[2],
-                                0., 150.),
-                     :density)
-    fric = @trace(trunc_norm(friction[1], friction[2],
-                                 0., 1.),
-                      :friction)
+    dens = @trace(trunc_norm(density[1], density[2], 0., 150.),
+                  :density)
+    fric = @trace(trunc_norm(friction[1], friction[2], 0., 1.),
+                  :friction)
     restitution = @trace(uniform(0.8, 1.0), :restitution)
     physical_props = Dict("density" => dens,
                           "lateralFriction" => fric,
@@ -41,22 +36,22 @@ map_init_state = Gen.Map(state_prior)
 function _helper(prev_phys, switch, mat)
     prev_con = Bool(prev_phys["congruent"])
     if switch
-        prior = prev_con ? from_material_params(mat) : incongruent_mat
+        prior = prev_con ? incongruent_mat : from_material_params(mat)
     else
-        prior = Dict( "density" => (prev_phys["density"], 0.5))
+        prior = Dict( "density" => (prev_phys["density"], 0.1))
                       # "lateralFriction" => (prev_phys["lateralFriction"], 0.1))
     end
+    println(prior)
     return prior
 end
 
 @gen (static) function object_kernel(prev_phys::Dict{String, Float64},
                                      mat_info::Dict)
-    switch = @trace(bernoulli(0.1), :switch)
+    switch = @trace(bernoulli(0.01), :switch)
     prior = _helper(prev_phys, switch, mat_info)
     density = prior["density"]
-    dens = @trace(trunc_norm(density[1], density[2],
-                                0., 150.),
-                     :density)
+    dens = @trace(trunc_norm(density[1], density[2], 0., 150.),
+                  :density)
     # cong switch
     # t f t
     # t t f

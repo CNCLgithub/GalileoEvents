@@ -67,13 +67,6 @@ function extract_pos(t)
     reshape(all_pos, (1, size(all_pos)...))
 end
 
-# function extract_phys(t, feat)
-#     d = Vector{Float64}(undef, 1)
-#     d[1] = Gen.get_choices(t)[:object_physics => 1 => feat]
-#     reshape(d, (1,1,1))
-# end
-
-
 function extract_phys(t, feat)
     i,params = get_args(t)
     addr = :chain => i => :physics => 1 => feat
@@ -101,10 +94,10 @@ const light_seq_map = LatentMap(Dict(
 ######################################################################
 
 function rejuv(trace)
-    i,_ = get_args(trace)
-    addr = :chain => i => :physics => 1 => :switch
-    (trace, accepted) = Gen.mh(trace, Gen.select(addr))
-    (trace, accepted) = Gen.mh(trace, exp1_mx_density, tuple())
+    # i,_ = get_args(trace)
+    # addr = :chain => i => :physics => 1 => :switch
+    # (trace, accepted) = Gen.mh(trace, Gen.select(addr))
+    # (trace, accepted) = Gen.mh(trace, exp1_mx_density, tuple())
     return trace
 end
 
