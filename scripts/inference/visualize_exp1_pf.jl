@@ -10,6 +10,8 @@ using FileIO
 using ArgParse
 using Base.Filesystem
 
+using Glob
+
 function parse_commandline()
     s = ArgParseSettings()
 
@@ -39,7 +41,7 @@ function parse_commandline()
 end
 
 
-function plot_chain(df, ml_est, latents, col_t, path)
+function plot_chain(df, latents, col_t, path)
     # first the estimates
     estimates = map(y -> Gadfly.plot(df,
                                      y = y,
@@ -55,23 +57,31 @@ function plot_chain(df, ml_est, latents, col_t, path)
 end
 
 function process_trial(particles::Int,
-                       noise::Float64,
+                       obs_noise::Float64,
                        trial::Int)
 
     dataset_path = "/databases/exp1.hdf5"
     dataset_name = first(splitext(basename(dataset_path)))
-    trace_path = "/traces/$(dataset_name)_p_$(particles)_n_$(obs_noise)/$(trial)_c_1.jld2"
     dataset = GalileoRamp.galileo_ramp.Exp1Dataset(dataset_path)
     (scene, state, cols) = get(dataset, trial)
 
-    chain_path = "$trace_path/$(trial).jld2"
-    extracted = extract_chain(chain_path)
+    trace_path = "/traces/$(dataset_name)_p_$(particles)_n_$(obs_noise)"
+    chain_paths = glob("$(trial)_c_*.jld2", "$(trace_path)")
+    println(chain_paths)
+    chain_paths = isempty(chain_paths) ? ["$(trace_path)/$(trial).jld2"] : chain_paths
+    extracts = map(extract_chain, chain_paths)
+    densities = hcat(map(e -> e["unweighted"][:ramp_density], extracts)...)
+    positions = hcat(map(e -> e["unweighted"][:ramp_pos], extracts)...)
+    extracted = Dict("log_scores" => merge(hcat, extracts...)["log_scores"],
+                  "unweighted" => Dict(:ramp_density => densities,
+                                       :ramp_pos => positions))
+
 
     df = to_frame(extracted["log_scores"], extracted["unweighted"],
                   exclude = [:ramp_pos])
     sort!(df, :t)
     plot_path = "$trace_path/$(trial)_plot.png"
-    plot_chain(df, extracted["ml_est"], [:ramp_density], cols, plot_path)
+    plot_chain(df,[:ramp_density], cols, plot_path)
 
     gt_pos = state["pos"]
     preds = extracted["unweighted"][:ramp_pos]
