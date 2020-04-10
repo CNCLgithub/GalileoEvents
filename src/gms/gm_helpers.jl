@@ -98,14 +98,14 @@ function initialize_state(params::Params,
     scene = _init_state(params.object_prior, object_phys,
                         init_pos)
     objs = scene["objects"]
-    obj_d = Dict{String, obj_phys_type}()
+    obj_v = Vector{obj_phys_type}(undef, params.n_objects)
     init_mat = zeros(4, 2, 3)
     for (o,k) in enumerate(["A", "B"])
-        obj_d[k] = objs[k]["physics"]
+        obj_v[o] = objs[k]["physics"]
         init_mat[1,o,:] = objs[k]["position"]
         init_mat[2,o,:] = objs[k]["orientation"]
     end
-    return (init_mat, obj_d)
+    return (init_mat, obj_v)
 end
 
 function from_material_params(params)
@@ -122,7 +122,11 @@ function from_material_params(params)
                 "lateralFriction" => friction_prior)
 end
 
-function update_world(cid, obj_ids, scene)
+function update_world(cid, obj_ids, belief)
+    scene = Dict{String, obj_phys_type}()
+    for (o,k) in enumerate(["A", "B"])
+        scene[k] = belief[o]
+    end
     @pycall physics.physics.update_world(cid,
                                          obj_ids,
                                          scene)::PyObject
@@ -135,7 +139,8 @@ function step(cid, obj_ids, prev_state)
                                          state = prev_state)::Array{Float64,3}
 end
 
-function forward_step(prev_state, params::Params, belief::Dict)
+function forward_step(prev_state, params::Params,
+                      belief)
     update_world(params.client, params.object_map, belief)
     state = step(params.client, params.object_map, prev_state)
     return state

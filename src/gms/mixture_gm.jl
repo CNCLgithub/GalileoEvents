@@ -3,32 +3,30 @@ export mixture_generative_model
 
 ## Generative Model + components
 
-@gen (static) function object_physics(density, friction)
-    density = @trace(trunc_norm(density[1], density[2],
-                                0., 150.),
-                     :density)
-    friction = @trace(trunc_norm(friction[1], friction[2],
-                                 0., 1.),
-                      :friction)
-    restitution = @trace(uniform(0.8, 1.0), :restitution)
-    physical_props = Dict("density" => density,
-                          "lateralFriction" => friction,
-                          "restitution" => restitution)
-    return physical_props
+@gen (static) function object_physics(density, friction, c)
 end
 
 const incongruent_mat = Dict( "density" => (4.0, 20.0),
-                              "friction" => (0.3, 0.5))
+                              "lateralFriction" => (0.3, 0.5))
 
 @gen (static) function object_prior(material_params)
     from_mat = from_material_params(material_params)
-    congruent = @trace(binomial(0.9), :congruent)
+    congruent = @trace(bernoulli(0.9), :congruent)
     prior = congruent ? from_mat : incongruent_mat
     density = prior["density"]
-    friction = prior["friction"]
-    properties = @trace(object_physics(density, friction), :physics)
-    properties["congruent"] = congruent
-    return properties
+    friction = prior["lateralFriction"]
+    dens = @trace(trunc_norm(density[1], density[2],
+                                0., 150.),
+                     :density)
+    fric = @trace(trunc_norm(friction[1], friction[2],
+                                 0., 1.),
+                      :friction)
+    restitution = @trace(uniform(0.8, 1.0), :restitution)
+    physical_props = Dict("density" => dens,
+                          "lateralFriction" => fric,
+                          "restitution" => restitution,
+                          "congruent" => congruent)
+    return physical_props
 end
 
 map_object_prior = Gen.Map(object_prior)
@@ -40,31 +38,49 @@ end
 
 map_init_state = Gen.Map(state_prior)
 
-@gen (static) function object_kernel(prev_phys::Dict{String, Float64})
-    switch = @trace(binomial(0.1), :switch)
-    prior = _helper(prev_phys, switch)
+function _helper(prev_phys, switch, mat)
+    prev_con = Bool(prev_phys["congruent"])
+    if switch
+        prior = prev_con ? from_material_params(mat) : incongruent_mat
+    else
+        prior = Dict( "density" => (prev_phys["density"], 0.5))
+                      # "lateralFriction" => (prev_phys["lateralFriction"], 0.1))
+    end
+    return prior
+end
+
+@gen (static) function object_kernel(prev_phys::Dict{String, Float64},
+                                     mat_info::Dict)
+    switch = @trace(bernoulli(0.1), :switch)
+    prior = _helper(prev_phys, switch, mat_info)
     density = prior["density"]
-    friction = prior["friction"]
-    properties = @trace(object_physics(density, friction), :physics)
+    dens = @trace(trunc_norm(density[1], density[2],
+                                0., 150.),
+                     :density)
     # cong switch
     # t f t
     # t t f
     # f t t
     # f f f
-    properties["congruent"] = prev_phys["congruent"] xor switch
-    return properties
+    prev_con = Bool(prev_phys["congruent"])
+    con = prev_con ⊻ switch
+    physical_props = Dict{String, Float64}("density" => dens,
+                          "lateralFriction" => prev_phys["lateralFriction"],
+                          "restitution" => prev_phys["restitution"],
+                          "congruent" => con)
+    return physical_props
 end
 
 map_obj_kernel = Gen.Map(object_kernel)
 
 @gen (static) function kernel(t::Int, prev::Tuple, params::Params)
-    prev_phys, prev_state = prev
-    belief = @trace(map_obj_kernel(prev_phys), :property_kernel)
-    next_state = forward_step(prev_state, params, belief)
+    # prev_state, prev_phys = prev
+    belief = @trace(map_obj_kernel(prev[2], params.object_prior), :physics)
+    next_state = forward_step(prev[1], params, belief)
     pos = next_state[1, :, :]
     next_pos = @trace(Gen.broadcasted_normal(pos, params.obs_noise),
                       :positions)
-    nxt = (belief, next_state)
+    nxt = (next_state, belief)
     return nxt
 end
 

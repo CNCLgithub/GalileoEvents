@@ -2,7 +2,7 @@ using Gen
 
 function test(n::Int)
 
-    cid = GalileoRamp.physics.physics.init_client()
+    cid = GalileoRamp.physics.physics.init_client(direct = true)
     obj_prior = fill(GalileoRamp.default_object, 2)
     init_pos = [1.5, 0.5]
     scene = GalileoRamp.initialize_state(obj_prior, init_pos)
@@ -15,10 +15,11 @@ function test(n::Int)
     trace, w = Gen.generate(mixture_generative_model,
                             (n, params), cm)
     GalileoRamp.physics.physics.clear_trace(cid)
-    return nothing
+    return trace
 end
 
 test(1);
 @time test(1);
-@time test(10);
+trace = @time test(10);
+println(Gen.get_choices(trace))
 @time test(120);
