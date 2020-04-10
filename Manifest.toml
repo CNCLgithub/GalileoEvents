@@ -497,9 +497,9 @@ version = "1.10.5+5"
 
 [[HarfBuzz_jll]]
 deps = ["Cairo_jll", "Fontconfig_jll", "FreeType2_jll", "Gettext_jll", "Glib_jll", "Graphite2_jll", "Libdl", "Libffi_jll", "Pkg"]
-git-tree-sha1 = "dbc6a8c98abe861dd928bc2b603b4ee1eed41dcd"
+git-tree-sha1 = "7a206ed46082e986179586a4ed60cbc740313ea6"
 uuid = "2e76f6c2-a576-52d4-95c1-20adfe4de566"
-version = "2.6.1+4"
+version = "2.6.1+5"
 
 [[Hexagons]]
 deps = ["Test"]
@@ -678,9 +678,9 @@ version = "2.34.0+1"
 
 [[Libtiff_jll]]
 deps = ["JpegTurbo_jll", "Libdl", "Pkg", "Zlib_jll", "Zstd_jll"]
-git-tree-sha1 = "6cab365abd0108b45e1cbd234223152d88647742"
+git-tree-sha1 = "0764d2317bf99a0120325720f83d356f6016b05c"
 uuid = "89763e89-9b03-5906-acba-b20f662cd828"
-version = "4.0.10+0"
+version = "4.0.10+1"
 
 [[Libuuid_jll]]
 deps = ["Libdl", "Pkg"]
@@ -783,10 +783,10 @@ uuid = "6fe1bfb0-de20-5000-8ca7-80f57d26f881"
 version = "1.0.4"
 
 [[OpenBLAS_jll]]
-deps = ["Libdl", "Pkg"]
-git-tree-sha1 = "cbab167006bbb875d4b4204cc4da8822bd43df83"
+deps = ["CompilerSupportLibraries_jll", "Libdl", "Pkg"]
+git-tree-sha1 = "2ee3e636e94b9fd95fa8364d5cba2e20dae16609"
 uuid = "4536629a-c528-5b80-bd46-f80d51c5b363"
-version = "0.3.9+1"
+version = "0.3.9+2"
 
 [[OpenSpecFun_jll]]
 deps = ["CompilerSupportLibraries_jll", "Libdl", "Pkg"]
@@ -832,9 +832,9 @@ version = "0.5.4"
 
 [[Pango_jll]]
 deps = ["Cairo_jll", "Fontconfig_jll", "FreeType2_jll", "FriBidi_jll", "Glib_jll", "HarfBuzz_jll", "Libdl", "Pkg"]
-git-tree-sha1 = "99ee35d5298b2615c800becfea2b3dc4fdb803c5"
+git-tree-sha1 = "cd19789f20bde5d45e96a7e937db9a6a024412e6"
 uuid = "36c8627f-9965-5494-a995-c6b170f724f3"
-version = "1.42.4+7"
+version = "1.42.4+8"
 
 [[Parameters]]
 deps = ["OrderedCollections"]
@@ -1363,15 +1363,15 @@ version = "3.33.92+3"
 
 [[at_spi2_atk_jll]]
 deps = ["ATK_jll", "Libdl", "Pkg", "XML2_jll", "Xorg_libX11_jll", "at_spi2_core_jll"]
-git-tree-sha1 = "c896019bced4ebbf7e507e66fa403ec4409a1937"
+git-tree-sha1 = "b8222202b3ab2b67dc88195673a9201a015e703e"
 uuid = "de012916-1e3f-58c2-8f29-df3ef51d412d"
-version = "2.34.1+0"
+version = "2.34.1+1"
 
 [[at_spi2_core_jll]]
 deps = ["Dbus_jll", "Glib_jll", "Libdl", "Pkg", "Xorg_libXtst_jll"]
-git-tree-sha1 = "db3118da77a00c375c04ff3df08daa4045324b44"
+git-tree-sha1 = "af2eae0aedd158cacc727de18e577f21ebbed9eb"
 uuid = "0fc3237b-ac94-5853-b45c-d43d59a06200"
-version = "2.34.0+0"
+version = "2.34.0+1"
 
 [[gdk_pixbuf_jll]]
 deps = ["Glib_jll", "JpegTurbo_jll", "Libdl", "Libtiff_jll", "Pkg", "X11_jll", "Xorg_libX11_jll", "libpng_jll"]
