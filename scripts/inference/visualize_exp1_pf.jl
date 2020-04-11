@@ -87,13 +87,14 @@ function process_trial(particles::Int,
     df = to_frame(extracted["log_scores"], extracted["unweighted"],
                   exclude = [:ramp_pos])
     sort!(df, :t)
-    println(df)
     plot_path = "$trace_path/$(trial)_plot.png"
-    plot_chain(df,[:ramp_density, :ramp_switch], cols, plot_path)
+    plot_chain(df,[:ramp_density, :ramp_congruent], cols, plot_path)
 
     gt_pos = state["pos"]
     preds = extracted["unweighted"][:ramp_pos]
     viz_path = "$trace_path/$(trial)_viz.gif"
+    println(gt_pos[end,1,:])
+    println(preds[end,1,1,:])
     visualize(scene, gt_pos, preds, nothing, viz_path)
     return nothing;
 end

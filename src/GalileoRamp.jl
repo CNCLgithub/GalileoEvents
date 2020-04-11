@@ -8,7 +8,7 @@ const physics = PyNULL()
 const galileo_ramp = PyNULL()
 function __init__()
     # setup python imports
-    copy!(physics, pyimport("physics.world"))
+    copy!(physics, pyimport("ramp_physics"))
     copy!(galileo_ramp, pyimport("galileo_ramp.exp1_dataset"))
 
     # setup gen static functions

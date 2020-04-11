@@ -8,7 +8,7 @@ import numpy as np
 from pprint import pprint
 from h5data import dataset
 
-from physics.world.simulation import physics
+from ramp_physics import physics
 import numpy as np
 
 def get_json(raw):

@@ -19,10 +19,13 @@ function load_trial(dpath::String, idx::Int, obs_noise::Float64)
     cm[:initial_state => 1 => :init_pos] = scene["initial_pos"]["A"]
     cm[:initial_state => 2 => :init_pos] = scene["initial_pos"]["B"]
     objects = scene["objects"]
+    cm[:object_physics => 2 => :material] = 2
     cm[:object_physics => 2 => :congruent] = true
     cm[:object_physics => 2 => :density] = objects["B"]["physics"]["density"]
     cm[:object_physics => 2 => :friction] = objects["B"]["physics"]["lateralFriction"]
     cm[:object_physics => 2 => :restitution] = objects["B"]["physics"]["restitution"]
+    cm[:object_physics => 1 => :material] = findfirst(k -> k == objects["A"]["appearance"],
+                                                      mat_keys)
     cm[:object_physics => 1 => :friction] = objects["A"]["physics"]["lateralFriction"]
     cm[:object_physics => 1 => :restitution] = objects["A"]["physics"]["restitution"]
 
@@ -32,7 +35,6 @@ function load_trial(dpath::String, idx::Int, obs_noise::Float64)
         addr = :chain => t => :positions
         tcm[addr] = state["pos"][t, :, :]
         # keep table at gt
-        # addr =
         tcm[:chain => t => :physics => 2 => :switch] = false
         tcm[:chain => t => :physics => 2 => :density] = objects["B"]["physics"]["density"]
         obs[t] = tcm
@@ -61,10 +63,18 @@ end
 ######################################################################
 
 function extract_pos(t)
+    # println(get_choices(t))
     ret = Gen.get_retval(t)
     all_pos = [reshape(state[1, :, :], (1,2,3)) for (state,_) in ret]
     all_pos = vcat(all_pos...)
     reshape(all_pos, (1, size(all_pos)...))
+end
+
+function extract_congruent(t)
+    # println(get_choices(t))
+    ret = Gen.get_retval(t)
+    _, phys = ret[end]
+    reshape([phys[1]["congruent"]], (1,1,1))
 end
 
 function extract_phys(t, feat)
@@ -82,11 +92,13 @@ const static_latent_map = LatentMap(Dict(
 const seq_latent_map = LatentMap(Dict(
     :ramp_pos => t -> reshape(extract_pos(t)[:, end, :, :], (1,1,2,3)),
     :ramp_density => t -> extract_phys(t, :density),
-    :ramp_switch => t -> extract_phys(t, :switch)
+    :ramp_congruent => extract_congruent
+    # :ramp_switch => t -> extract_phys(t, :switch)
 ))
 const light_seq_map = LatentMap(Dict(
     :ramp_density => t -> extract_phys(t, :density),
-    :ramp_switch => t -> extract_phys(t, :switch)
+    :ramp_congruent => extract_congruent
+    # :ramp_switch => t -> extract_phys(t, :switch)
 ))
 
 ######################################################################
@@ -94,10 +106,10 @@ const light_seq_map = LatentMap(Dict(
 ######################################################################
 
 function rejuv(trace)
-    # i,_ = get_args(trace)
-    # addr = :chain => i => :physics => 1 => :switch
-    # (trace, accepted) = Gen.mh(trace, Gen.select(addr))
-    # (trace, accepted) = Gen.mh(trace, exp1_mx_density, tuple())
+    i,_ = get_args(trace)
+    addr = :chain => i => :physics => 1 => :switch
+    (trace, accepted) = Gen.mh(trace, Gen.select(addr))
+    (trace, accepted) = Gen.mh(trace, exp1_mx_density, tuple())
     return trace
 end
 

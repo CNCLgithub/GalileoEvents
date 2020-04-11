@@ -3,11 +3,14 @@ export mixture_generative_model
 
 ## Generative Model + components
 
+const material_ps = ones(3) ./ 3
 const incongruent_mat = Dict( "density" => (4.0, 20.0),
                               "lateralFriction" => (0.3, 0.5))
 
+
 @gen (static) function object_prior(material_params)
-    from_mat = from_material_params(material_params)
+    material = @trace(categorical(material_ps), :material)
+    from_mat = from_material_params(material)
     congruent = @trace(bernoulli(0.9), :congruent)
     prior = congruent ? from_mat : incongruent_mat
     density = prior["density"]
@@ -39,9 +42,7 @@ function _helper(prev_phys, switch, mat)
         prior = prev_con ? incongruent_mat : from_material_params(mat)
     else
         prior = Dict( "density" => (prev_phys["density"], 0.1))
-                      # "lateralFriction" => (prev_phys["lateralFriction"], 0.1))
     end
-    println(prior)
     return prior
 end
 

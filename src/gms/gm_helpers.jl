@@ -24,6 +24,7 @@ const density_map = Dict("Wood" => 1.0,
 const friction_map = Dict("Wood" => 0.263,
                           "Brick" => 0.323,
                           "Iron" => 0.215)
+const mat_keys = collect(keys(density_map))
 
 abstract type GMParams end
 
@@ -47,11 +48,11 @@ end
 function create_object(params, physical_props)
     cat = params["shape"]
     if cat == "Block"
-        shape = physics.scene.block.Block
+        shape = physics.world.Block
     elseif cat == "Puck"
-        shape = physics.scene.puck.Puck
+        shape = physics.world.Puck
     else
-        shape = physics.scene.ball.Ball
+        shape = physics.world.Ball
     end
     obj::PyObject = shape("", params["dims"], physical_props)
 end
@@ -59,10 +60,10 @@ end
 function _init_state(object_prior::Vector,
                      object_phys,
                      init_pos)
-    s::PyObject = physics.scene.ramp.RampScene([3.5, 1.8], [3.5, 1.8],
-                                               ramp_angle = 35. * pi / 180.,
-                                               ramp_phys = surface_phys,
-                                               table_phys = surface_phys)
+    s::PyObject = physics.world.RampScene([3.5, 1.8], [3.5, 1.8],
+                                          ramp_angle = 35. * pi / 180.,
+                                          ramp_phys = surface_phys,
+                                          table_phys = surface_phys)
 
     for (i,k) = enumerate(["A", "B"])
         obj::PyObject = create_object(object_prior[i], object_phys[i])
@@ -107,7 +108,7 @@ function initialize_state(params::Params,
     return (init_mat, obj_v)
 end
 
-function from_material_params(params)
+function from_material_params(params::Dict)
     mat = params["appearance"]
     if isnothing(mat)
         density_prior = (4., 4.)
@@ -121,28 +122,35 @@ function from_material_params(params)
                 "lateralFriction" => friction_prior)
 end
 
-function update_world(cid, obj_ids, belief)
-    scene = Dict{String, obj_phys_type}()
-    for (o,k) in enumerate(["A", "B"])
-        scene[k] = belief[o]
+
+function from_material_params(i::Int)
+    mat = Dict("appearance" => mat_keys[i])
+    return from_material_params(mat)
+end
+
+
+function update_world(params::Params, belief)
+    scene = Dict{String, PyDict}()
+    for (i,k) = enumerate(["A", "B"])
+        obj::PyObject = create_object(params.object_prior[i],
+                                      belief[i])
+        scene[k] = obj.serialize()
     end
-    println(scene["A"])
-    println(obj_ids)
-    @pycall physics.physics.update_world(cid,
-                                         obj_ids,
+    @pycall physics.physics.update_world(params.client,
+                                         params.object_map,
                                          scene)::PyObject
     return nothing
 end
 
-function step(cid, obj_ids, prev_state)
-    @pycall physics.physics.run_mc_trace(cid,
-                                         obj_ids,
+function step(params::Params, prev_state)
+    @pycall physics.physics.run_mc_trace(params.client,
+                                         params.object_map,
                                          state = prev_state)::Array{Float64,3}
 end
 
 function forward_step(prev_state, params::Params,
                       belief)
-    update_world(params.client, params.object_map, belief)
-    state = step(params.client, params.object_map, prev_state)
+    update_world(params, belief)
+    state = step(params, prev_state)
     return state
 end
