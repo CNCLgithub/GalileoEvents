@@ -48,7 +48,9 @@ end
 
 @gen (static) function object_kernel(prev_phys::Dict{String, Float64},
                                      mat_info::Dict)
-    switch = @trace(bernoulli(0.01), :switch)
+    prev_con = Bool(prev_phys["congruent"])
+    switch_p = prev_con ? 0.01 : 0.001
+    switch = @trace(bernoulli(switch_p), :switch)
     prior = _helper(prev_phys, switch, mat_info)
     density = prior["density"]
     dens = @trace(trunc_norm(density[1], density[2], 0., 150.),
@@ -58,7 +60,6 @@ end
     # t t f
     # f t t
     # f f f
-    prev_con = Bool(prev_phys["congruent"])
     con = prev_con ⊻ switch
     physical_props = Dict{String, Float64}("density" => dens,
                           "lateralFriction" => prev_phys["lateralFriction"],

@@ -28,6 +28,7 @@ function load_trial(dpath::String, idx::Int, obs_noise::Float64)
                                                       mat_keys)
     cm[:object_physics => 1 => :friction] = objects["A"]["physics"]["lateralFriction"]
     cm[:object_physics => 1 => :restitution] = objects["A"]["physics"]["restitution"]
+    # cm[:object_physics => 1 => :congruent] = true
 
     obs = Vector{Gen.ChoiceMap}(undef, n)
     for t = 1:n

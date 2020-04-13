@@ -14,8 +14,6 @@ end
     i,params = get_args(trace)
     addr = :chain => i => :physics => 1 => :density
     choices = Gen.get_choices(trace)
-    prop = choices[addr]
-    low = prop - 1.0
-    high = prop + 1.0
-    @trace(uniform(low, high), addr)
+    d = choices[addr]
+    @trace(log_uniform(d, 0.2), addr)
 end

@@ -41,21 +41,26 @@ function parse_commandline()
 end
 
 
-function plot_chain(df, latents, col_t, path)
-    # first the estimates
-    estimates = map(y -> Gadfly.plot(df,
-                                     y = y,
-                                     x = :t,
-                                     xintercept = col_t,
-                                     Gadfly.Geom.histogram2d(xbincount=120),
-                                     Gadfly.Geom.vline,
-                                     Scale.x_continuous(minvalue = 0, maxvalue = 120)),
-                    latents)
-    # log_scores = Gadfly.plot(df, y = :log_score, x = :t, xintercept = [col_t],
-    #                          Gadfly.Geom.histogram2d(),
-    #                          Gadfly.Geom.vline,
-    #                          Scale.x_continuous(minvalue = 0, maxvalue = 120))
-    plot = vstack(estimates...)
+function plot_chain(df, col_t, path)
+
+    density = Gadfly.plot(df,
+                          x = :t,
+                          y = :ramp_density,
+                          Gadfly.Geom.histogram2d(xbincount=120,
+                                                  ybincount=20),
+                          Scale.y_log(),
+                          xintercept = col_t,
+                          Gadfly.Geom.vline,
+                          Scale.x_continuous(minvalue = 0, maxvalue = 120))
+    congruent = Gadfly.plot(df,
+                            x = :t,
+                            y = :ramp_congruent,
+                            Gadfly.Geom.histogram2d(ybincount = 2,
+                                                    xbincount=120),
+                            xintercept = col_t,
+                            Gadfly.Geom.vline,
+                            Scale.x_continuous(minvalue = 0, maxvalue = 120))
+    plot = vstack(density, congruent)
     # log_scores |> PNG(path);
     compose(compose(context(), rectangle(), fill("white")), plot) |>
         PNG(path);
@@ -88,7 +93,7 @@ function process_trial(particles::Int,
                   exclude = [:ramp_pos])
     sort!(df, :t)
     plot_path = "$trace_path/$(trial)_plot.png"
-    plot_chain(df,[:ramp_density, :ramp_congruent], cols, plot_path)
+    plot_chain(df, cols, plot_path)
 
     gt_pos = state["pos"]
     preds = extracted["unweighted"][:ramp_pos]
