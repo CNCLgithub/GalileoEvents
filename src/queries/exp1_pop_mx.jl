@@ -36,8 +36,10 @@ function load_trial(dpath::String, idx::Int, obs_noise::Float64)
         addr = :chain => t => :positions
         tcm[addr] = state["pos"][t, :, :]
         # keep table at gt
-        tcm[:chain => t => :physics => 2 => :switch] = false
+        # tcm[:chain => t => :physics => 1 => :density] = objects["A"]["physics"]["density"]
+        # tcm[:chain => t => :physics => 1 => :friction] = objects["A"]["physics"]["lateralFriction"]
         tcm[:chain => t => :physics => 2 => :density] = objects["B"]["physics"]["density"]
+        tcm[:chain => t => :physics => 2 => :friction] = objects["B"]["physics"]["lateralFriction"]
         obs[t] = tcm
     end
 
@@ -72,35 +74,37 @@ function extract_pos(t)
     reshape(all_pos, (1, size(all_pos)...))
 end
 
-function extract_congruent(t)
-    # println(get_choices(t))
-    ret = Gen.get_retval(t)
-    _, phys = ret[end]
-    reshape([phys[1]["congruent"]], (1,1,1))
-end
-
-function extract_phys(t, feat)
+function extract_collision(t)
     i,params = get_args(t)
-    addr = :chain => i => :physics => 1 => feat
+    addr = :chain => i => :graph => :collision
     d = Vector{Float64}(undef, 1)
     d[1] = Gen.get_choices(t)[addr]
     reshape(d, (1,1,1))
 end
 
-const static_latent_map = LatentMap(Dict(
-    :ramp_pos => extract_pos,
-    :ramp_density => t -> extract_phys(t, :density),
-))
+function extract_sliding(t, obj::Int)
+    i,params = get_args(t)
+    addr = :chain => i => :graph => :self_edges => obj => :sliding
+    d = Vector{Float64}(undef, 1)
+    d[1] = Gen.get_choices(t)[addr]
+    reshape(d, (1,1,1))
+end
+
+function extract_phys(t, feat)
+    addr = :object_physics => 1 => feat
+    d = Vector{Float64}(undef, 1)
+    d[1] = Gen.get_choices(t)[addr]
+    reshape(d, (1,1,1))
+end
+
 const seq_latent_map = LatentMap(Dict(
-    :ramp_pos => t -> reshape(extract_pos(t)[:, end, :, :], (1,1,2,3)),
+    :position => t -> reshape(extract_pos(t)[:, end, :, :], (1,1,2,3)),
+    :collision => extract_collision,
+    :ramp_sliding => t -> extract_sliding(t, 1),
+    :table_sliding => t -> extract_sliding(t, 2),
     :ramp_density => t -> extract_phys(t, :density),
-    :ramp_congruent => extract_congruent
-    # :ramp_switch => t -> extract_phys(t, :switch)
-))
-const light_seq_map = LatentMap(Dict(
-    :ramp_density => t -> extract_phys(t, :density),
-    :ramp_congruent => extract_congruent
-    # :ramp_switch => t -> extract_phys(t, :switch)
+    :ramp_friction => t -> extract_phys(t, :friction),
+    :ramp_congruent => t -> extract_phys(t, :congruent),
 ))
 
 ######################################################################
@@ -108,7 +112,6 @@ const light_seq_map = LatentMap(Dict(
 ######################################################################
 
 function rejuv(state, stats)
-
     i,_ = get_args(trace)
     addr = :chain => i => :physics => 1 => :switch
     (trace, accepted) = Gen.mh(trace, Gen.select(addr))
@@ -142,7 +145,8 @@ function seq_inference(dpath::String, idx::Int, particles::Int,
     proc= PopParticleFilter(particles,
                             ess,
                             nothing, tuple(),
-                            rejuv,
+                            nothing,
+                            # rejuv,
                             attention_stats,
                             s -> abs(s) < 0.01,
                             1,1, false)

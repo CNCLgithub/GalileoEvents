@@ -1,14 +1,15 @@
 
 export mixture_generative_model
 
+using LinearAlgebra:norm
+
 ## Generative Model + components
 
 const material_ps = ones(3) ./ 3
 const incongruent_mat = Dict( "density" => (4.0, 20.0),
                               "lateralFriction" => (0.3, 0.5))
 
-
-@gen (static) function object_prior(material_params)
+@gen (static) function physics_prior()
     material = @trace(categorical(material_ps), :material)
     from_mat = from_material_params(material)
     congruent = @trace(bernoulli(0.9), :congruent)
@@ -20,6 +21,7 @@ const incongruent_mat = Dict( "density" => (4.0, 20.0),
     fric = @trace(trunc_norm(friction[1], friction[2], 0., 1.),
                   :friction)
     restitution = @trace(uniform(0.8, 1.0), :restitution)
+
     physical_props = Dict("density" => dens,
                           "lateralFriction" => fric,
                           "restitution" => restitution,
@@ -27,7 +29,7 @@ const incongruent_mat = Dict( "density" => (4.0, 20.0),
     return physical_props
 end
 
-map_object_prior = Gen.Map(object_prior)
+map_object_prior = Gen.Map(physics_prior)
 
 @gen (static) function state_prior()
     init_pos = @trace(uniform(0, 2), :init_pos)
@@ -36,48 +38,78 @@ end
 
 map_init_state = Gen.Map(state_prior)
 
-function _helper(prev_phys, switch, mat)
-    prev_con = Bool(prev_phys["congruent"])
-    if switch
-        prior = prev_con ? incongruent_mat : from_material_params(mat)
-    else
-        prior = Dict( "density" => (prev_phys["density"], 0.1))
-    end
-    return prior
+function collision_probability(positions::Matrix{Float64})
+    l2 = norm(positions[1, :] - positions[2,:])
+    p = l2 < 0.3 ? 0.99 : 0.01
+    # println("l2 $(l2), p $(p)")
+    return p
+end
+function sliding_probability(lin_vels::Vector{Float64})
+    # println("vel: $(lin_vels[1])")
+    (abs(lin_vels[1]) > 1E-3) ? 0.95 : 0.01
 end
 
-@gen (static) function object_kernel(prev_phys::Dict{String, Float64},
-                                     mat_info::Dict)
-    prev_con = Bool(prev_phys["congruent"])
-    switch_p = prev_con ? 0.01 : 0.001
-    switch = @trace(bernoulli(switch_p), :switch)
-    prior = _helper(prev_phys, switch, mat_info)
-    density = prior["density"]
-    dens = @trace(trunc_norm(density[1], density[2], 0., 150.),
-                  :density)
-    # cong switch
-    # t f t
-    # t t f
-    # f t t
-    # f f f
-    con = prev_con ⊻ switch
-    physical_props = Dict{String, Float64}("density" => dens,
-                          "lateralFriction" => prev_phys["lateralFriction"],
-                          "restitution" => prev_phys["restitution"],
-                          "congruent" => con)
+@gen (static) function sliding(vels::Vector{Float64})
+    sliding_p = sliding_probability(vels)
+    slid = @trace(bernoulli(sliding_p), :sliding)
+    return slid
+end
+
+map_sliding = Gen.Map(sliding)
+
+@gen (static) function graph_kernel(prev_state::Array{Float64, 3})
+    col_p = collision_probability(prev_state[1, :, :])
+    collision = @trace(bernoulli(col_p), :collision)
+    args = [prev_state[4,1,:], prev_state[4,2,:]]
+    slid = @trace(map_sliding(args), :self_edges)
+    ret = (collision, slid)
+    return ret
+end
+
+function process_change_points(prev::Tuple, current::Tuple)
+    col1, (slide_a1, slide_b1) = prev
+    col2, (slide_a2, slide_b2) = current
+    col_change = !col1 & col2
+    # ramp_change = slide_a1 ⊻ slide_a2
+    # table_change = slide_b1 ⊻ slide_b2
+    return fill(col_change, 2)
+end
+
+@gen function object_kernel(prev_phys::Dict{String, Float64},
+                            col_edge::Bool)
+
+    # slide_edge = edges[1]
+    congruent = Bool(prev_phys["congruent"])
+    prev_dens = prev_phys["density"]
+
+    # if collision change and incongruent, sample density
+    if !congruent & col_edge
+        dens = @trace(uniform(1E-4, 150),  :density)
+    else
+        dens = prev_dens
+    end
+    prev_fric = prev_phys["lateralFriction"]
+    physical_props = Dict{String, Float64}(
+        "congruent" => congruent,
+        "density" => dens,
+        "lateralFriction" => prev_fric,
+        "restitution" => prev_phys["restitution"])
     return physical_props
 end
 
 map_obj_kernel = Gen.Map(object_kernel)
 
 @gen (static) function kernel(t::Int, prev::Tuple, params::Params)
-    # prev_state, prev_phys = prev
-    belief = @trace(map_obj_kernel(prev[2], params.object_prior), :physics)
+    # prev_state, prev_graph, prev_phys = prev
+    graph = @trace(graph_kernel(prev[1]), :graph)
+    args = process_change_points(prev[2], graph)
+    belief = @trace(map_obj_kernel(prev[3], args),
+                    :physics)
     next_state = forward_step(prev[1], params, belief)
     pos = next_state[1, :, :]
     next_pos = @trace(Gen.broadcasted_normal(pos, params.obs_noise),
                       :positions)
-    nxt = (next_state, belief)
+    nxt = (next_state, graph, belief)
     return nxt
 end
 
@@ -85,12 +117,10 @@ chain = Gen.Unfold(kernel)
 
 @gen (static) function mixture_generative_model(t::Int, params::Params)
 
-    objects = @trace(map_object_prior(params.object_prior),
-                     :object_physics)
-    init_args = fill(tuple(), params.n_objects)
-    initial_pos = @trace(map_init_state(init_args), :initial_state)
+    args = fill(tuple(), params.n_objects)
+    objects = @trace(map_object_prior(args), :object_physics)
+    initial_pos = @trace(map_init_state(args), :initial_state)
     i_state = initialize_state(params, objects, initial_pos)
-
     states = @trace(chain(t, i_state, params), :chain)
     return states
 end

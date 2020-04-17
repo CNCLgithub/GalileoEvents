@@ -105,7 +105,8 @@ function initialize_state(params::Params,
         init_mat[1,o,:] = objs[k]["position"]
         init_mat[2,o,:] = objs[k]["orientation"]
     end
-    return (init_mat, obj_v)
+    graph = (false, (false, false))
+    return (init_mat, graph, obj_v)
 end
 
 function from_material_params(params::Dict)

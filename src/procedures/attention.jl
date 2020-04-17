@@ -13,8 +13,11 @@ function lookforward(traces,
                      query::StaticQuery)
 
     n = length(traces)
-    upfn = t -> update(t, query.args, (UnknownChange(),),
-                       query.observations)
+    upfn = t,o -> update(t, query.args, (UnknownChange(),), o)
+
+    indeces = multinomial(fill(1.0/n, Int(n/2.0)))
+   
+
     new_traces = Vector{Gen.Trace}(undef, n)
     weights = Vector{Float64}(undef, n)
     for i = 1:n
@@ -35,6 +38,7 @@ function attention(state::Gen.ParticleFilterState,
     traces = Gen.sample_unweighted_traces(state, n)
     vars = Vector{Float64}(undef, forward)
     s = Vector{Float64}(undef, forward)
+
     # forward step
     for i = t+1:t+forward
         target = query[i]

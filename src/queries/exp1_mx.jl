@@ -71,11 +71,20 @@ function extract_pos(t)
     reshape(all_pos, (1, size(all_pos)...))
 end
 
-function extract_congruent(t)
-    # println(get_choices(t))
-    ret = Gen.get_retval(t)
-    _, phys = ret[end]
-    reshape([phys[1]["congruent"]], (1,1,1))
+function extract_collision(t)
+    i,params = get_args(t)
+    addr = :chain => i => :graph => :collision
+    d = Vector{Float64}(undef, 1)
+    d[1] = Gen.get_choices(t)[addr]
+    reshape(d, (1,1,1))
+end
+
+function extract_sliding(t, obj::Int)
+    i,params = get_args(t)
+    addr = :chain => i => :graph => :self_edges => obj => :sliding
+    d = Vector{Float64}(undef, 1)
+    d[1] = Gen.get_choices(t)[addr]
+    reshape(d, (1,1,1))
 end
 
 function extract_phys(t, feat)
@@ -86,15 +95,13 @@ function extract_phys(t, feat)
     reshape(d, (1,1,1))
 end
 
-const static_latent_map = LatentMap(Dict(
-    :ramp_pos => extract_pos,
-    :ramp_density => t -> extract_phys(t, :density),
-))
 const seq_latent_map = LatentMap(Dict(
-    :ramp_pos => t -> reshape(extract_pos(t)[:, end, :, :], (1,1,2,3)),
+    :position => t -> reshape(extract_pos(t)[:, end, :, :], (1,1,2,3)),
+    :collision => extract_collision,
+    :ramp_sliding => t -> extract_sliding(t, 1),
+    :table_sliding => t -> extract_sliding(t, 2),
     :ramp_density => t -> extract_phys(t, :density),
-    :ramp_congruent => extract_congruent
-    # :ramp_switch => t -> extract_phys(t, :switch)
+    :ramp_friction => t -> extract_phys(t, :friction),
 ))
 const light_seq_map = LatentMap(Dict(
     :ramp_density => t -> extract_phys(t, :density),
@@ -112,29 +119,6 @@ function rejuv(trace)
     (trace, accepted) = Gen.mh(trace, Gen.select(addr))
     (trace, accepted) = Gen.mh(trace, exp1_mx_density, tuple())
     return trace
-end
-
-"""
-Static estimation of full posterior
-P(ramp_density | O1,..,ON, State_0)
-"""
-function static_inference(dpath::String, idx::Int, samples::Int,
-                          obs_noise::Float64;
-                          out::Union{String, Nothing} = nothing)
-    params, constraints, obs = load_trial(dpath, idx, obs_noise)
-    for o in obs
-         for (addr, submap) in get_submaps_shallow(o)
-             set_submap!(constraints, addr, submap)
-         end
-    end
-    args = (length(obs), params)
-    query = Gen_Compose.StaticQuery(static_latent_map,
-                                    mixture_generative_model,
-                                    args,
-                                    constraints)
-    proc = MetropolisHastings(samples, rejuv)
-    run_inference(query, proc, out)
-    physics.physics.clear_trace(params.client)
 end
 
 """

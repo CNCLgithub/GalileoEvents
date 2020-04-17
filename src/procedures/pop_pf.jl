@@ -66,7 +66,7 @@ function Gen_Compose.smc_step!(state::Gen.ParticleFilterState,
     # Resample before moving on...
     # TODO: Potentially bad for initial step
     Gen_Compose.resample!(proc, state, true)
-    Gen.maybe_resample!(state, ess_threshold=proc.ess, verbose=true)
+    Gen.maybe_resample!(state, ess_threshold=proc.ess)
 
     # update the state of the particles
     if isnothing(proc.proposal)
