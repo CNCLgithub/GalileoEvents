@@ -135,7 +135,7 @@ function seq_inference(dpath::String, idx::Int, particles::Int,
 
     lm = bo ? light_seq_map : seq_latent_map
     query = Gen_Compose.SequentialQuery(lm,
-                                        mixture_generative_model,
+                                        cp_generative_model,
                                         (0, params),
                                         constraints,
                                         args,

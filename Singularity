@@ -29,7 +29,8 @@ from: ubuntu:18.04
                      gettext \
                      gettext-base \
                      libgtk-3-dev \
-                     libglib2.0-dev
+                     libglib2.0-dev \
+                     xdg-utils
  apt-get clean
 
  # Install Julia

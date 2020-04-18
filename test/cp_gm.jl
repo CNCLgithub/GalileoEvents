@@ -12,7 +12,7 @@ function test(n::Int)
     cm[:initial_state => 2 => :init_pos] = init_pos[2]
     cm[:object_physics => 1 => :friction] = 0.2
     cm[:object_physics => 2 => :friction] = 0.2
-    trace, w = Gen.generate(mixture_generative_model,
+    trace, w = Gen.generate(cp_generative_model,
                             (n, params), cm)
     GalileoRamp.physics.physics.clear_trace(cid)
     return trace

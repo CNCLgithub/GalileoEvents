@@ -1,5 +1,5 @@
 
-export mixture_generative_model
+export cp_generative_model
 
 using LinearAlgebra:norm
 
@@ -115,7 +115,7 @@ end
 
 chain = Gen.Unfold(kernel)
 
-@gen (static) function mixture_generative_model(t::Int, params::Params)
+@gen (static) function cp_generative_model(t::Int, params::Params)
 
     args = fill(tuple(), params.n_objects)
     objects = @trace(map_object_prior(args), :object_physics)
