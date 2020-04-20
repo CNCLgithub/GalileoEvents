@@ -65,7 +65,7 @@ function Gen_Compose.smc_step!(state::Gen.ParticleFilterState,
                                query::StaticQuery)
     # Resample before moving on...
     # TODO: Potentially bad for initial step
-    Gen_Compose.resample!(proc, state, true)
+    Gen_Compose.resample!(proc, state)
     Gen.maybe_resample!(state, ess_threshold=proc.ess)
 
     # update the state of the particles
@@ -83,8 +83,10 @@ function Gen_Compose.smc_step!(state::Gen.ParticleFilterState,
 
     aux_contex = nothing
 
-    if !isnothing(proc.rejuvination)
-        aux_contex = Gen_Compose.rejuvinate!(proc, state)
+    if isnothing(proc.rejuvination)
+        aux_contex = nothing
+    else
+        aux_contex = proc.rejuvinate!(proc, state)
     end
 
     return aux_contex

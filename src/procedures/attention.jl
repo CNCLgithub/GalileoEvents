@@ -1,6 +1,5 @@
 export attention
 
-using Statistics
 using PhysicalConstants
 
 function entropy(ps::AbstractArray{Float64})

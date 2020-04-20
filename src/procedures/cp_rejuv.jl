@@ -1,6 +1,20 @@
 """ Defines a series of reversable jump proposal for changepoints"""
 
 
+@gen function incongruent_proposal(tr::Gen.Trace)
+    t, (_, prev_graph, _), _ = get_args(tr)
+    choices = get_choices(tr)
+    addr = :chain => t => :physics => 1 => :persistence => :density
+    if addr in choices
+        prev_dens = choices[addr]
+        {addr} ~ log_uniform(prev_dens, 0.2)
+    end
+end
+
+""" Proposes changepoints
+
+Only well defined for c < t and c == t
+"""
 @gen function cp_proposal(tr::Gen.Trace, ps::Vector{Float64})
     t, (_, prev_graph, _), _ = get_args(tr)
     state,graph,belief = last(ret_val(tr))
@@ -38,13 +52,40 @@ end
     @write_discrete_to_proposal(:cp, old_cp)
 end
 
-function cp_stats(chain::Gen_Compose::SeqPFChain)
+function extract_collisions(tr)
+    t,_ = get_args(tr)
+    choices = get_choices(tr)
+    cols = Vector{Bool}(undef, t)
+    for i = 1:t
+        addr = :chain => i => :graph => :collision
+        cols[i] = choices[addr]
+    end
+    reshape(cols, (1,t))
+end
 
-    parsed = current_step(chain)
-    prop_collided = mean(parsed["unweighted"][:collision])
+const latent_map = LatentMap(Dict(:collisions => extract_collisions))
+
+function cp_stats(state::Gen.ParticleFilterState)
+    traces = Gen.get_traces(state)
+    n = length(traces)
+    uw_traces = Gen.sample_unweighted_traces(state, n)
+    unweighted = map(latent_map, uw_traces)
+    estimates = merge(hcat, unweighted...)
+    prop_collided = mean(estimates[:collision])
+end
 
 
-
+function cp_rejuv(proc::PopParticleFilter,
+                  state::Gen.ParticleFilterState,
+                  p_cols::Vector{Float64})
+    n = length(state.traces)
+    p_col = cp_stats(state)
+    p_col[end] < 0.5 && return p_col_t
+    for i = 1:n
+        (state.traces[i],_) = mh(state.traces[i], cp_proposal,
+                                 (p_cols), cp_involution)
+        (state.traces[i],_) = mh(state.traces[i], incongruent_proposal, tuple())
+    end
 
 
 end

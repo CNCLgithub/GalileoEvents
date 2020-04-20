@@ -25,6 +25,7 @@ const incongruent_mat = Dict( "density" => (4.0, 20.0),
     physical_props = Dict("density" => dens,
                           "lateralFriction" => fric,
                           "restitution" => restitution,
+                          "persistent" => false,
                           "congruent" => congruent)
     return physical_props
 end
@@ -75,21 +76,37 @@ function process_change_points(prev::Tuple, current::Tuple)
     return fill(col_change, 2)
 end
 
+@gen function obj_persistence(prev_con, prev_dens)
+    switch = @trace(bernoulli(0.1), :switch)
+    p_con = (prev_con ⊻ switch) ? 0.9 : 0.1
+    congruent = @trace(bernoulli(p_con), :congruent)
+    if congruent
+        dens = prev_dens
+    else
+        dens = @trace(log_uniform(5.0, 6.0),  :density)
+    end
+    return (congruent, dens)
+end
+
 @gen function object_kernel(prev_phys::Dict{String, Float64},
                             col_edge::Bool)
 
     # slide_edge = edges[1]
     congruent = Bool(prev_phys["congruent"])
+    persistent = Bool(prev_phys["persistent"])
     prev_dens = prev_phys["density"]
 
-    # if collision change and incongruent, sample density
-    if !congruent & col_edge
-        dens = @trace(uniform(1E-4, 150),  :density)
+    # if collision change => "rematerialize"
+    if col_edge & !(persistent)
+        congruent, dens = @trace(obj_persistence(congruent, prev_dens),
+                                 :persistence)
+        persistent = true
     else
         dens = prev_dens
     end
     prev_fric = prev_phys["lateralFriction"]
     physical_props = Dict{String, Float64}(
+        "persistent" => persistent,
         "congruent" => congruent,
         "density" => dens,
         "lateralFriction" => prev_fric,
