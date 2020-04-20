@@ -1,10 +1,11 @@
 """ Defines a series of reversable jump proposal for changepoints"""
 
 
+# TODO make t the cp
 @gen function incongruent_proposal(tr::Gen.Trace)
     t, (_, prev_graph, _), _ = get_args(tr)
     choices = get_choices(tr)
-    addr = :chain => t => :physics => 1 => :persistence => :density
+    addr = :chain => cp => :physics => 1 => :persistence => :density
     if addr in choices
         prev_dens = choices[addr]
         {addr} ~ log_uniform(prev_dens, 0.2)
@@ -37,17 +38,17 @@ end
 @involution function cp_involution(model_args, proposal_args, proposal_retval)
     old_cp, new_cp = proposal_retval
     if new_cp < old_cp
-        for i = new_cp:old_cp
-            addr = :chain => i => :graph => :collision
-            @write_discrete_to_model(addr, true)
-        end
-        # @write_discrete_to_proposal(:cp, old_cp)
+        # (cp == t) -> (cp < t)
+        addr = :chain => new_cp => :graph => :collision
+        @write_discrete_to_model(addr, true)
+        # for i = new_cp:old_cp
+        #     @write_discrete_to_model(addr, true)
+        # end
     else
         for i = old_cp:(new_cp - 1)
             addr = :chain => i => :graph => :collision
             @write_discrete_to_model(addr, false)
         end
-        # @write_discrete_to_proposal(:cp, old_cp)
     end
     @write_discrete_to_proposal(:cp, old_cp)
 end
@@ -80,7 +81,8 @@ function cp_rejuv(proc::PopParticleFilter,
                   p_cols::Vector{Float64})
     n = length(state.traces)
     p_col = cp_stats(state)
-    p_col[end] < 0.5 && return p_col_t
+    # TODO fix logic here
+    min(p_col) < 0.5 && return p_col_t
     for i = 1:n
         (state.traces[i],_) = mh(state.traces[i], cp_proposal,
                                  (p_cols), cp_involution)

@@ -76,14 +76,17 @@ function process_change_points(prev::Tuple, current::Tuple)
     return fill(col_change, 2)
 end
 
+# TODO fix the ps
+# if switch, go to prior
 @gen function obj_persistence(prev_con, prev_dens)
     switch = @trace(bernoulli(0.1), :switch)
-    p_con = (prev_con ⊻ switch) ? 0.9 : 0.1
-    congruent = @trace(bernoulli(p_con), :congruent)
-    if congruent
-        dens = prev_dens
-    else
+    # p_con = (prev_con ⊻ switch) ? 0.9 : 0.1
+    # congruent = @trace(bernoulli(p_con), :congruent)
+    if switch
+        # TODO look at congruency
         dens = @trace(log_uniform(5.0, 6.0),  :density)
+    else
+        dens = prev_dens
     end
     return (congruent, dens)
 end
