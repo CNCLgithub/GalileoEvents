@@ -55,14 +55,6 @@ function plot_chain(df, col_t, path)
                           xintercept = col_t,
                           Gadfly.Geom.vline,
                           Scale.x_continuous(minvalue = 0, maxvalue = 120))
-    fric = Gadfly.plot(df,
-                          x = :t,
-                          y = :ramp_friction,
-                          Gadfly.Geom.histogram2d(xbincount=120,
-                                                  ybincount=20),
-                          xintercept = col_t,
-                          Gadfly.Geom.vline,
-                          Scale.x_continuous(minvalue = 0, maxvalue = 120))
     congruent = Gadfly.plot(df,
                           x = :t,
                           y = :ramp_congruent,
@@ -79,7 +71,7 @@ function plot_chain(df, col_t, path)
                             xintercept = col_t,
                             Gadfly.Geom.vline,
                             Scale.x_continuous(minvalue = 0, maxvalue = 120))
-    plot = vstack(density, fric, congruent, collision)
+    plot = vstack(density, congruent, collision)
     # log_scores |> PNG(path);
     plot |> PNG(path, √200cm, 20cm; dpi=96)
     # plot |> PNG(path)
@@ -96,8 +88,8 @@ function process_trial(particles::Int,
     dataset = GalileoRamp.galileo_ramp.Exp1Dataset(dataset_path)
     (scene, state, cols) = get(dataset, trial)
 
-    # trace_path = "/traces/$(dataset_name)_p_$(particles)_n_$(obs_noise)"
-    trace_path = "/traces/"
+    trace_path = "/traces/$(dataset_name)_p_$(particles)_n_$(obs_noise)"
+    # trace_path = "/traces/"
     chain_paths = glob("$(trial)_c_*.jld2", "$(trace_path)")
     println(chain_paths)
     if isempty(chain_paths)

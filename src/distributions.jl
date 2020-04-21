@@ -24,21 +24,23 @@ function Gen.random(::NoisyMatrix, mu::Array{U}, noise::T) where {U<:Real,T<:Rea
 end;
 
 # LogUniform proposals
+
+
 struct LogUniform <: Gen.Distribution{Float64} end
 
 const log_uniform = LogUniform()
 
-function Gen.logpdf(::LogUniform, x::Float64, mu::U, noise::T) where {U<:Real,T<:Real}
-    low = log(1 - noise)
-    high = log(1 + noise)
-    v = log(x) - log(mu)
+function Gen.logpdf(::LogUniform, x::Float64, low::T, high::T) where {U<:Real,T<:Real}
+    low = log(low)
+    high = log(high)
+    v = log(x)
     return (v >= low && v <= high) ? -log(high-low) : -Inf
-end;
+end
 
-function Gen.random(::LogUniform, mu::U, noise::T) where {U<:Real,T<:Real}
-    d = uniform(log(1 - noise), log(1 + noise))
-    return exp(d + log(mu))
-end;
+function Gen.random(::LogUniform, low::T, high::T) where {U<:Real,T<:Real}
+    d = uniform(log(low), log(high))
+    exp(d)
+end
 
 # Truncated Distributions
 struct TruncNorm <: Gen.Distribution{Float64} end

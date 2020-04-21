@@ -64,11 +64,9 @@ end
 ######################################################################
 
 function extract_pos(t)
-    # println(get_choices(t))
-    ret = Gen.get_retval(t)
-    all_pos = [reshape(state[1, :, :], (1,2,3)) for (state,_) in ret]
-    all_pos = vcat(all_pos...)
-    reshape(all_pos, (1, size(all_pos)...))
+    state,graph,belief = last(get_retval(t))
+    all_pos = reshape(state[1, :, :], (1,2,3))
+    reshape(all_pos, (1,1,2,3))
 end
 
 function extract_collision(t)
@@ -88,24 +86,25 @@ function extract_sliding(t, obj::Int)
 end
 
 function extract_phys(t, feat)
-    i,params = get_args(t)
-    addr = :chain => i => :physics => 1 => feat
+    state,graph,belief = last(get_retval(t))
     d = Vector{Float64}(undef, 1)
-    d[1] = Gen.get_choices(t)[addr]
+    # println(belief[1])
+    d[1] = belief[1][feat]
     reshape(d, (1,1,1))
 end
 
 const seq_latent_map = LatentMap(Dict(
-    :position => t -> reshape(extract_pos(t)[:, end, :, :], (1,1,2,3)),
+    :position => extract_pos,
     :collision => extract_collision,
     :ramp_sliding => t -> extract_sliding(t, 1),
     :table_sliding => t -> extract_sliding(t, 2),
-    :ramp_density => t -> extract_phys(t, :density),
-    :ramp_friction => t -> extract_phys(t, :friction),
+    :ramp_density => t -> extract_phys(t, "density"),
+    :ramp_congruent => t -> extract_phys(t, "congruent"),
+    # :ramp_friction => t -> extract_phys(t, :friction),
 ))
 const light_seq_map = LatentMap(Dict(
     :ramp_density => t -> extract_phys(t, :density),
-    :ramp_congruent => extract_congruent
+    # :ramp_congruent => extract_congruent
     # :ramp_switch => t -> extract_phys(t, :switch)
 ))
 
@@ -142,9 +141,13 @@ function seq_inference(dpath::String, idx::Int, particles::Int,
                                         obs)
 
     ess = particles * 0.5
-    proc= ParticleFilter(particles,
-                         ess,
-                         rejuv)
+    proc= PopParticleFilter(particles,
+                            ess,
+                            nothing,
+                            tuple(),
+                            cp_rejuv,
+                            # nothing,
+                            false)
 
     buffer_size = bo ? 120 : 40
     out = bo ? nothing : out

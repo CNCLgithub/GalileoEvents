@@ -26,7 +26,8 @@ const incongruent_mat = Dict( "density" => (4.0, 20.0),
                           "lateralFriction" => fric,
                           "restitution" => restitution,
                           "persistent" => false,
-                          "congruent" => congruent)
+                          "congruent" => congruent,
+                          "material" => material)
     return physical_props
 end
 
@@ -76,18 +77,23 @@ function process_change_points(prev::Tuple, current::Tuple)
     return fill(col_change, 2)
 end
 
-# TODO fix the ps
-# if switch, go to prior
-@gen function obj_persistence(prev_con, prev_dens)
+@gen function obj_persistence(prev_con::Bool, prev_dens::Float64,
+                              material::Int)
     switch = @trace(bernoulli(0.1), :switch)
-    # p_con = (prev_con ⊻ switch) ? 0.9 : 0.1
-    # congruent = @trace(bernoulli(p_con), :congruent)
     if switch
-        # TODO look at congruency
-        dens = @trace(log_uniform(5.0, 6.0),  :density)
+        if prev_con
+            # Con -> Incon
+            dens = @trace(log_uniform(0.01, 150.0),  :density)
+        else
+            # Incon -> Con
+            density = from_material_params(material)["density"]
+            dens = @trace(trunc_norm(density..., 0., 150.),
+                          :density)
+        end
     else
         dens = prev_dens
     end
+    congruent = prev_con ⊻ switch
     return (congruent, dens)
 end
 
@@ -97,11 +103,13 @@ end
     # slide_edge = edges[1]
     congruent = Bool(prev_phys["congruent"])
     persistent = Bool(prev_phys["persistent"])
+    material = Int(prev_phys["material"])
     prev_dens = prev_phys["density"]
 
-    # if collision change => "rematerialize"
+    # if collision change => "persist"
     if col_edge & !(persistent)
-        congruent, dens = @trace(obj_persistence(congruent, prev_dens),
+        congruent, dens = @trace(obj_persistence(congruent, prev_dens,
+                                                 material),
                                  :persistence)
         persistent = true
     else
@@ -111,6 +119,7 @@ end
     physical_props = Dict{String, Float64}(
         "persistent" => persistent,
         "congruent" => congruent,
+        "material" => material,
         "density" => dens,
         "lateralFriction" => prev_fric,
         "restitution" => prev_phys["restitution"])

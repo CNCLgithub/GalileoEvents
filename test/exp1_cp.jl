@@ -1,9 +1,9 @@
 # Inference Core - (src/queries/exp1.jl)
 # compile first pass
-seq_inference("/databases/exp1.hdf5", 1, 1, 0.1; out = nothing);
-@time seq_inference("/databases/exp1.hdf5", 1, 1, 0.1; out = nothing);
+# seq_inference("/databases/exp1.hdf5", 1, 1, 0.1; out = nothing);
+# @time seq_inference("/databases/exp1.hdf5", 1, 1, 0.1; out = nothing);
 @time seq_inference("/databases/exp1.hdf5", 1, 10, 0.1; out = nothing);
-@time seq_inference("/databases/exp1.hdf5", 1, 100, 0.1; out = nothing);
+# @time seq_inference("/databases/exp1.hdf5", 1, 100, 0.1; out = nothing);
 
 # # Inference api for BO - (src/queries/exp1.jl)
 # @time seq_inference("/databases/exp1.hdf5", 1, 1, 0.1; bo = true);
