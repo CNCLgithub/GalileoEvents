@@ -16,10 +16,8 @@ const incongruent_mat = Dict( "density" => (4.0, 20.0),
     prior = congruent ? from_mat : incongruent_mat
     density = prior["density"]
     friction = prior["lateralFriction"]
-    dens = @trace(trunc_norm(density[1], density[2], 0., 150.),
-                  :density)
-    fric = @trace(trunc_norm(friction[1], friction[2], 0., 1.),
-                  :friction)
+    dens = @trace(log_uniform(density[1], density[2]), :density)
+    fric = @trace(log_uniform(friction[1], friction[2]), :friction)
     restitution = @trace(uniform(0.8, 1.0), :restitution)
 
     physical_props = Dict("density" => dens,
@@ -79,22 +77,19 @@ end
 
 @gen function obj_persistence(prev_con::Bool, prev_dens::Float64,
                               material::Int)
-    switch = @trace(bernoulli(0.1), :switch)
-    if switch
-        if prev_con
-            # Con -> Incon
-            dens = @trace(log_uniform(0.01, 150.0),  :density)
-        else
-            # Incon -> Con
-            density = from_material_params(material)["density"]
-            dens = @trace(trunc_norm(density..., 0., 150.),
-                          :density)
-        end
-    else
+    p = prev_con ? 0.9 : 0.1
+    new_con = @trace(bernoulli(p), :congruent)
+    if new_con == prev_con
         dens = prev_dens
+    elseif prev_con
+        # Con -> Incon
+        dens = @trace(log_uniform(0.01, 150.0),  :density)
+    else
+        # Incon -> Con
+        density = from_material_params(material)["density"]
+        dens = @trace(log_uniform(density...), :density)
     end
-    congruent = prev_con ⊻ switch
-    return (congruent, dens)
+    return (new_con, dens)
 end
 
 @gen function object_kernel(prev_phys::Dict{String, Float64},

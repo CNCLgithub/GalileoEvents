@@ -57,6 +57,20 @@ function create_object(params, physical_props)
     obj::PyObject = shape("", params["dims"], physical_props)
 end
 
+function update_object!(params, physical_props)
+    cat = params["shape"]
+    if cat == "Block"
+        mass = denisty * product(params["dims"])
+    elseif cat == "Puck"
+        mass = product(params["dims"]) * pi * 0.25
+    else
+        mass = params["dims"][1]^3 * pi * (4.0/3.0)
+    end
+    physical_props["mass"] = mass
+    params["physics"] = physical_props
+    return nothing
+end
+
 function _init_state(object_prior::Vector,
                      object_phys,
                      init_pos)
@@ -115,8 +129,8 @@ function from_material_params(params::Dict)
         density_prior = (4., 4.)
         friction_prior = (0.3, 0.4)
     else
-        density_prior = (density_map[mat]..., 0.5)
-        friction_prior = (friction_map[mat]..., 0.2)
+        density_prior = (density_map[mat]*0.9, density_map[mat]*1.1)
+        friction_prior = (friction_map[mat]*0.9, friction_map[mat]*1.1)
     end
 
     return Dict("density" => density_prior,
@@ -131,11 +145,10 @@ end
 
 
 function update_world(params::Params, belief)
-    scene = Dict{String, PyDict}()
+    scene = Dict{String, Any}()
     for (i,k) = enumerate(["A", "B"])
-        obj::PyObject = create_object(params.object_prior[i],
-                                      belief[i])
-        scene[k] = obj.serialize()
+        update_object!(params.object_prior[i], belief[i])
+        scene[k] = params.object_prior[i]
     end
     @pycall physics.physics.update_world(params.client,
                                          params.object_map,

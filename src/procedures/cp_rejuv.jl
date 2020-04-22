@@ -5,14 +5,25 @@ export cp_rejuv
 """ Defines a series of reversable jump proposal for changepoints"""
 
 
-# TODO have more effecient cp lookup
+@gen function congruency_proposal(tr::Gen.Trace, cp::Int)
+    choices = get_choices(tr)
+    addr = :chain => cp => :physics => 1 => :persistence => :congruent
+    prev_choice = choices[addr]
+    return (prev_choice, addr)
+end
+
+@involution function congruency_involution(model_args, proposal_args, prop_ret)
+    prev_choice, addr = prop_ret
+    new_choice = !prev_choice
+    @write_discrete_to_model(addr, new_choice)
+end
+
 """
 Proposes a random walk for incongruent density.
 
 Only applies to traces with a detected change point
 """
 @gen function incongruent_proposal(tr::Gen.Trace, cp::Int)
-    t, _ = get_args(tr)
     choices = get_choices(tr)
     addr = :chain => cp => :physics => 1 => :persistence => :density
     if has_value(choices, addr)
@@ -123,6 +134,8 @@ function cp_rejuv(proc::PopParticleFilter,
                                      (p_cols,), cp_involution)
             cp = extract_cp(state.traces[i])
             if cp > 0
+                (state.traces[i],_) = mh(state.traces[i], congruency_proposal, (cp,),
+                                         congruency_involution)
                 (state.traces[i],_) = mh(state.traces[i], incongruent_proposal, (cp,))
             end
         end
