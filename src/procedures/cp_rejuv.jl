@@ -76,6 +76,7 @@ Only well defined for c < t and c == t
         # (cp == t) -> (cp < t)
         weights[1:(t-1)] = softmax(ps[1:(t-1)])
     else
+        #TODO look at everything but the old cp
         # (cp < t) -> (cp == t)
         weights[(old_cp+1):t] = softmax(ps[(old_cp+1):t])
     end
@@ -127,13 +128,14 @@ function cp_rejuv(proc::PopParticleFilter,
     t, _ = get_args(state.traces[1])
     a = max(1, t-10)
     rejuv_cp = maximum(p_cols[a:t]) >= 0.5
+    rejuv_cp = p_cols[t] > 0.1
     if rejuv_cp
         println("rejuv cp @ t $t")
         for i = 1:n
             (state.traces[i],_) = mh(state.traces[i], cp_proposal,
                                      (p_cols,), cp_involution)
             cp = extract_cp(state.traces[i])
-            if cp > 0
+            if (cp > 0)
                 (state.traces[i],_) = mh(state.traces[i], congruency_proposal, (cp,),
                                          congruency_involution)
                 (state.traces[i],_) = mh(state.traces[i], incongruent_proposal, (cp,))
