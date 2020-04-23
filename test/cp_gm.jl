@@ -20,5 +20,6 @@ end
 
 test(1);
 @time test(1);
+@time test(120);
 # trace = @time test(10);
 # # println(Gen.get_choices(trace))

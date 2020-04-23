@@ -57,17 +57,11 @@ function create_object(params, physical_props)
     obj::PyObject = shape("", params["dims"], physical_props)
 end
 
-function update_object!(params, physical_props)
+function update_object!(physical_props, params)
     cat = params["shape"]
-    if cat == "Block"
-        mass = denisty * product(params["dims"])
-    elseif cat == "Puck"
-        mass = product(params["dims"]) * pi * 0.25
-    else
-        mass = params["dims"][1]^3 * pi * (4.0/3.0)
-    end
-    physical_props["mass"] = mass
-    params["physics"] = physical_props
+    density = physical_props["density"]
+    volume = params["volume"]
+    physical_props["mass"] = density * volume
     return nothing
 end
 
@@ -92,17 +86,17 @@ function initialize_state(object_prior::Vector,
     phys = [d["physics"] for d in object_prior]
     _init_state(object_prior, phys, init_pos)::Dict
 end
-function initialize_state(scene::Dict)
-    new_d = Dict(
-        "ramp" => scene["ramp"],
-        "table" => scene["table"],
-        "initial_pos" => scene["initial_pos"],
-        "objects" => Dict(
-            "1" => scene["objects"]["A"],
-            "2" => scene["objects"]["B"],
-        )
-    )
-end
+# function initialize_state(scene::Dict)
+#     new_d = Dict(
+#         "ramp" => scene["ramp"],
+#         "table" => scene["table"],
+#         "initial_pos" => scene["initial_pos"],
+#         "objects" => Dict(
+#             "1" => scene["objects"]["A"],
+#             "2" => scene["objects"]["B"],
+#         )
+#     )
+# end
 
 # for inference
 obj_phys_type = Dict{String, Float64}
@@ -115,6 +109,7 @@ function initialize_state(params::Params,
     obj_v = Vector{obj_phys_type}(undef, params.n_objects)
     init_mat = zeros(4, 2, 3)
     for (o,k) in enumerate(["A", "B"])
+        params.object_prior[o] = objs[k]
         obj_v[o] = objs[k]["physics"]
         init_mat[1,o,:] = objs[k]["position"]
         init_mat[2,o,:] = objs[k]["orientation"]
@@ -144,11 +139,12 @@ function from_material_params(i::Int)
 end
 
 
-function update_world(params::Params, belief)
+function update_world!(belief,
+                       params::Params)
     scene = Dict{String, Any}()
     for (i,k) = enumerate(["A", "B"])
-        update_object!(params.object_prior[i], belief[i])
-        scene[k] = params.object_prior[i]
+        update_object!(belief[i], params.object_prior[i])
+        scene[k] = belief[i]
     end
     @pycall physics.physics.update_world(params.client,
                                          params.object_map,
@@ -164,7 +160,7 @@ end
 
 function forward_step(prev_state, params::Params,
                       belief)
-    update_world(params, belief)
+    update_world!(belief, params)
     state = step(params, prev_state)
     return state
 end

@@ -66,20 +66,13 @@ Only well defined for c < t and c == t
     state,graph,belief = last(rets)
     col1 = first(prev_graph)
     col2 = first(graph)
-    weights = zeros(t)
+    weights = deepcopy(ps)
     old_cp = extract_cp(tr)
     # println("prev cp: $(old_cp) @ t $(t)")
-    if old_cp == 0
-        # cp > t -> cp <= t
-        weights = softmax(ps)
-    elseif old_cp == t
-        # (cp == t) -> (cp < t)
-        weights[1:(t-1)] = softmax(ps[1:(t-1)])
-    else
-        #TODO look at everything but the old cp
-        # (cp < t) -> (cp == t)
-        weights[(old_cp+1):t] = softmax(ps[(old_cp+1):t])
+    if old_cp > 0
+        weights[old_cp] = 0
     end
+    weights = softmax(weights)
     new_cp = ({:cp} ~ categorical(weights))
     return (old_cp, new_cp)
 end
