@@ -180,6 +180,7 @@ function merge_evaluation(evals, responses)
         transform(model_mass_ratio = log.(:ramp_density_mean) + :v_m2) |>
         by([:scene,:cond], model_ratio_diff = diff(:model_mass_ratio),
            human_ratio_diff = diff(:avg_human_response))
+    println(results)
     rmse = fit_pf(results)
 end
 

@@ -4,7 +4,7 @@ from: ubuntu:18.04
 %environment
  export PATH=$PATH:/blender/blender
  export PATH=$PATH:/miniconda/bin
- export PATH=$PATH:/julia-1.3.1/bin
+ export PATH=$PATH:/julia-1.4.1/bin
 
 %runscript
   exec bash "$@"
@@ -34,10 +34,10 @@ from: ubuntu:18.04
  apt-get clean
 
  # Install Julia
- wget "https://julialang-s3.julialang.org/bin/linux/x64/1.3/julia-1.3.1-linux-x86_64.tar.gz" \
+ wget "https://julialang-s3.julialang.org/bin/linux/x64/1.4/julia-1.4.1-linux-x86_64.tar.gz" \
       -O "/julia.tar.gz"
  tar xvzf "/julia.tar.gz"
- ln -s /julia-1.3.1/bin/julia /usr/bin/julia
+ ln -s /julia-1.4.1/bin/julia /usr/bin/julia
  chmod +x /usr/bin/julia
 
  # Setup blender
