@@ -43,7 +43,7 @@ end
 function extract_cp(tr::Gen.Trace)
     t, _ = get_args(tr)
     choices = get_choices(tr)
-    cp = 0
+    cp = t + 1
     for i = 1:t
         addr = :chain => i => :graph => :collision
         if choices[addr]
@@ -57,7 +57,12 @@ end
 """
 Proposes changepoints
 
-Only well defined for c < t and c == t
+There are three jumps:
+
+1. there is no cp -> propose a cp in [1,t]
+2. there is a cp in [1,t] -> another cp in [1,t]
+3. there is a cp in [1,t] -> a cp > t
+
 """
 @gen function cp_proposal(tr::Gen.Trace, ps::Vector{Float64})
     t, _ = get_args(tr)
@@ -66,29 +71,31 @@ Only well defined for c < t and c == t
     state,graph,belief = last(rets)
     col1 = first(prev_graph)
     col2 = first(graph)
-    weights = deepcopy(ps)
+    weights = zeros(t + 1)
+    weights[1:t] = ps
+    weights[t+1] = prod(1.0 .- ps)
     old_cp = extract_cp(tr)
     # println("prev cp: $(old_cp) @ t $(t)")
-    if old_cp > 0
-        weights[old_cp] = 0
-    end
+    weights[old_cp] = 0
     weights = softmax(weights)
     new_cp = ({:cp} ~ categorical(weights))
-    return (old_cp, new_cp)
+    return (t, old_cp, new_cp)
 end
 
 @involution function cp_involution(model_args, proposal_args, proposal_retval)
-    old_cp, new_cp = proposal_retval
+    t, old_cp, new_cp = proposal_retval
     # println("$(old_cp) -> $(new_cp)")
-    addr = :chain => new_cp => :graph => :collision
-    @write_discrete_to_model(addr, true)
-    if (old_cp < new_cp) & old_cp > 0
+    @write_discrete_to_proposal(:cp, old_cp)
+    if new_cp <= t
+        addr = :chain => new_cp => :graph => :collision
+        @write_discrete_to_model(addr, true)
+    end
+    if old_cp < new_cp
         for i = old_cp:(new_cp - 1)
             addr = :chain => i => :graph => :collision
             @write_discrete_to_model(addr, false)
         end
     end
-    @write_discrete_to_proposal(:cp, old_cp)
 end
 
 function extract_collisions(tr)
@@ -125,13 +132,14 @@ function cp_rejuv(proc::PopParticleFilter,
     if rejuv_cp
         println("rejuv cp @ t $t")
         for i = 1:n
-            (state.traces[i],_) = mh(state.traces[i], cp_proposal,
-                                     (p_cols,), cp_involution)
-            cp = extract_cp(state.traces[i])
-            if (cp > 0)
-                (state.traces[i],_) = mh(state.traces[i], congruency_proposal, (cp,),
-                                         congruency_involution)
-                (state.traces[i],_) = mh(state.traces[i], incongruent_proposal, (cp,))
+            trace = state.traces[i]
+            (trace,_) = mh(trace, cp_proposal,
+                           (p_cols,), cp_involution)
+            cp = extract_cp(trace)
+            if cp < t+1
+                (trace,_) = mh(trace, congruency_proposal, (cp,),
+                               congruency_involution)
+                (trace,_) = mh(trace, incongruent_proposal, (cp,))
             end
         end
     end

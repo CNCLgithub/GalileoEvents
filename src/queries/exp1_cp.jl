@@ -103,22 +103,12 @@ const seq_latent_map = LatentMap(Dict(
     # :ramp_friction => t -> extract_phys(t, :friction),
 ))
 const light_seq_map = LatentMap(Dict(
-    :ramp_density => t -> extract_phys(t, :density),
-    # :ramp_congruent => extract_congruent
-    # :ramp_switch => t -> extract_phys(t, :switch)
+    :ramp_density => t -> extract_phys(t, "density"),
 ))
 
 ######################################################################
 # Inference Calls
 ######################################################################
-
-function rejuv(trace)
-    i,_ = get_args(trace)
-    addr = :chain => i => :physics => 1 => :switch
-    (trace, accepted) = Gen.mh(trace, Gen.select(addr))
-    (trace, accepted) = Gen.mh(trace, exp1_mx_density, tuple())
-    return trace
-end
 
 """
 Sequentail estimation of markovian posterior

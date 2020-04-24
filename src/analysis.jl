@@ -155,17 +155,19 @@ function merge_evaluation(evals, responses)
         df = DataFrame(ramp_density_mean = estimates,
                        cond = 0:3)
         if trial < 120
-            df.scene = Int(floor(trial/2))
-            df.congruent = (trial % 2) == 0
+            df[!, :scene] .= Int(floor(trial/2))
+            df[!, :congruent] .= (trial % 2) == 0
         else
-            df.scene = Int(trial - 60)
-            df.congruent = true
+            df[!, :scene] .= Int(trial - 60)
+            df[!, :congruent] .= true
         end
         results = vcat(results, df)
     end
     results = join(results, human_responses, on = [:scene, :congruent, :cond])
     results = @linq results |>
-        transform(avg_model_estimates = log.(:ramp_density_mean) + :v_m2)
+        transform(model_mass_ratio = log.(:ramp_density_mean) + :v_m2) |>
+        by(:scene, model_ratio_diff = diff(:model_mass_ratio),
+           human_ratio_diff = diff(:avg_human_response))
     rmse = fit_pf(results)
 end
 
@@ -174,15 +176,7 @@ Computes RMSE of model predictions on human judgements.
 The linear model is fit using the control trials.
 """
 function fit_pf(data)
-    println(data)
-    train = @linq data |>
-        where(:control .== 1)
-    println(train)
-    model = lm(@formula(avg_human_response ~ avg_model_estimates),
-               train)
-    test = @linq data |>
-        where(:control .!= 1)
-    preds = predict(model, test)
-    resids = (test.avg_human_response - preds).^2
-    rmse = sqrt((1.0/length(resids)) * sum(resids))
+    model = lm(@formula(human_ratio_diff ~ model_ratio_diff),
+               data)
+    deviance(model)
 end

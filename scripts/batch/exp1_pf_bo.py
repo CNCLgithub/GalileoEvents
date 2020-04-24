@@ -10,33 +10,6 @@ from bayes_opt.logger import JSONLogger
 from bayes_opt.event import Events
 
 
-
-# Use if workers crash
-# logging_config = {
-#     "version": 1,
-#     "handlers": {
-#         "file": {
-#             "class": "logging.handlers.RotatingFileHandler",
-#             "filename": "output.log",
-#             "level": "DEBUG",
-#         },
-#         "console": {
-#             "class": "logging.StreamHandler",
-#             "level": "DEBUG",
-#         }
-#     },
-#     "loggers": {
-#         "distributed.worker": {
-#             "level": "DEBUG",
-#             "handlers": ["file", "console"],
-#         },
-#         "distributed.scheduler": {
-#             "level": "DEBUG",
-#             "handlers": ["file", "console"],
-#         }
-#     }
-# }
-# dask.config.config['logging'] = logging_config
 import distributed
 from dask_jobqueue import SLURMCluster
 
@@ -70,8 +43,8 @@ def f(obs_noise, particles, client):
     g = lambda t: eval_trial(obs_noise, particles, t)
     tasks = client.map(g, trials, pure = False)
     results = client.gather(tasks)
-    rmse = client.submit(merge, results)
-    return rmse.result() * -1.0
+    deviance = client.submit(merge, results)
+    return deviance.result() * -1.0
 
 def initialize_dask(n):
 
@@ -139,7 +112,7 @@ def main():
 
     # Bounded region of parameter space
     pbounds = {
-        'obs_noise': (0.001, 1.0),
+        'obs_noise': (0.001, 0.1),
         'particles': (1, 100),
     }
     optimizer = BayesianOptimization(
