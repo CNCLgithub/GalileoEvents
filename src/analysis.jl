@@ -135,14 +135,25 @@ function digest_pf_trial(chain, tps)
 end
 
 function evaluation(obs_noise::Float64, particles::Int,
-                    dataset::String, trial::Int)
+                    dataset::String, trial::Int; 
+                    reps::Int = 1)
     d = galileo_ramp.Exp1Dataset(dataset)
     (_,_, tps) = get(d, trial)
-    chain = seq_inference(dataset, trial, particles, obs_noise;
-                          bo = true)
-    # returns tibble of: | :t | :ramp_density_mean | :log_score_mean
-    df = digest_pf_trial(chain, tps)
-    return (trial, df.ramp_density_mean)
+    for i = 1:reps
+        chain = seq_inference(dataset, trial, particles, obs_noise;
+                              bo = true)
+        # returns tibble of: | :t | :ramp_density_mean | :log_score_mean
+        tibble = digest_pf_trial(chain, tps)
+        tibble[!, :rep] .= i
+        if i == 1
+            df = tibble
+        else
+            df = vcat(df, tibble)
+        end 
+    end
+    df = @linq df |>
+         by(:t, rp_mean = mean(:ramp_density_mean))
+    return (trial, df.rp_mean)
 end
 
 function merge_evaluation(evals, responses)
@@ -164,9 +175,10 @@ function merge_evaluation(evals, responses)
         results = vcat(results, df)
     end
     results = join(results, human_responses, on = [:scene, :congruent, :cond])
+    println(results)
     results = @linq results |>
         transform(model_mass_ratio = log.(:ramp_density_mean) + :v_m2) |>
-        by(:scene, model_ratio_diff = diff(:model_mass_ratio),
+        by([:scene,:cond], model_ratio_diff = diff(:model_mass_ratio),
            human_ratio_diff = diff(:avg_human_response))
     rmse = fit_pf(results)
 end

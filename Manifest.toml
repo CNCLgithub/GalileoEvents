@@ -439,7 +439,9 @@ version = "0.11.2"
 
 [[Gen]]
 deps = ["DataStructures", "Distributions", "ForwardDiff", "FunctionalCollections", "JSON", "LinearAlgebra", "MacroTools", "Random", "ReverseDiff", "SpecialFunctions"]
-path = "/project/.julia/dev/Gen"
+git-tree-sha1 = "3fe4cde28e6a32456dac2acac094fed936dd97a0"
+repo-rev = "master"
+repo-url = "https://github.com/probcomp/Gen.git"
 uuid = "ea4f424c-a589-11e8-07c0-fd5c91b9da4a"
 version = "0.3.2"
 
@@ -523,9 +525,9 @@ version = "0.2.0"
 
 [[IRTools]]
 deps = ["InteractiveUtils", "MacroTools", "Test"]
-git-tree-sha1 = "1a4355e4b5b50be2311ebb644f34f3306dbd0410"
+git-tree-sha1 = "8845400bd2d9815d37720251f1b53d27a335e1f4"
 uuid = "7869d1d1-7146-5819-86e3-90919afe41df"
-version = "0.3.1"
+version = "0.3.2"
 
 [[ImageCore]]
 deps = ["Colors", "FixedPointNumbers", "Graphics", "MappedArrays", "MosaicViews", "OffsetArrays", "PaddedViews", "Reexport", "Requires"]
@@ -984,9 +986,9 @@ version = "1.2.0"
 
 [[Revise]]
 deps = ["CodeTracking", "Distributed", "FileWatching", "JuliaInterpreter", "LibGit2", "LoweredCodeUtils", "OrderedCollections", "Pkg", "REPL", "UUIDs", "Unicode"]
-git-tree-sha1 = "3c04c929f8720c2fabb12534cd102a2356a7705c"
+git-tree-sha1 = "cf9571d0dae31099c686d2ca73d5c759b9e76ad8"
 uuid = "295af30f-e4ad-537b-8983-00126c2a3abe"
-version = "2.5.4"
+version = "2.6.3"
 
 [[Rmath]]
 deps = ["Random", "Rmath_jll"]
@@ -1389,9 +1391,9 @@ version = "1.4.4+0"
 
 [[Zygote]]
 deps = ["AbstractFFTs", "ArrayLayouts", "DiffRules", "FillArrays", "ForwardDiff", "IRTools", "InteractiveUtils", "LinearAlgebra", "MacroTools", "NNlib", "NaNMath", "Random", "Requires", "SpecialFunctions", "Statistics", "ZygoteRules"]
-git-tree-sha1 = "014e1f208bd5b43e26448ca31d971053f58bc20a"
+git-tree-sha1 = "08ee0b7796c4c9ce644b9ecc326f3e047486baeb"
 uuid = "e88e6eb3-aa80-5325-afca-941959d7151f"
-version = "0.4.15"
+version = "0.4.17"
 
 [[ZygoteRules]]
 deps = ["MacroTools"]

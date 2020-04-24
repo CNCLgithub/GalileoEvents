@@ -21,12 +21,12 @@ responses = "/databases/exp1_avg_human_responses.csv"
 
 INIT_JULIA = True
 
-def eval_trial(obs_noise, particles, trial):
+def eval_trial(obs_noise, particles, trial, reps):
     """ Runs inference for a given trial"""
     # load julia modules for worker
     import galileo_ramp.execute
     gr = galileo_ramp.execute.initialize(INIT_JULIA)
-    return gr.evaluation(obs_noise, particles, dataset, trial)
+    return gr.evaluation(obs_noise, particles, dataset, trial, reps = reps)
 
 def merge(results):
     """ Merges inference runs and returns RMSE """
@@ -35,12 +35,12 @@ def merge(results):
     return gr.merge_evaluation(results, responses)
 
 
-trials = list(range(210))
-# trials = [0,1,120,121]
+# trials = list(range(120))
+trials = [0,1,2,3]
 
-def f(obs_noise, particles, client):
+def f(obs_noise, particles, client, reps):
     """ The black box function that returns RMSE """
-    g = lambda t: eval_trial(obs_noise, particles, t)
+    g = lambda t: eval_trial(obs_noise, particles, t, reps)
     tasks = client.map(g, trials, pure = False)
     results = client.gather(tasks)
     deviance = client.submit(merge, results)
@@ -103,17 +103,18 @@ def main():
     set_executable('/project/.pyenv/bin/python-jl')
     client = initialize_dask(len(trials))
 
+    reps = 2
     # run function once for julia JIT
-    f(0.1, 1, client)
+    f(0.1, 2, client, 1)
 
     # partial application of fitness function
-    def black_box(obs_noise = 0.1, particles = 1):
-        return f(obs_noise, int(particles), client)
+    def black_box(obs_noise = 0.1, particles = 10):
+        return f(obs_noise, int(particles), client, reps)
 
     # Bounded region of parameter space
     pbounds = {
         'obs_noise': (0.001, 0.1),
-        'particles': (1, 100),
+        # 'particles': (1, 100),
     }
     optimizer = BayesianOptimization(
         f=black_box,
