@@ -36,8 +36,7 @@ function load_trial(dpath::String, idx::Int, obs_noise::Float64)
         addr = :chain => t => :positions
         tcm[addr] = state["pos"][t, :, :]
         # keep table at gt
-        tcm[:chain => t => :physics => 2 => :switch] = false
-        tcm[:chain => t => :physics => 2 => :density] = objects["B"]["physics"]["density"]
+        # tcm[:chain => t => :physics => 2 => :persistence => :congruent] = true
         obs[t] = tcm
     end
 
@@ -95,7 +94,7 @@ end
 
 const seq_latent_map = LatentMap(Dict(
     :position => extract_pos,
-    :collision => extract_collision,
+    # :collision => extract_collision,
     :ramp_sliding => t -> extract_sliding(t, 1),
     :table_sliding => t -> extract_sliding(t, 2),
     :ramp_density => t -> extract_phys(t, "density"),

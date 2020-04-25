@@ -57,23 +57,19 @@ end
 
 map_sliding = Gen.Map(sliding)
 
-@gen (static) function graph_kernel(prev_state::Array{Float64, 3})
+@gen (static) function graph_kernel(prev_state::Array{Float64, 3},
+                                    prev_cp::Bool)
     col_p = collision_probability(prev_state[1, :, :])
-    collision = @trace(bernoulli(col_p), :collision)
+    cp_p = prev_cp ? 0.0 : col_p
+    cp = @trace(bernoulli(cp_p), :changepoint)
     args = [prev_state[4,1,:], prev_state[4,2,:]]
     slid = @trace(map_sliding(args), :self_edges)
-    ret = (collision, slid)
+    active_cp_edge = prev_cp | cp
+    ret = (active_cp_edge, slid)
     return ret
 end
 
-function process_change_points(prev::Tuple, current::Tuple)
-    col1, (slide_a1, slide_b1) = prev
-    col2, (slide_a2, slide_b2) = current
-    col_change = !col1 & col2
-    # ramp_change = slide_a1 ⊻ slide_a2
-    # table_change = slide_b1 ⊻ slide_b2
-    return fill(col_change, 2)
-end
+parse_graph(t::Tuple) = first(t)
 
 @gen function obj_persistence(prev_con::Bool, prev_dens::Float64,
                               material::Int)
@@ -125,8 +121,11 @@ map_obj_kernel = Gen.Map(object_kernel)
 
 @gen (static) function kernel(t::Int, prev::Tuple, params::Params)
     # prev_state, prev_graph, prev_phys = prev
-    graph = @trace(graph_kernel(prev[1]), :graph)
-    args = process_change_points(prev[2], graph)
+    prev_cp = parse_graph(prev[2])
+    graph = @trace(graph_kernel(prev[1], prev_cp), :graph)
+    active_cp_edge = parse_graph(graph)
+    cp_edge_change = !prev_cp & active_cp_edge
+    args = fill(cp_edge_change, 2)
     belief = @trace(map_obj_kernel(prev[3], args),
                     :physics)
     next_state = forward_step(prev[1], params, belief)
