@@ -41,7 +41,7 @@ map_init_state = Gen.Map(state_prior)
 function collision_probability(positions::Matrix{Float64})
     l2 = norm(positions[1, :] - positions[2,:])
     # p = min(exp((-l2)), 0.99)
-    p = l2 < 0.3 ? 0.99 : 0.01
+    p = l2 < 0.2 ? 0.99 : 0.01
     # println("l2 $(l2), p $(p)")
     return p
 end
