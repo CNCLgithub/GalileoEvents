@@ -69,10 +69,8 @@ function extract_pos(t)
 end
 
 function extract_collision(t)
-    i,params = get_args(t)
-    addr = :chain => i => :graph => :collision
     d = Vector{Float64}(undef, 1)
-    d[1] = Gen.get_choices(t)[addr]
+    d[1] = extract_cp(t)
     reshape(d, (1,1,1))
 end
 
@@ -94,7 +92,7 @@ end
 
 const seq_latent_map = LatentMap(Dict(
     :position => extract_pos,
-    # :collision => extract_collision,
+    :changepoint => extract_collision,
     :ramp_sliding => t -> extract_sliding(t, 1),
     :table_sliding => t -> extract_sliding(t, 2),
     :ramp_density => t -> extract_phys(t, "density"),
