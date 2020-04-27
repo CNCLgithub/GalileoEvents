@@ -64,12 +64,12 @@ function plot_chain(df, col_t, path)
                           Gadfly.Geom.vline,
                           Scale.x_continuous(minvalue = 0, maxvalue = 120))
     collision = Gadfly.plot(df,
-                            # x = :changepoint,
-                            # Gadfly.Geom.histogram(),
-                            x = :t,
-                            y = :changepoint,
-                            Gadfly.Geom.histogram2d(ybincount =120,
-                                                    xbincount=120),
+                            x = :changepoint,
+                            Gadfly.Geom.histogram(),
+                            # x = :t,
+                            # y = :changepoint,
+                            # Gadfly.Geom.histogram2d(ybincount =120,
+                            #                         xbincount=120),
                             xintercept = col_t,
                             Gadfly.Geom.vline,
                             Scale.x_continuous(minvalue = 0, maxvalue = 120))

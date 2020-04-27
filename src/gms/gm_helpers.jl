@@ -86,17 +86,6 @@ function initialize_state(object_prior::Vector,
     phys = [d["physics"] for d in object_prior]
     _init_state(object_prior, phys, init_pos)::Dict
 end
-# function initialize_state(scene::Dict)
-#     new_d = Dict(
-#         "ramp" => scene["ramp"],
-#         "table" => scene["table"],
-#         "initial_pos" => scene["initial_pos"],
-#         "objects" => Dict(
-#             "1" => scene["objects"]["A"],
-#             "2" => scene["objects"]["B"],
-#         )
-#     )
-# end
 
 # for inference
 obj_phys_type = Dict{String, Float64}
@@ -106,6 +95,7 @@ function initialize_state(params::Params,
     scene = _init_state(params.object_prior, object_phys,
                         init_pos)
     objs = scene["objects"]
+    objs["B"]["physics"]["persistent"] = true
     obj_v = Vector{obj_phys_type}(undef, params.n_objects)
     init_mat = zeros(4, 2, 3)
     for (o,k) in enumerate(["A", "B"])

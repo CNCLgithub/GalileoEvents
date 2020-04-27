@@ -68,9 +68,11 @@ function extract_pos(t)
     reshape(all_pos, (1,1,2,3))
 end
 
-function extract_collision(t)
+function extract_collision(tr)
+    t,params = get_args(tr)
     d = Vector{Float64}(undef, 1)
-    d[1] = extract_cp(t)
+    cp = extract_cp(tr)
+    d[1] = cp > t ? NaN : cp
     reshape(d, (1,1,1))
 end
 
@@ -82,11 +84,10 @@ function extract_sliding(t, obj::Int)
     reshape(d, (1,1,1))
 end
 
-function extract_phys(t, feat)
+function extract_phys(t, idx, feat)
     state,graph,belief = last(get_retval(t))
     d = Vector{Float64}(undef, 1)
-    # println(belief[1])
-    d[1] = belief[1][feat]
+    d[1] = belief[idx][feat]
     reshape(d, (1,1,1))
 end
 
@@ -95,9 +96,9 @@ const seq_latent_map = LatentMap(Dict(
     :changepoint => extract_collision,
     :ramp_sliding => t -> extract_sliding(t, 1),
     :table_sliding => t -> extract_sliding(t, 2),
-    :ramp_density => t -> extract_phys(t, "density"),
-    :ramp_congruent => t -> extract_phys(t, "congruent"),
-    # :ramp_friction => t -> extract_phys(t, :friction),
+    :ramp_density => t -> extract_phys(t, 1, "density"),
+    :ramp_congruent => t -> extract_phys(t, 1, "congruent"),
+    :table_density => t -> extract_phys(t, 2, "density"),
 ))
 const light_seq_map = LatentMap(Dict(
     :ramp_density => t -> extract_phys(t, "density"),

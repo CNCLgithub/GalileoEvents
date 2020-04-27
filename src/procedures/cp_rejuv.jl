@@ -5,20 +5,6 @@ export cp_rejuv,
 
 """ Defines a series of reversable jump proposal for changepoints"""
 
-
-@gen function congruency_proposal(tr::Gen.Trace, cp::Int)
-    choices = get_choices(tr)
-    addr = :chain => cp => :physics => 1 => :persistence => :congruent
-    prev_choice = choices[addr]
-    return (prev_choice, addr)
-end
-
-@involution function congruency_involution(model_args, proposal_args, prop_ret)
-    prev_choice, addr = prop_ret
-    new_choice = !prev_choice
-    @write_discrete_to_model(addr, new_choice)
-end
-
 """
 Proposes a random walk for incongruent density.
 
@@ -65,90 +51,6 @@ There are three jumps:
 3. there is a cp in [1,t] -> a cp > t
 
 """
-@gen function cp_proposal(tr::Gen.Trace, ps::Vector{Float64})
-    t, _ = get_args(tr)
-    current_cp = extract_cp(tr)
-    weights = deepcopy(ps[1:end-1])
-    future_weight = last(ps)
-    nonzero = findall(!iszero, weights)
-    n = length(nonzero)
-    weights[nonzero]  = weights[nonzero] .+ (future_weight/ n)
-    new_cp = ({:cp} ~ categorical(weights))
-    println("$(current_cp) -> $(new_cp) @ t $(t) | w $(weights[current_cp]) -> $(weights[new_cp])")
-    return (t, current_cp, new_cp)
-end
-
-# function cp_involution(trace, fwd_choices, fwd_ret,
-#                        proposal_args::Tuple;
-#                        check = false)
-
-#     choices = get_choices(trace)
-#     (t, current_cp, new_cp) = fwd_ret
-#     println("invo $current_cp -> $new_cp")
-
-#     bwd_choices = choicemap()
-#     bwd_choices[:cp] = current_cp
-#     constraints = choicemap()
-
-#     if current_cp != new_cp
-#         constraints[:chain => current_cp => :graph => :changepoint] = false
-#         constraints[:chain => new_cp => :graph => :changepoint] = true
-
-#         set_submap!(constraints, :chain => new_cp => :physics,
-#                     get_submap(choices, :chain => current_cp => :physics))
-#         set_submap!(constraints, :chain => current_cp => :physics,
-#                     get_submap(choices, :chain => new_cp => :physics))
-#     end
-
-
-
-
-#     model_args = get_args(trace)
-#     (new_trace, weight, _, dis) = update(trace, model_args, (NoChange(),), constraints)
-
-#     # println("choices")
-#     # display(get_submap(choices, :chain => current_cp => :physics))
-#     # display(get_submap(choices, :chain => new_cp => :physics))
-#     println("constraints")
-#     display(constraints)
-#     println("bwd choices")
-#     display(bwd_choices)
-#     println("weight $weight")
-#     println("discard")
-#     display(dis)
-#     # (bwd_score, bwd_ret) = assess(cp_proposal, (new_trace, proposal_args...), bwd_choices)
-#     # println("bwd score $bwd_score")
-#     # println(bwd_ret)
-#     (new_trace, bwd_choices, weight)
-
-# end
-
-@involution function cp_involution(model_args, proposal_args, proposal_retval)
-    (t, current_cp) = proposal_retval
-    new_cp = @read_discrete_from_proposal(:cp)
-    println("invo $current_cp -> $new_cp")
-
-    @copy_model_to_model(:chain => current_cp => :physics,
-                         :chain => new_cp => :physics)
-    @copy_model_to_model(:chain => new_cp => :physics,
-                         :chain => current_cp => :physics)
-    @write_discrete_to_model(:chain => current_cp => :graph => :changepoint,
-                             false)
-    @write_discrete_to_model(:chain => new_cp => :graph => :changepoint,
-                             true)
-    @write_discrete_to_proposal(:cp, current_cp)
-end
-
-# function extract_collisions(tr)
-#     t,_ = get_args(tr)
-#     choices = get_choices(tr)
-#     cols = Vector{Float64}(undef, t)
-#     for i = 1:t
-#         addr = :chain => i => :graph => :collision
-#         cols[i] = choices[addr]
-#     end
-#     reshape(cols, (1,t))
-# end
 
 function cp_stats(state::Gen.ParticleFilterState)
     traces = Gen.get_traces(state)
@@ -172,21 +74,16 @@ function cp_rejuv(proc::PopParticleFilter,
     t = length(p_cols) - 1
     # ensure that at least some particles detect collision on [1,t]
     a = max(1, t-10)
-    println(p_cols[a:t+1])
-    rejuv_cp = sum(p_cols[a:t]) >= 0.3
+    # println(p_cols[a:t])
+    rejuv_cp = maximum(p_cols[a:t]) >= 0.11
     if rejuv_cp & (t > 1)
         println("rejuv cp @ t $t")
         for i = 1:n
             trace = state.traces[i]
             cp = extract_cp(trace)
             if cp < t+1
-                (trace,_) = mh(trace, cp_proposal,
-                               (p_cols,), cp_involution,
-                               )
-                               # check = true)
-                cp = extract_cp(trace)
-                (trace,_) = mh(trace, congruency_proposal, (cp,),
-                               congruency_involution)
+                addr = :chain => cp => :physics => 1 => :persistence => :congruent
+                (trace,_) = mh(trace, Gen.select(addr))
                 (trace,_) = mh(trace, incongruent_proposal, (cp,))
             end
             state.traces[i] = trace
