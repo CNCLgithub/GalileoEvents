@@ -1,3 +1,4 @@
+using CSV
 using ArgParse
 using GalileoRamp
 using Base.Filesystem
@@ -47,14 +48,14 @@ function main()
     particles = args["particles"]
     obs_noise = args["obs_noise"]
     out_dir = "/traces/$(dataset_name)_p_$(particles)_n_$(obs_noise)"
-    for chain in 1:args["chains"]
-        out = "$out_dir/$(idx)_c_$(chain).jld2"
-        isdir(out_dir) || mkdir(out_dir)
-        args["restart"] && isfile(out) && rm(out)
+    df = evaluation(obs_noise, particles,
+                    args["dataset"], idx,
+                    chains = args["chains"])
 
-        seq_inference(args["dataset"], idx, args["particles"],
-                      args["obs_noise"]; out = out, resume = false)
-    end
+    isdir(out_dir) || mkdir(out_dir)
+    out = "$out_dir/$(idx).csv"
+    args["restart"] && isfile(out) && rm(out)
+    CSV.write(out, df)
     return nothing
 end
 

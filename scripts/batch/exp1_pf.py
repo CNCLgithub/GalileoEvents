@@ -37,7 +37,8 @@ def main():
     dataset = Exp1Dataset(args.src)
 
 
-    njobs = len(dataset)
+    # we only need the test trials
+    njobs = 120
 
     tasks = [(str(i),) for i in range(njobs)]
     kwargs = ['--particles {0:d}'.format(args.particles),

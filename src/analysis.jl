@@ -131,29 +131,33 @@ function digest_pf_trial(chain, tps)
     df = to_frame(extracted["log_scores"], extracted["unweighted"])
     df = df[in.(df.t, Ref(tps)),:]
     sort!(df, :t)
-    aggregate(groupby(df, :t), mean)
 end
 
 function evaluation(obs_noise::Float64, particles::Int,
                     dataset::String, trial::Int; 
-                    reps::Int = 1)
+                    chains::Int = 1,
+                    bo_ret = false)
     d = galileo_ramp.Exp1Dataset(dataset)
     (_,_, tps) = get(d, trial)
-    for i = 1:reps
+    for i = 1:chains
         chain = seq_inference(dataset, trial, particles, obs_noise;
                               bo = true)
         # returns tibble of: | :t | :ramp_density_mean | :log_score_mean
         tibble = digest_pf_trial(chain, tps)
-        tibble[!, :rep] .= i
+        tibble[!, :chain] .= i
         if i == 1
             df = tibble
         else
             df = vcat(df, tibble)
         end 
     end
-    df = @linq df |>
-         by(:t, rp_mean = mean(:ramp_density_mean))
-    return (trial, df.rp_mean)
+    if bo_ret
+        df = @linq df |>
+            by(:t, rp_mean = mean(:ramp_density))
+        return (trial, df.rp_mean)
+    else
+        return df
+    end
 end
 
 function merge_evaluation(evals, responses)
