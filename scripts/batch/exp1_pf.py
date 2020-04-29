@@ -55,7 +55,7 @@ def main():
     }
     path = '/project/scripts/inference/exp1_pf.jl'
     sys_img = '/project/sys_galileo_ramp.so'
-    func = 'bash {0!s}/run.sh julia {1!s}'
+    func = 'bash {0!s}/run.sh julia -J sys.so --compiled-modules=no {1!s}'
     func = func.format(os.getcwd(), path)
     # func = 'bash {0!s}/run.sh julia --sysimage {1!s} {2!s}'
     # func = func.format(os.getcwd(), sys_img, path)

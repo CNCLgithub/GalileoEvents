@@ -35,8 +35,8 @@ def merge(results):
     return gr.merge_evaluation(results, responses)
 
 
-# trials = list(range(120))
-trials = [0,1,2,3]
+trials = list(range(120))
+# trials = [0,1,2,3]
 
 def f(obs_noise, particles, client, reps):
     """ The black box function that returns RMSE """
@@ -99,21 +99,19 @@ def initialize_dask(n):
     return distributed.Client(cluster)
 
 def main():
-    # print(sys.executable)
-    set_executable('/project/.pyenv/bin/python-jl')
     client = initialize_dask(len(trials))
 
-    reps = 2
+    reps = 5
     # run function once for julia JIT
     f(0.1, 2, client, 1)
 
     # partial application of fitness function
-    def black_box(obs_noise = 0.1, particles = 10):
+    def black_box(obs_noise = 0.1, particles = 100):
         return f(obs_noise, int(particles), client, reps)
 
     # Bounded region of parameter space
     pbounds = {
-        'obs_noise': (0.001, 0.1),
+        'obs_noise': (0.001, 0.05),
         # 'particles': (1, 100),
     }
     optimizer = BayesianOptimization(

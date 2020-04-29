@@ -25,8 +25,8 @@ function process_trial(dataset_path::String,
     sort(df, :t)
 end
 
-particles = [4, 10, 300];
-noises = [0.01, 0.02, 0.05];
+particles = [100];
+noises = [0.01, 0.0362, 0.05];
 let model = 1
 dfs = []
 for ps in particles

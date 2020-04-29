@@ -101,7 +101,7 @@ const seq_latent_map = LatentMap(Dict(
     :table_density => t -> extract_phys(t, 2, "density"),
 ))
 const light_seq_map = LatentMap(Dict(
-    :ramp_density => t -> extract_phys(t, "density"),
+    :ramp_density => t -> extract_phys(t, 1, "density"),
 ))
 
 ######################################################################
