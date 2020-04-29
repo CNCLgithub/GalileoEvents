@@ -38,15 +38,14 @@ end
 
 map_init_state = Gen.Map(state_prior)
 
-function collision_probability(positions::Matrix{Float64})
-    l2 = norm(positions[1, :] - positions[2,:])
-    # p = min(exp((-l2)), 0.99)
-    p = l2 < 0.3 ? 0.99 : 0.00
-    # println("l2 $(l2), p $(p)")
+function collision_probability(positions::T, dims::T) where T<:Matrix{Float64}
+    dx = dims[:, 1] ./ 2.0
+    l2 = norm(positions[1, 1] + dx[1] - positions[2,1] - dx[2])
+    p = l2 < 0.35 ? 0.99 : 0.00
+    # println("a_x $(positions[1,1]) l2 $(l2), p $(p)")
     return p
 end
 function sliding_probability(lin_vels::Vector{Float64})
-    # println("vel: $(lin_vels[1])")
     (abs(lin_vels[1]) > 1E-3) ? 0.95 : 0.01
 end
 
@@ -59,8 +58,10 @@ end
 map_sliding = Gen.Map(sliding)
 
 @gen (static) function graph_kernel(prev_state::Array{Float64, 3},
-                                    prev_cp::Bool)
-    col_p = collision_probability(prev_state[1, :, :])
+                                    prev_cp::Bool,
+                                    dims::Matrix{Float64})
+    col_p = collision_probability(prev_state[1, :, :],
+                                  dims)
     cp_p = prev_cp ? 0.0 : col_p
     cp = @trace(bernoulli(cp_p), :changepoint)
     args = [prev_state[4,1,:], prev_state[4,2,:]]
@@ -120,10 +121,19 @@ end
 
 map_obj_kernel = Gen.Map(object_kernel)
 
+function extract_dims(params::Params)
+    dims = Matrix{Float64}(undef, 2, 3)
+    for i = 1:length(params.object_prior)
+        dims[i, :] = params.object_prior[i]["dims"]
+    end
+    return dims
+end
+
 @gen (static) function kernel(t::Int, prev::Tuple, params::Params)
     # prev_state, prev_graph, prev_phys = prev
     prev_cp = parse_graph(prev[2])
-    graph = @trace(graph_kernel(prev[1], prev_cp), :graph)
+    dims = extract_dims(params)
+    graph = @trace(graph_kernel(prev[1], prev_cp, dims), :graph)
     active_cp_edge = parse_graph(graph)
     cp_edge_change = !prev_cp & active_cp_edge
     args = fill(cp_edge_change, 2)
