@@ -13,6 +13,6 @@
 # df = @time to_frame(extracted["log_scores"], extracted["unweighted"]);
 # df = @time digest_pf_trial(results, [60, 70, 80, 90])
 # println(df)
-a = @time evaluation(0.1, 10, "/databases/exp1.hdf5", 0, reps = 2);
-b = @time evaluation(0.1, 10, "/databases/exp1.hdf5", 1, reps = 2);
+a = @time evaluation(0.1, 10, "/databases/exp1.hdf5", 0, chains = 2, bo_ret = true);
+b = @time evaluation(0.1, 10, "/databases/exp1.hdf5", 1, chains = 2, bo_ret = true);
 rmse = merge_evaluation([a,b], "/databases/exp1_avg_human_responses.csv")

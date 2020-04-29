@@ -17,7 +17,7 @@ end
 dataset_path = "/databases/exp1.hdf5"
 dataset = GalileoRamp.galileo_ramp.Exp1Dataset(dataset_path)
 particles = [100];
-noises = [0.01, 0.0362, 0.05];
+noises = [0.05, 0.075, 0.1];
 let model = 1
 dfs = []
 for ps in particles
