@@ -114,8 +114,8 @@ function from_material_params(params::Dict)
         density_prior = (4., 4.)
         friction_prior = (0.3, 0.4)
     else
-        density_prior = (density_map[mat]*0.9, density_map[mat]*1.1)
-        friction_prior = (friction_map[mat]*0.9, friction_map[mat]*1.1)
+        density_prior = (density_map[mat]*0.5, density_map[mat]*1.5)
+        friction_prior = (friction_map[mat]*0.5, friction_map[mat]*1.5)
     end
 
     return Dict("density" => density_prior,

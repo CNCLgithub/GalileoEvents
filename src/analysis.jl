@@ -12,6 +12,7 @@ using DataFrames
 using DataFramesMeta
 using StatsModels
 using GLM
+using UnicodePlots
 using Base.Iterators:flatten
 
 function extract_mh_chain(path::String)
@@ -169,6 +170,7 @@ function merge_evaluation(evals, responses)
         trial, estimates = evals[tidx]
         df = DataFrame(ramp_density_mean = estimates,
                        cond = 0:3)
+        df[!, :trial] .= trial
         if trial < 120
             df[!, :scene] .= Int(floor(trial/2))
             df[!, :congruent] .= (trial % 2) == 0
@@ -179,13 +181,7 @@ function merge_evaluation(evals, responses)
         results = vcat(results, df)
     end
     results = join(results, human_responses, on = [:scene, :congruent, :cond])
-    println(results)
-    results = @linq results |>
-        transform(model_mass_ratio = log.(:ramp_density_mean) + :v_m2) |>
-        by([:scene,:cond], model_ratio_diff = diff(:model_mass_ratio),
-           human_ratio_diff = diff(:avg_human_response))
-    println(results)
-    rmse = fit_pf(results)
+    return results
 end
 
 """
@@ -193,7 +189,39 @@ Computes RMSE of model predictions on human judgements.
 The linear model is fit using the control trials.
 """
 function fit_pf(data)
-    model = lm(@formula(human_ratio_diff ~ model_ratio_diff),
-               data)
-    deviance(model)
+    df = @linq data |>
+        where(:cond .> 0) |>
+        transform(model_mass_ratio = log.(:ramp_density_mean) + :v_m2) |>
+        by([:scene,:cond], model_ratio_diff = diff(:model_mass_ratio),
+           human_ratio_diff = diff(:avg_human_response),
+           gt_ratio_diff = diff(:gt_mass_ratio))
+    heavy = lm(@formula(human_ratio_diff ~ model_ratio_diff),
+               @where(df, :gt_ratio_diff .> 0))
+    light = lm(@formula(human_ratio_diff ~ model_ratio_diff),
+               @where(df, :gt_ratio_diff .< 0))
+    plt = densityplot(df[!, :cond],
+                      df[!, :human_ratio_diff],
+                      name = "human")
+    display(plt)
+    plt = densityplot(df[!, :cond],
+                      df[!, :model_ratio_diff],
+                      name = "model")
+    display(plt)
+    # plt = scatterplot(data[!, :cond],
+    #                   data[!, :human_ratio_diff],
+    #                   name = "human")
+    # scatterplot!(plt,
+    #              data[!, :cond],
+    #              predict(model),
+    #              name = "predict")
+    # scatterplot!(plt,
+    #              data[!, :cond],
+    #              data[!, :model_ratio_diff],
+    #              name = "gt")
+    display(heavy)
+    display(light)
+    println(r2(heavy))
+    println(r2(light))
+    return (df, heavy, light)
+
 end
