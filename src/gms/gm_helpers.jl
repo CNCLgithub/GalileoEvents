@@ -3,7 +3,6 @@ export GMParams,
     Params,
     create_object,
     initialize_state,
-    from_material_params,
     forward_step
 
 
@@ -108,25 +107,6 @@ function initialize_state(params::Params,
     return (init_mat, graph, obj_v)
 end
 
-function from_material_params(params::Dict)
-    mat = params["appearance"]
-    if isnothing(mat)
-        density_prior = (4., 4.)
-        friction_prior = (0.3, 0.4)
-    else
-        density_prior = (density_map[mat]*0.5, density_map[mat]*1.5)
-        friction_prior = (friction_map[mat]*0.5, friction_map[mat]*1.5)
-    end
-
-    return Dict("density" => density_prior,
-                "lateralFriction" => friction_prior)
-end
-
-
-function from_material_params(i::Int)
-    mat = Dict("appearance" => mat_keys[i])
-    return from_material_params(mat)
-end
 
 
 function update_world!(belief,

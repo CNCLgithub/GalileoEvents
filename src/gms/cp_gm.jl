@@ -9,9 +9,22 @@ const material_ps = ones(3) ./ 3
 const incongruent_mat = Dict( "density" => (4.0, 20.0),
                               "lateralFriction" => (0.3, 0.5))
 
+function cp_material_params(params::Dict)
+    mat = params["appearance"]
+    density_prior = (density_map[mat]*0.5, density_map[mat]*1.5)
+    friction_prior = (friction_map[mat]*0.5, friction_map[mat]*1.5)
+    return Dict("density" => density_prior,
+                "lateralFriction" => friction_prior)
+end
+
+function cp_material_params(i::Int)
+    mat = Dict("appearance" => mat_keys[i])
+    return cp_material_params(mat)
+end
+
 @gen (static) function physics_prior()
     material = @trace(categorical(material_ps), :material)
-    from_mat = from_material_params(material)
+    from_mat = cp_material_params(material)
     congruent = @trace(bernoulli(0.9), :congruent)
     prior = congruent ? from_mat : incongruent_mat
     density = prior["density"]
@@ -84,7 +97,7 @@ parse_graph(t::Tuple) = first(t)
         dens = @trace(log_uniform(0.01, 150.0),  :density)
     else
         # Incon -> Con
-        density = from_material_params(material)["density"]
+        density = cp_material_params(material)["density"]
         dens = @trace(log_uniform(density...), :density)
     end
     return (new_con, dens)
@@ -93,7 +106,6 @@ end
 @gen function object_kernel(prev_phys::Dict{String, Float64},
                             col_edge::Bool)
 
-    # slide_edge = edges[1]
     congruent = Bool(prev_phys["congruent"])
     persistent = Bool(prev_phys["persistent"])
     material = Int(prev_phys["material"])

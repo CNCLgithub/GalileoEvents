@@ -73,7 +73,7 @@ function visualize(gt,
     mov = Movie(750, 300, "visualization", 1:scene_length)
     backdrop(scene, framenumber) = background("white")
     function frame(scene, framenumber)
-        origin()
+        Luxor.origin()
         translate(Point(0.,100.))
         draw_groundtruth(gt, observations[framenumber, :, :])
         draw_predictions(predictions[framenumber, :, :, :], false)
