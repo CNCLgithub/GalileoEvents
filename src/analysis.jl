@@ -134,8 +134,9 @@ function digest_pf_trial(chain, tps)
     sort!(df, :t)
 end
 
-function evaluation(obs_noise::Float64, particles::Int,
-                    dataset::String, trial::Int; 
+function evaluation(dataset::String, trial::Int;
+                    obs_noise::Float64 = 0.1,
+                    particles::Int = 10,
                     chains::Int = 1,
                     bo_ret = false)
     d = galileo_ramp.Exp1Dataset(dataset)
@@ -155,22 +156,8 @@ function evaluation(obs_noise::Float64, particles::Int,
     if bo_ret
         df = @linq df |>
             by(:t, rp_mean = mean(:ramp_density))
-        return (trial, df.rp_mean)
-    else
-        return df
-    end
-end
-
-function merge_evaluation(evals, responses)
-    # | :scene | :congruent | :t | avg_human_response | log(v1/m2)
-    human_responses = DataFrame(CSV.File(responses))
-    # | :scene | :congruent | :t | :ramp_density_mean | :log_score_mean
-    results = DataFrame()
-    for tidx=1:length(evals)
-        trial, estimates = evals[tidx]
-        df = DataFrame(ramp_density_mean = estimates,
-                       cond = 0:3)
         df[!, :trial] .= trial
+        df[!, :cond] = collect(0:3)
         if trial < 120
             df[!, :scene] .= Int(floor(trial/2))
             df[!, :congruent] .= (trial % 2) == 0
@@ -178,9 +165,17 @@ function merge_evaluation(evals, responses)
             df[!, :scene] .= Int(trial - 60)
             df[!, :congruent] .= true
         end
-        results = vcat(results, df)
     end
-    results = join(results, human_responses, on = [:scene, :congruent, :cond])
+    df
+end
+
+function merge_evaluation(evals, responses)
+    # | :scene | :congruent | :t | avg_human_response | log(v1/m2)
+    human_responses = DataFrame(CSV.File(responses))
+    # | :scene | :congruent | :t | :ramp_density_mean | :log_score_mean
+    results = vcat(evals...)
+    results = join(results, human_responses,
+                   on = [:scene, :congruent, :cond])
     return results
 end
 
@@ -195,6 +190,7 @@ function fit_pf(data)
         by([:scene,:cond], model_ratio_diff = diff(:model_mass_ratio),
            human_ratio_diff = diff(:avg_human_response),
            gt_ratio_diff = diff(:gt_mass_ratio))
+
     heavy = lm(@formula(human_ratio_diff ~ model_ratio_diff),
                @where(df, :gt_ratio_diff .> 0))
     light = lm(@formula(human_ratio_diff ~ model_ratio_diff),
