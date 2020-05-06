@@ -13,3 +13,6 @@
 [submodule "deps/ramp_physics"]
 	path = deps/ramp_physics
 	url = git@github.com:CNCLgithub/ramp_physics.git
+[submodule "deps/AsyncManager.jl"]
+	path = deps/AsyncManager.jl
+	url = git@github.com:CNCLgithub/AsyncManager.jl.git
