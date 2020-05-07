@@ -1,4 +1,5 @@
 
+using Base.Iterators
 using AsyncManager
 using Distributed
 using BayesianOptimization
@@ -25,10 +26,12 @@ const human_responses = "/databases/exp1_avg_human_responses.csv"
     const exp1_dataset = "/databases/exp1.hdf5"
 
     # evaluation on individual trial
-    function run_trial(trial; kwargs...)
+    function run_trial(channel, trial; kwargs...)
         # random function for now
-        GalileoRamp.evaluation(exp1_dataset, trial;
-                               kwargs...)
+        df = GalileoRamp.evaluation(exp1_dataset, trial;
+                                    kwargs...)
+        println(df)
+        put!(channel, df)
     end
 end
 
@@ -41,15 +44,34 @@ function objective(x)
             bo_ret = true)
 
     display(args)
-    n = 120
-    results = Vector{DataFrame}(undef, n)
-    @sync @distributed for i = 1:n
-        trial = i - 1
-        results[i] = run_trial(trial; args...)
+    n = 10
+    # Cribbed from https://white.ucc.asn.au/2018/07/14/Asynchronous-and-Distributed-File-Loading.html
+    results = Channel(ctype=DataFrame, csize=n) do results
+
+        remote_ch = RemoteChannel(()->results)
+
+        @sync @distributed for idx = 1:n
+            trial = idx - 1
+            run_trial(remote_ch, trial; args...)
+        end
+
+        collect(take(results, n))
+        # c_pool = CachingPool(workers())
+        # println(c_pool)
+        # futures = map(1:n) do idx
+        #     trial = idx - 1
+        #     remotecall(run_trial, c_pool, remote_ch, trial; args...)
+        # end
+        # for f in futures
+        #     wait(f)
+        # end
+        # clear!(c_pool)
     end
 
+    println(results)
+
     merged = merge_evaluation(results, human_responses)
-    rmse = fit_pf(merged)
+    rmse = GalileoRamp.fit_pf(merged)
 
     println("input: $x")
     println("objective: $rmse")
@@ -90,6 +112,7 @@ opt = BOpt(objective,
 result = boptimize!(opt)
 display(result)
 
+clear!(workers())
 for i in workers()
     rmprocs(i)
 end
