@@ -31,10 +31,11 @@ struct LogUniform <: Gen.Distribution{Float64} end
 const log_uniform = LogUniform()
 
 function Gen.logpdf(::LogUniform, x::Float64, low::T, high::T) where {U<:Real,T<:Real}
-    low = log(low)
-    high = log(high)
+    l = log(low)
+    h = log(high)
     v = log(x)
-    return (v >= low && v <= high) ? -log(high-low) : -Inf
+    # println("$v ($x) | $l ($low) , $h ($high)")
+    return (v >= l && v <= h) ? -log(h-l) : -Inf
 end
 
 function Gen.random(::LogUniform, low::T, high::T) where {U<:Real,T<:Real}

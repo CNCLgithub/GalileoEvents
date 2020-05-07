@@ -5,6 +5,8 @@ version = "0.1.0"
 
 [deps]
 ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
+AsyncManager = "5c2edd14-bcd1-4418-a894-1279f04b3951"
+BayesianOptimization = "4c6ed407-134f-591c-93fa-e0f7c164a0ec"
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 Cairo = "159f3aea-2a34-519c-b102-8c37f9878175"
 Compat = "34da2185-b29b-5c13-b0c7-acf172513d20"

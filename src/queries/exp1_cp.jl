@@ -10,7 +10,8 @@ using Base.Filesystem
 # Helpers
 ######################################################################
 
-function load_trial(dpath::String, idx::Int, obs_noise::Float64)
+function load_trial(dpath::String, idx::Int, obs_noise::Float64,
+                    prior_width::Float64)
     d = galileo_ramp.Exp1Dataset(dpath)
     (scene, state, _) = get(d, idx)
 
@@ -35,8 +36,6 @@ function load_trial(dpath::String, idx::Int, obs_noise::Float64)
         tcm = choicemap()
         addr = :chain => t => :positions
         tcm[addr] = state["pos"][t, :, :]
-        # keep table at gt
-        # tcm[:chain => t => :physics => 2 => :persistence => :congruent] = true
         obs[t] = tcm
     end
 
@@ -45,7 +44,8 @@ function load_trial(dpath::String, idx::Int, obs_noise::Float64)
     init_pos = [scene["initial_pos"]["A"],
                 scene["initial_pos"]["B"]]
     cid = physics.physics.init_client(direct = true)
-    params = Params(obj_prior, init_pos, scene, obs_noise, cid)
+    params = Params(obj_prior, init_pos, scene, obs_noise,
+                    prior_width, cid)
     return (params, cm, obs)
 end
 
@@ -112,11 +112,11 @@ const light_seq_map = LatentMap(Dict(
 Sequentail estimation of markovian posterior
 """
 function seq_inference(dpath::String, idx::Int, particles::Int,
-                       obs_noise::Float64;
+                       obs_noise::Float64, prior_width::Float64;
                        resume::Bool = false,
                        out::Union{String, Nothing} = nothing,
                        bo::Bool = false)
-    params, constraints, obs = load_trial(dpath, idx, obs_noise)
+    params, constraints, obs = load_trial(dpath, idx, obs_noise, prior_width)
     nt = length(obs)
     args = [(t, params) for t in 1:nt]
 

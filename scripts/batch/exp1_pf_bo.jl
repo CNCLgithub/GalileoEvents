@@ -1,9 +1,13 @@
 
 using AsyncManager
 using Distributed
+using BayesianOptimization
+using GaussianProcesses
+using Distributions
+using DataFrames
 
 # adding workers
-addprocs(2);
+addprocs(1);
 # path = pwd()
 # project_path = dirname(dirname(path))
 # # TODO: Do I need `path`?
@@ -13,15 +17,15 @@ addprocs(2);
 # addprocs_slurm(manager; exename = "./run.sh julia",
 #                dir = project_path)
 
+const human_responses = "/databases/exp1_avg_human_responses.csv"
 
 @everywhere begin
-    using BayesianOptimization
     using GalileoRamp
 
     const exp1_dataset = "/databases/exp1.hdf5"
 
     # evaluation on individual trial
-    function evaluation(trial; kwargs...)
+    function run_trial(trial; kwargs...)
         # random function for now
         GalileoRamp.evaluation(exp1_dataset, trial;
                                kwargs...)
@@ -33,12 +37,15 @@ function objective(x)
     args = (obs_noise = x[1],
             prior_width = x[2],
             particles = 10,
-            chains = 10,
+            chains = 1,
             bo_ret = true)
 
-    results = SharedArray{DataFrame}(120)
-    @distributed for trial=0:119
-        results[i+1] = evaluation(trial; args...)
+    display(args)
+    n = 120
+    results = Vector{DataFrame}(undef, n)
+    @sync @distributed for i = 1:n
+        trial = i - 1
+        results[i] = run_trial(trial; args...)
     end
 
     merged = merge_evaluation(results, human_responses)
@@ -70,9 +77,9 @@ opt = BOpt(objective,
            model,
            UpperConfidenceBound(),                   # type of acquisition
            modeloptimizer,
-           [0., 0.1], [0., 1.],                     # lowerbounds, upperbounds
+           [0.01, 0.2], [0.01, 0.9],                     # lowerbounds, upperbounds
            repetitions = 5,                          # evaluate the function for each input 5 times
-           maxiterations = 100,                      # evaluate at 100 input positions
+           maxiterations = 10,                      # evaluate at 100 input positions
            sense = Min,                              # minimize the function
            acquisitionoptions = (method = :LD_LBFGS, # run optimization of acquisition function with NLopts :LD_LBFGS method
                                  restarts = 5,       # run the NLopt method from 5 random initial conditions each time.

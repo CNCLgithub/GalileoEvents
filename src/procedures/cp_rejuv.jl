@@ -55,6 +55,11 @@ There are three jumps:
 function cp_stats(state::Gen.ParticleFilterState)
     traces = Gen.get_traces(state)
     n = length(traces)
+    # println(get_log_weights(state))
+    # bad = findall(isinf.(Gen.get_log_weights(state)))
+    # for i in bad
+    #     display(get_choices(state.traces[i]))
+    # end
     uw_traces = Gen.sample_unweighted_traces(state, n)
     cps = map(extract_cp, uw_traces)
     t, _ = get_args(state.traces[1])

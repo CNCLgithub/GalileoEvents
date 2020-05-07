@@ -24,6 +24,7 @@ const friction_map = Dict("Wood" => 0.263,
                           "Brick" => 0.323,
                           "Iron" => 0.215)
 const mat_keys = collect(keys(density_map))
+const default_prior_width  = 0.1
 
 abstract type GMParams end
 
@@ -31,18 +32,20 @@ struct Params <: GMParams
     n_objects::Int
     object_prior::Vector{Dict}
     obs_noise::Float64
+    prior_width::Float64
     client::Int
     object_map::Dict{String, Int}
+    # during init
+    function Params(object_prior::Vector, init_pos::Vector{Float64},
+                    scene::Dict, obs_noise::Float64, prior_width::Float64,
+                    cid::Int)
+        n = length(object_prior)
+        object_map = @pycall physics.physics.init_world(scene,
+                                                        cid)::Dict{String,Int}
+        new(n, object_prior, obs_noise, prior_width, cid, object_map)
+    end
 end
 
-# during init
-function Params(object_prior::Vector, init_pos::Vector{Float64},
-                scene::Dict,
-                obs_noise::Float64, cid::Int)
-    n = length(object_prior)
-    object_map = @pycall physics.physics.init_world(scene, cid)::Dict{String,Int}
-    Params(n, object_prior, obs_noise, cid, object_map)
-end
 
 function create_object(params, physical_props)
     cat = params["shape"]

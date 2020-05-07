@@ -136,13 +136,15 @@ end
 
 function evaluation(dataset::String, trial::Int;
                     obs_noise::Float64 = 0.1,
+                    prior_width::Float64 = 0.5,
                     particles::Int = 10,
                     chains::Int = 1,
                     bo_ret = false)
     d = galileo_ramp.Exp1Dataset(dataset)
     (_,_, tps) = get(d, trial)
     for i = 1:chains
-        chain = seq_inference(dataset, trial, particles, obs_noise;
+        chain = seq_inference(dataset, trial, particles, obs_noise,
+                              prior_width;
                               bo = true)
         # returns tibble of: | :t | :ramp_density_mean | :log_score_mean
         tibble = digest_pf_trial(chain, tps)
@@ -186,38 +188,25 @@ The linear model is fit using the control trials.
 function fit_pf(data)
     df = @linq data |>
         where(:cond .> 0) |>
-        transform(model_mass_ratio = log.(:ramp_density_mean) + :v_m2) |>
-        by([:scene,:cond], model_ratio_diff = diff(:model_mass_ratio),
+        transform(model_mass_ratio = log.(:rp_mean) + :v_m2,
+                  heavy = (:scene .% 10) .> 4) |>
+        by([:scene,:cond],
+           model_ratio_diff = diff(:model_mass_ratio),
            human_ratio_diff = diff(:avg_human_response),
-           gt_ratio_diff = diff(:gt_mass_ratio))
-
+           gt_ratio_diff = diff(:gt_mass_ratio),
+           heavy = first(:heavy))
+    # TODO add split-half cross validation?
     heavy = lm(@formula(human_ratio_diff ~ model_ratio_diff),
-               @where(df, :gt_ratio_diff .> 0))
+               @where(df, :heavy))
     light = lm(@formula(human_ratio_diff ~ model_ratio_diff),
-               @where(df, :gt_ratio_diff .< 0))
-    plt = densityplot(df[!, :cond],
-                      df[!, :human_ratio_diff],
-                      name = "human")
-    display(plt)
-    plt = densityplot(df[!, :cond],
-                      df[!, :model_ratio_diff],
-                      name = "model")
-    display(plt)
-    # plt = scatterplot(data[!, :cond],
-    #                   data[!, :human_ratio_diff],
-    #                   name = "human")
-    # scatterplot!(plt,
-    #              data[!, :cond],
-    #              predict(model),
-    #              name = "predict")
-    # scatterplot!(plt,
-    #              data[!, :cond],
-    #              data[!, :model_ratio_diff],
-    #              name = "gt")
-    display(heavy)
-    display(light)
-    println(r2(heavy))
-    println(r2(light))
-    return (df, heavy, light)
-
+               @where(df, :heavy .== false))
+    hdf = @linq df |>
+        where(:heavy) |>
+        transform(predict = predict(heavy))
+    ldf = @linq df |>
+        where(:heavy .== false) |>
+        transform(predict = predict(light))
+    df = @linq [ldf;hdf] |>
+        transform(resids = :human_ratio_diff .- :predict)
+    rmse = sqrt(sum(df.resids .^2))
 end

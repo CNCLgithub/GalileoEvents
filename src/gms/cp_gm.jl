@@ -6,33 +6,38 @@ using LinearAlgebra:norm
 ## Generative Model + components
 
 const material_ps = ones(3) ./ 3
-const incongruent_mat = Dict( "density" => (4.0, 20.0),
-                              "lateralFriction" => (0.3, 0.5))
+const incongruent_mat = Dict( "density" => (0.01, 150.),
+                              "lateralFriction" => (0.01, 0.99))
 
-function cp_material_params(params::Dict)
-    mat = params["appearance"]
-    density_prior = (density_map[mat]*0.5, density_map[mat]*1.5)
-    friction_prior = (friction_map[mat]*0.5, friction_map[mat]*1.5)
+function cp_material_params(mat::String, w::Float64)
+    dens_mu = density_map[mat]
+    density_prior = (dens_mu * (1-w), dens_mu * (1+w))
+    fric_mu = friction_map[mat]
+    friction_prior = (fric_mu * (1-w), fric_mu * (1+w))
+    # println("using $density_prior")
     return Dict("density" => density_prior,
                 "lateralFriction" => friction_prior)
 end
 
-function cp_material_params(i::Int)
-    mat = Dict("appearance" => mat_keys[i])
-    return cp_material_params(mat)
-end
+cp_material_params(i::Int, w::Float64) = cp_material_params(mat_keys[i], w)
 
-@gen (static) function physics_prior()
+@gen (static) function physics_prior(width::Float64)
+    # Object appearance
     material = @trace(categorical(material_ps), :material)
-    from_mat = cp_material_params(material)
+    from_mat = cp_material_params(material, width)
+
+    # Object physics -> appearance congruency
     congruent = @trace(bernoulli(0.9), :congruent)
     prior = congruent ? from_mat : incongruent_mat
     density = prior["density"]
     friction = prior["lateralFriction"]
+
+    # Object physical properties
     dens = @trace(log_uniform(density[1], density[2]), :density)
     fric = @trace(log_uniform(friction[1], friction[2]), :friction)
     restitution = @trace(uniform(0.8, 1.0), :restitution)
 
+    # Objects are not persistent untill the first collision
     physical_props = Dict("density" => dens,
                           "lateralFriction" => fric,
                           "restitution" => restitution,
@@ -87,7 +92,7 @@ end
 parse_graph(t::Tuple) = first(t)
 
 @gen function obj_persistence(prev_con::Bool, prev_dens::Float64,
-                              material::Int)
+                              material::Int, width::Float64)
     p = prev_con ? 0.9 : 0.1
     new_con = @trace(bernoulli(p), :congruent)
     if new_con == prev_con
@@ -97,14 +102,16 @@ parse_graph(t::Tuple) = first(t)
         dens = @trace(log_uniform(0.01, 150.0),  :density)
     else
         # Incon -> Con
-        density = cp_material_params(material)["density"]
+        prior = cp_material_params(material, width)
+        density = prior["density"]
         dens = @trace(log_uniform(density...), :density)
     end
     return (new_con, dens)
 end
 
 @gen function object_kernel(prev_phys::Dict{String, Float64},
-                            col_edge::Bool)
+                            col_edge::Bool,
+                            width::Float64)
 
     congruent = Bool(prev_phys["congruent"])
     persistent = Bool(prev_phys["persistent"])
@@ -114,7 +121,7 @@ end
     # if collision change => "persist"
     if col_edge & !persistent
         congruent, dens = @trace(obj_persistence(congruent, prev_dens,
-                                                 material),
+                                                 material, width),
                                  :persistence)
         persistent = true
     else
@@ -148,8 +155,9 @@ end
     graph = @trace(graph_kernel(prev[1], prev_cp, dims), :graph)
     active_cp_edge = parse_graph(graph)
     cp_edge_change = !prev_cp & active_cp_edge
-    args = fill(cp_edge_change, 2)
-    belief = @trace(map_obj_kernel(prev[3], args),
+    arg1 = fill(cp_edge_change, 2)
+    arg2 = fill(params.prior_width, 2)
+    belief = @trace(map_obj_kernel(prev[3], arg1, arg2),
                     :physics)
     next_state = forward_step(prev[1], params, belief)
     pos = next_state[1, :, :]
@@ -163,7 +171,7 @@ chain = Gen.Unfold(kernel)
 
 @gen (static) function cp_generative_model(t::Int, params::Params)
 
-    args = fill(tuple(), params.n_objects)
+    args = fill(params.prior_width, params.n_objects)
     objects = @trace(map_object_prior(args), :object_physics)
     initial_pos = @trace(map_init_state(args), :initial_state)
     i_state = initialize_state(params, objects, initial_pos)
