@@ -5,10 +5,9 @@ using Distributed
 using BayesianOptimization
 using GaussianProcesses
 using Distributions
-using DataFrames
 
 # adding workers
-addprocs(1);
+addprocs();
 # path = pwd()
 # project_path = dirname(dirname(path))
 # # TODO: Do I need `path`?
@@ -21,17 +20,15 @@ addprocs(1);
 const human_responses = "/databases/exp1_avg_human_responses.csv"
 
 @everywhere begin
-    using GalileoRamp
+    using GalileoRamp, DataFrames
 
     const exp1_dataset = "/databases/exp1.hdf5"
 
     # evaluation on individual trial
-    function run_trial(channel, trial; kwargs...)
+    function run_trial(trial::Int; kwargs...)
         # random function for now
         df = GalileoRamp.evaluation(exp1_dataset, trial;
                                     kwargs...)
-        println(df)
-        put!(channel, df)
     end
 end
 
@@ -45,32 +42,12 @@ function objective(x)
 
     display(args)
     n = 10
-    # Cribbed from https://white.ucc.asn.au/2018/07/14/Asynchronous-and-Distributed-File-Loading.html
-    results = Channel(ctype=DataFrame, csize=n) do results
+    trials = [0,1,2,3,10,11,12,13]
+    # trials = 0:(n-1)
+    collected = @sync pmap(x->run_trial(x;args...), trials;
+                           on_error=identity)
 
-        remote_ch = RemoteChannel(()->results)
-
-        @sync @distributed for idx = 1:n
-            trial = idx - 1
-            run_trial(remote_ch, trial; args...)
-        end
-
-        collect(take(results, n))
-        # c_pool = CachingPool(workers())
-        # println(c_pool)
-        # futures = map(1:n) do idx
-        #     trial = idx - 1
-        #     remotecall(run_trial, c_pool, remote_ch, trial; args...)
-        # end
-        # for f in futures
-        #     wait(f)
-        # end
-        # clear!(c_pool)
-    end
-
-    println(results)
-
-    merged = merge_evaluation(results, human_responses)
+    merged = merge_evaluation(collected, human_responses)
     rmse = GalileoRamp.fit_pf(merged)
 
     println("input: $x")
@@ -112,7 +89,6 @@ opt = BOpt(objective,
 result = boptimize!(opt)
 display(result)
 
-clear!(workers())
 for i in workers()
     rmprocs(i)
 end

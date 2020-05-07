@@ -82,7 +82,7 @@ function cp_rejuv(proc::PopParticleFilter,
     # println(p_cols[a:t])
     rejuv_cp = maximum(p_cols[a:t]) >= 0.11
     if rejuv_cp & (t > 1)
-        println("rejuv cp @ t $t")
+        # println("rejuv cp @ t $t")
         for i = 1:n
             trace = state.traces[i]
             cp = extract_cp(trace)
