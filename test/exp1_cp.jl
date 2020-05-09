@@ -18,6 +18,6 @@ eval_func(idx::Int) = @time evaluation("/databases/exp1.hdf5", idx;
                                        particles = 10,
                                        chains = 2, bo_ret = true);
 @time eval_func(0);
-# evals = map(eval_func, collect(80:119))
-# data = merge_evaluation(evals, "/databases/exp1_avg_human_responses.csv")
+evals = map(eval_func, [0,1,4,5,10,11,16,17])
+data = merge_evaluation(evals, "/databases/exp1_avg_human_responses.csv")
 # fits = GalileoRamp.fit_pf(data)

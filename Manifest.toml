@@ -50,9 +50,7 @@ version = "0.2.6"
 
 [[AsyncManager]]
 deps = ["Distributed", "FileWatching", "Revise", "Sockets"]
-git-tree-sha1 = "c8c174f5f76691c0398f3ee305463cd8cf5ea409"
-repo-rev = "master"
-repo-url = "deps/AsyncManager.jl"
+path = "deps/AsyncManager.jl"
 uuid = "5c2edd14-bcd1-4418-a894-1279f04b3951"
 version = "0.1.0"
 
@@ -126,7 +124,7 @@ uuid = "159f3aea-2a34-519c-b102-8c37f9878175"
 version = "1.0.2"
 
 [[Cairo_jll]]
-deps = ["Bzip2_jll", "Fontconfig_jll", "FreeType2_jll", "Glib_jll", "LZO_jll", "Libdl", "Pixman_jll", "Pkg", "X11_jll", "Xorg_libXext_jll", "Xorg_libXrender_jll", "Zlib_jll", "libpng_jll"]
+deps = ["Bzip2_jll", "Fontconfig_jll", "FreeType2_jll", "Glib_jll", "LZO_jll", "Libdl", "Pixman_jll", "Pkg", "Xorg_libXext_jll", "Xorg_libXrender_jll", "Zlib_jll", "libpng_jll"]
 git-tree-sha1 = "d296f5e975306844de3e57118c3cf4a7cf2a8762"
 uuid = "83423d85-b0ee-5818-9007-b63ccbeb887a"
 version = "1.16.0+4"
@@ -411,9 +409,9 @@ version = "2.10.1+2"
 
 [[FriBidi_jll]]
 deps = ["Libdl", "Pkg"]
-git-tree-sha1 = "e479537bf8a8f060c546553c14fd0633978dda7e"
+git-tree-sha1 = "2f56bee16bd0151de7b6a1eeea2ced190a2ad8d4"
 uuid = "559328eb-81f9-559d-9380-de523a88c83c"
-version = "1.0.5+2"
+version = "1.0.5+3"
 
 [[FunctionWrappers]]
 git-tree-sha1 = "e4813d187be8c7b993cb7f85cbf2b7bfbaadc694"
@@ -456,7 +454,9 @@ version = "0.11.2"
 
 [[Gen]]
 deps = ["DataStructures", "Distributions", "ForwardDiff", "FunctionalCollections", "JSON", "LinearAlgebra", "MacroTools", "Random", "ReverseDiff", "SpecialFunctions"]
-path = "/project/.julia/dev/Gen"
+git-tree-sha1 = "9368d08b0ce0622ec2b66ebdcc98e0959e31a4ae"
+repo-rev = "master"
+repo-url = "https://github.com/probcomp/Gen"
 uuid = "ea4f424c-a589-11e8-07c0-fd5c91b9da4a"
 version = "0.3.2"
 
@@ -1465,7 +1465,7 @@ uuid = "0fc3237b-ac94-5853-b45c-d43d59a06200"
 version = "2.34.0+1"
 
 [[gdk_pixbuf_jll]]
-deps = ["Glib_jll", "JpegTurbo_jll", "Libdl", "Libtiff_jll", "Pkg", "X11_jll", "Xorg_libX11_jll", "libpng_jll"]
+deps = ["Glib_jll", "JpegTurbo_jll", "Libdl", "Libtiff_jll", "Pkg", "Xorg_libX11_jll", "libpng_jll"]
 git-tree-sha1 = "566ebf4b2c9efd81b35eb914c325026831077f39"
 uuid = "da03df04-f53b-5353-a52f-6a8b0620ced0"
 version = "2.38.2+6"

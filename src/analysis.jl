@@ -176,37 +176,37 @@ function merge_evaluation(evals, responses)
     human_responses = DataFrame(CSV.File(responses))
     # | :scene | :congruent | :t | :ramp_density_mean | :log_score_mean
     results = vcat(evals...)
-    results = join(results, human_responses,
-                   on = [:scene, :congruent, :cond])
+    results = join(human_responses, results,
+                   on = [:scene, :congruent, :cond],
+                   kind = :left)
     return results
 end
 
 """
-Computes RMSE of model predictions on human judgements.
-The linear model is fit using the control trials.
+Computes RMSE of model predicted mass ratio differences
+on human mass judgement differences across matched pairs.
+
+Here `k` is the number of scenes to seperate for 
+k-fold cross-validation
+
 """
-function fit_pf(data)
+function fit_pf(data::DataFrame)
+    # sample the test set
     df = @linq data |>
         where(:cond .> 0) |>
         transform(model_mass_ratio = log.(:rp_mean) + :v_m2,
-                  heavy = (:scene .% 10) .> 4) |>
+                  heavy = (:scene .% 10) .> 4) |> 
         by([:scene,:cond],
            model_ratio_diff = diff(:model_mass_ratio),
            human_ratio_diff = diff(:avg_human_response),
            gt_ratio_diff = diff(:gt_mass_ratio),
-           heavy = first(:heavy))
-    # TODO add split-half cross validation?
-    heavy = lm(@formula(human_ratio_diff ~ model_ratio_diff),
-               @where(df, :heavy))
-    light = lm(@formula(human_ratio_diff ~ model_ratio_diff),
-               @where(df, :heavy .== false))
-    hdf = @linq df |>
-        where(:heavy) |>
-        transform(predict = predict(heavy))
-    ldf = @linq df |>
-        where(:heavy .== false) |>
-        transform(predict = predict(light))
-    df = @linq [ldf;hdf] |>
+           test = first(:test))
+
+    model = lm(@formula(human_ratio_diff ~ model_ratio_diff),
+               @where(df, .!(:test)))
+    test = @linq df |>
+        where(:test) |>
+        transform(predict = predict(model, :model_ratio_diff)) |>
         transform(resids = :human_ratio_diff .- :predict)
-    rmse = sqrt(sum(df.resids .^2))
+    rmse = sqrt(sum(test.resids .^2))
 end

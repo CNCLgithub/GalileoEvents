@@ -1,4 +1,5 @@
 
+using Random:shuffle
 using Base.Iterators
 using AsyncManager
 using Distributed
@@ -7,15 +8,15 @@ using GaussianProcesses
 using Distributions
 
 # adding workers
-addprocs();
-# path = pwd()
-# project_path = dirname(dirname(path))
+# addprocs(2);
+path = pwd()
 # # TODO: Do I need `path`?
-# manager = AsyncSlurmManager(2, path;
-#                            partition = "short",
-#                            time = 120)
-# addprocs_slurm(manager; exename = "./run.sh julia",
-#                dir = project_path)
+manager = AsyncSlurmManager(120, path;
+                            partition = "short",
+                            time = 120)
+
+@sync addprocs(manager; exename = "./run.sh julia",
+         dir = path)
 
 const human_responses = "/databases/exp1_avg_human_responses.csv"
 
@@ -32,22 +33,30 @@ const human_responses = "/databases/exp1_avg_human_responses.csv"
     end
 end
 
+"""
+Performs k-fold cross-validation over partitions of
+matched pairs. 
+"""
 function objective(x)
 
     args = (obs_noise = x[1],
             prior_width = x[2],
-            particles = 10,
-            chains = 1,
+            particles = 100,
+            chains = 5,
             bo_ret = true)
 
-    display(args)
-    n = 10
-    trials = [0,1,2,3,10,11,12,13]
-    # trials = 0:(n-1)
+    n = 120
+    k = 40
+    test = shuffle(collect(1:n) .<= k
+    trials = findall(.!(test)) .- 1 # shift to 0 base
     collected = @sync pmap(x->run_trial(x;args...), trials;
                            on_error=identity)
 
     merged = merge_evaluation(collected, human_responses)
+    merged = @linq merged |>
+       where(:scene .< n) |>
+       transform(:test = repeat(test, inner = 4)          
+
     rmse = GalileoRamp.fit_pf(merged)
 
     println("input: $x")
@@ -62,23 +71,22 @@ end
 model = ElasticGPE(2,                            # 2 input dimensions
                    mean = MeanConst(0.),
                    kernel = SEArd([0., 0.], 5.),
-                   logNoise = 0.,
+                   logNoise = 0., # assume some noise in observations (due to approximation accuracy)
                    capacity = 3000)              # the initial capacity of the GP is 3000 samples.
-set_priors!(model.mean, [Normal(1, 2)])
 
 
 # Optimize the hyperparameters of the GP using maximum a posteriori (MAP) estimates every 50 steps
-modeloptimizer = MAPGPOptimizer(every = 50, noisebounds = [-4, 3],       # bounds of the logNoise
+modeloptimizer = MAPGPOptimizer(every = 10, noisebounds = [-4, 3],       # bounds of the logNoise
                                 kernbounds = [[-1, -1, 0], [4, 4, 10]],  # bounds of the 3 parameters GaussianProcesses.get_param_names(model.kernel)
                                 maxeval = 40)
 
 opt = BOpt(objective,
            model,
-           UpperConfidenceBound(),                   # type of acquisition
+           ExpectedImprovement(),                   # type of acquisition
            modeloptimizer,
-           [0.01, 0.2], [0.01, 0.9],                     # lowerbounds, upperbounds
-           repetitions = 5,                          # evaluate the function for each input 5 times
-           maxiterations = 10,                      # evaluate at 100 input positions
+           [0.01, 0.01], [0.2, 0.99],                     # lowerbounds, upperbounds
+           repetitions = 2,                          # evaluate the function for each input n times
+           maxiterations = 100,                      # evaluate at n input positions
            sense = Min,                              # minimize the function
            acquisitionoptions = (method = :LD_LBFGS, # run optimization of acquisition function with NLopts :LD_LBFGS method
                                  restarts = 5,       # run the NLopt method from 5 random initial conditions each time.
@@ -87,8 +95,8 @@ opt = BOpt(objective,
             verbosity = Progress)
 
 result = boptimize!(opt)
-display(result)
+println(result)
 
-for i in workers()
-    rmprocs(i)
-end
+#for i in workers()
+#    rmprocs(i)
+#end
