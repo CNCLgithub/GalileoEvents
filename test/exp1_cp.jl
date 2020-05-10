@@ -16,8 +16,8 @@
 eval_func(idx::Int) = @time evaluation("/databases/exp1.hdf5", idx;
                                        obs_noise = 0.05, prior_width = 0.4,
                                        particles = 10,
-                                       chains = 2, bo_ret = true);
+                                       chains = 1, bo_ret = true);
 @time eval_func(0);
-evals = map(eval_func, [0,1,4,5,10,11,16,17])
+evals = map(eval_func, 0:119)
 data = merge_evaluation(evals, "/databases/exp1_avg_human_responses.csv")
-# fits = GalileoRamp.fit_pf(data)
+fits = GalileoRamp.fit_pf(data)

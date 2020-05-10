@@ -13,6 +13,7 @@ using DataFramesMeta
 using StatsModels
 using GLM
 using UnicodePlots
+using Random:shuffle
 using Base.Iterators:flatten
 
 function extract_mh_chain(path::String)
@@ -176,9 +177,8 @@ function merge_evaluation(evals, responses)
     human_responses = DataFrame(CSV.File(responses))
     # | :scene | :congruent | :t | :ramp_density_mean | :log_score_mean
     results = vcat(evals...)
-    results = join(human_responses, results,
-                   on = [:scene, :congruent, :cond],
-                   kind = :left)
+    results = join(results, human_responses,
+                   on = [:scene, :congruent, :cond])
     return results
 end
 
@@ -190,23 +190,26 @@ Here `k` is the number of scenes to seperate for
 k-fold cross-validation
 
 """
-function fit_pf(data::DataFrame)
+function fit_pf(data::DataFrame; k::Int = 20)
     # sample the test set
+    test = shuffle(collect(1:60) .<= k)
     df = @linq data |>
         where(:cond .> 0) |>
         transform(model_mass_ratio = log.(:rp_mean) + :v_m2,
-                  heavy = (:scene .% 10) .> 4) |> 
+                  heavy = (:scene .% 10) .> 4) |>
         by([:scene,:cond],
            model_ratio_diff = diff(:model_mass_ratio),
            human_ratio_diff = diff(:avg_human_response),
-           gt_ratio_diff = diff(:gt_mass_ratio),
-           test = first(:test))
+           gt_ratio_diff = diff(:gt_mass_ratio))
+
+    df = @transform(df, test = repeat(test, inner = 3))
 
     model = lm(@formula(human_ratio_diff ~ model_ratio_diff),
                @where(df, .!(:test)))
+    predicted = predict(model, @where(df, :test))
     test = @linq df |>
         where(:test) |>
-        transform(predict = predict(model, :model_ratio_diff)) |>
+        transform(predict = predicted) |>
         transform(resids = :human_ratio_diff .- :predict)
     rmse = sqrt(sum(test.resids .^2))
 end
