@@ -42,7 +42,7 @@ def interpolate_positions(n):
 def make_pair(scene, material, shp, density, pos):
     dims = sample_dimensions(obj_dims)
     congruent = canonical_object(material, shp, dims)
-    incongruent = shapes.change_prop(congruent, 'density', density)
+    incongruent = shapes.shape.change_prop(congruent, 'density', density)
     con = deepcopy(scene)
     con.add_object('A', congruent, pos)
     incon = deepcopy(scene)
@@ -71,7 +71,7 @@ def main():
 
 
     # table and table object (`B`) is held constant
-    base = RampWorld(args.table, args.ramp,
+    base = worlds.RampWorld(args.table, args.ramp,
                      ramp_angle = args.ramp_angle * (np.pi/180.),
                      ramp_phys = surface_phys,
                      table_phys = surface_phys)
@@ -120,7 +120,7 @@ def main():
         #                               debug = True)
         data = {'scene' : s.serialize()}
         with open(p, 'w') as f:
-            json.dump(data, f, indent = 2, cls = encoders.NpEncoder)
+            json.dump(data, f, indent = 2, cls = NpEncoder)
 
     # write out metadata
     with open(out_path + 'info', 'w') as f:
