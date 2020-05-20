@@ -16,7 +16,7 @@ supported targets:
 # container setup
 [[ "${@}" =~ "cont_build" ]] || [[ "${@}" =~ "cont_pull" ]] || echo "Not touching container"
 [[ "${@}" =~ "cont_pull" ]] && echo "pulling container" && \
-    wget "https://yale.box.com/shared/static/i5vxp5xghtfb2931fhd4b0ih4ya62o2s.sif" -O "${ENV[cont]}"
+    wget "https://yale.box.com/shared/static/i5vxp5xghtfb2931fhd4b0ih4ya62o2s.sif" \
     -O "${ENV[cont]}"
 [[ "${@}" =~ "cont_build" ]] && echo "building container" && \
     SINGULARITY_TMPDIR=/var/tmp sudo -E singularity build "${ENV[cont]}" Singularity
