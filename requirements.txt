@@ -7,12 +7,7 @@ sympy
 sphinx
 pandas
 sklearn
-dask
-distributed
-dask-jobqueue
-bokeh
-bayesian-optimization
 -e deps/hdf5_dataset
 -e deps/slurm
--e deps/ramp_physics
+-e deps/rigid_body_world
 -e .

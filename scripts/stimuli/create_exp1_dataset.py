@@ -7,12 +7,8 @@ import numpy as np
 from copy import deepcopy
 from itertools import chain
 
-from physics.world.scene import shape
-from physics.world.scene.puck import Puck
-from physics.world.scene.block import Block
-from physics.world.scene.ramp import RampScene
-from physics.world.simulation import physics
-from physics.utils import encoders
+from rbw import shapes, worlds, simulation
+from rbw.utils.encoders import NpEncoder
 
 surface_phys = {'density' : 0.0,
                 'friction': 0.3}
@@ -46,7 +42,7 @@ def interpolate_positions(n):
 def make_pair(scene, material, shp, density, pos):
     dims = sample_dimensions(obj_dims)
     congruent = canonical_object(material, shp, dims)
-    incongruent = shape.change_prop(congruent, 'density', density)
+    incongruent = shapes.change_prop(congruent, 'density', density)
     con = deepcopy(scene)
     con.add_object('A', congruent, pos)
     incon = deepcopy(scene)
@@ -75,11 +71,11 @@ def main():
 
 
     # table and table object (`B`) is held constant
-    base = RampScene(args.table, args.ramp,
+    base = RampWorld(args.table, args.ramp,
                      ramp_angle = args.ramp_angle * (np.pi/180.),
                      ramp_phys = surface_phys,
                      table_phys = surface_phys)
-    table_obj = canonical_object("Brick", Block, obj_dims)
+    table_obj = canonical_object("Brick", shapes.Block, obj_dims)
     base.add_object("B", table_obj, 0.35)
 
     # materials have the same proportions of heavy/light perturbations
@@ -91,7 +87,7 @@ def main():
     # generate the 60 pairs of ramp objects
     pairs = []
     for m in ['Iron', 'Brick', 'Wood']:
-        for shp in [Block, Puck]:
+        for shp in [shapes.Block, shapes.Puck]:
             for dp in zip(densities, positions):
                 pairs.append(make_pair(base, m, shp, *dp))
 
@@ -100,7 +96,7 @@ def main():
     positions = interpolate_positions(5)
     positions = np.repeat(positions, 3)
     for m in ['Iron', 'Brick', 'Wood']:
-        for shp in [Block, Puck]:
+        for shp in [shapes.Block, shapes.Puck]:
         # 15 vs 30 since there are 2 (block+puck) per loop
             for p in positions:
                 controls.append(make_control(base, m, shp, p))

@@ -27,9 +27,6 @@ supported targets:
 [[ "${@}" =~ "conda" ]] && echo "building conda env" && \
     singularity exec ${ENV[cont]} bash -c "yes | conda create -p $PWD/${ENV[env]} python=3.6" && \
     ./run.sh python -m pip install -r requirements.txt && \
-    # detectron2 setup (dependent on torch, so out of the requirements.txt
-    # since pip installs in the alphabetical order)
-    ./run.sh python -m pip install -e deps/detectron2
 
 # julia setup
 [[ "${@}" =~ "julia" ]] || echo "Not touching julia"
