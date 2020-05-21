@@ -14,13 +14,14 @@ from itertools import repeat
 
 from slurmpy import sbatch
 
-from physics.world.render.interface import render
+from rbw.utils.render import render
 
 from galileo_ramp.exp1_dataset import Exp1Dataset
 
+blender_exec = '/blender/blender'
 base_path = '/project/galileo_ramp/blend/'
 render_path = base_path + 'render.py'
-scene_path = base_path + 'new_scene.blend'
+blend_path = base_path + 'new_scene.blend'
 
 def render_trace(scene, trace, out, res, mode,
                  snapshot = False, gpu = False):
@@ -46,7 +47,8 @@ def render_trace(scene, trace, out, res, mode,
         resolution = res,
         theta = 1.5*np.pi,
         render = render_path,
-        materials = scene_path,
+        blend = blend_path,
+        exec = blender_exec
     )
     if snapshot:
         kwargs['frames'] = [0]

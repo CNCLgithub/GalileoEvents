@@ -8,7 +8,7 @@ import numpy as np
 from pprint import pprint
 from h5data import dataset
 
-from ramp_physics import physics
+from rbw import simulation
 import numpy as np
 
 def get_json(raw):
@@ -91,17 +91,18 @@ class Exp1Dataset(dataset.HDF5Dataset):
 
     def process_trial(self, parts):
         scene = parts['scene']['scene']
-        client = physics.init_client(direct = True)
-        obj_ids = physics.init_world(scene, client)
-        state,cols = physics.run_full_trace(client,
-                                            obj_ids,
-                                            T = 2,
-                                            fps = 60,
-                                            time_scale = 1.0,
-                                            debug = False)
-        physics.clear_trace(client)
-        trace = {k:state[:,i] for i,k in enumerate(self.trace_features)}
-        trace['col'] = cols
+        client = simulation.init_client()
+        sim = simulation.init_sim(simulation.RampSim, scene, client) # load ramp into client
+        pla,rot,cols = simulation.run_full_trace(sim, T = 2.0, fps = 60,
+                                                 time_scale = 1.0)
+        simulation.clear_sim(sim)
+        trace = dict(
+            pos = pla[:, 0],
+            orn = rot,
+            avl = pla[:, 1],
+            lvl = pla[:, 2],
+            col = cols
+        )
         contact = np.nonzero(trace['col'])[0][0]
         time_points = np.array([-1, 1, 3, 5]) * self.time_scale
         time_points += contact
