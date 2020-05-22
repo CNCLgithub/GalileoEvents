@@ -48,7 +48,7 @@ def main():
 
     # materials have the same proportions of heavy/light perturbations
     density_ratios = [[1, 2, 3], [1, 3, 5], [1, 2, 5], [1, 4, 2]]
-    positions = [[1, 0.5, 1.5], [0.2, 0.3, 1.7], [0.4, 1.6, 1.8], [1.3, 0.6, 0.4]]
+    positions = [[0.9, 0.5, 1.5], [0.2, 0.3, 1.7], [0.4, 1.6, 1.8], [1.3, 0.6, 0.4]]
     appearance = "Wood"
     dims = [0.3, 0.3, 0.3]
 
@@ -58,12 +58,12 @@ def main():
     # makes 16 scenes ...
     for density in density_ratios:
         for pos in positions:
-            scene = base
+            scene = deepcopy(base)
             
             obj_a = shapes.Ball(appearance, dims, {'density': density[0], 'lateralFriction': 0.3})
             obj_b = shapes.Ball(appearance, dims, {'density': density[1], 'lateralFriction': 0.3})
             obj_c = shapes.Ball(appearance, dims, {'density': density[2], 'lateralFriction': 0.3})
-
+            
             scene.add_object('A', obj_a, pos[0])
             scene.add_object('B', obj_b, pos[1])
             scene.add_object('C', obj_c, pos[2])
