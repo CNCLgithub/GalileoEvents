@@ -123,10 +123,11 @@ class RampScene:
         :type object_d: dict
         """
         if object_d['shape'] == 'Ball':
+            radius =  object_d['dims'][0] * 0.5
             bpy.ops.mesh.primitive_ico_sphere_add(location=object_d['position'],
                                                   enter_editmode=False,
                                                   subdivisions=7,
-                                                  radius = object_d['dims'][0])
+                                                  radius = radius)
         elif object_d['shape'] == 'Block':
             bpy.ops.mesh.primitive_cube_add(location=object_d['position'],
                                             enter_editmode=False,)

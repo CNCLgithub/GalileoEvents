@@ -50,7 +50,7 @@ def main():
     density_ratios = [[1, 2, 3], [1, 3, 5], [1, 2, 5], [1, 4, 2]]
     positions = [[0.9, 0.5, 1.5], [0.2, 0.3, 1.7], [0.4, 1.6, 1.8], [1.3, 0.6, 0.4]]
     appearance = "Wood"
-    dims = [0.1, 0.1, 0.1]
+    dims = [0.3, 0.3, 0.3]
 
     out_path = '/scenes/3ball'
     os.path.isdir(out_path) or os.mkdir(out_path)
