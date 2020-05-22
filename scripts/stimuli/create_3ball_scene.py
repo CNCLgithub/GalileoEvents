@@ -50,12 +50,13 @@ def main():
     density_ratios = [[1, 2, 3], [1, 3, 5], [1, 2, 5], [1, 4, 2]]
     positions = [[0.9, 0.5, 1.5], [0.2, 0.3, 1.7], [0.4, 1.6, 1.8], [1.3, 0.6, 0.4]]
     appearance = "Wood"
-    dims = [0.3, 0.3, 0.3]
+    dims = [0.1, 0.1, 0.1]
 
     out_path = '/scenes/3ball'
     os.path.isdir(out_path) or os.mkdir(out_path)
     
     # makes 16 scenes ...
+    i = 0
     for density in density_ratios:
         for pos in positions:
             scene = deepcopy(base)
@@ -72,12 +73,12 @@ def main():
             data = {'scene' : scene.serialize()}
             with open(p, 'w') as f:
                 json.dump(data, f, indent = 2, cls = NpEncoder)
-            pass
+            i+=1
 
 
     # write out metadata
-    with open(out_path + 'info', 'w') as f:
-        json.dump({'trials' : 20}, f)
+    with open(os.path.join(out_path, 'info'), 'w') as f:
+        json.dump({'trials' : 16}, f)
 
 if __name__ == '__main__':
     main()
