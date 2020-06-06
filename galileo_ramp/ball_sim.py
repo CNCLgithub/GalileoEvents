@@ -3,6 +3,9 @@ from rbw.simulation import RampSim
 
 class Ball3Sim(RampSim):
 
+    @property
+    def world(self):
+        return self._world
 
     @world.setter
     def world(self, w):

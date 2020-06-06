@@ -1,5 +1,8 @@
 from rbw.worlds import RampWorld
 
+default_phys = {'lateralFriction': 0.2,
+                'density': 0.0}
+
 class Ball3World(RampWorld):
     """ 3Ball variant of ramp world.
 
