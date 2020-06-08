@@ -25,6 +25,24 @@ def canonical_object(material, shape, dims):
     return shape(material, dims, {'density' : density_map[material],
                                   'lateralFriction' : friction_map[material],
                                   'restitution' : 0.9})
+
+def simulate(data):
+    client = simulation.init_client() # start a server
+    sim = simulation.init_sim(Ball3Sim, data, client) # load ramp into client
+    trace = simulation.run_full_trace(sim) # run simulation
+    simulation.clear_sim(sim)
+    return trace
+
+# todo somehow integrate `vels`
+def make_scene(base, names, objects, positions, vels):
+    scene = deepcopy(base)
+    for name, obj, pos, vel in zip(names, objects, positions, vels):
+        obj = deepcopy(obj)
+        scene.add_object(name, obj, pos, init_vel = vel)
+
+    return scene
+
+
 def main():
     parser = argparse.ArgumentParser(
         description = 'Generates an HDF5 for the Exp 1 dataset',
@@ -40,10 +58,10 @@ def main():
 
 
     # table and table object (`B`) is held constant
-    base = worlds.RampWorld(args.table, args.ramp,
-                     ramp_angle = args.ramp_angle * (np.pi/180.),
-                     ramp_phys = surface_phys,
-                     table_phys = surface_phys)
+    base = Ball3World(args.table, args.ramp,
+                      ramp_angle = args.ramp_angle * (np.pi/180.),
+                      ramp_phys = surface_phys,
+                      table_phys = surface_phys)
     # table_obj = canonical_object("Brick", shapes.Block, obj_dims)
     # base.add_object("B", table_obj, 0.35)
 
@@ -60,29 +78,36 @@ def main():
     obj_b = shapes.Ball(appearance, dims, {'density': density_ratios[1], 'lateralFriction': 0.3})
     obj_c = shapes.Ball(appearance, dims, {'density': density_ratios[2], 'lateralFriction': 0.3})
 
-    scene=deepcopy(base)
 
-    scene.add_object('A', obj_a, position[0])
-    scene.add_object('B', obj_b, position[1])
-    scene.add_object('C', obj_c, position[2])
+    # TODO make function to create a scene given objects
+    vels = np.zeros((3, 2, 3))
+    scene = make_scene(base, [obj_a, obj_b, obj_c], position, vels)
 
     p = os.path.join(out_path, '{0:d}.json'.format(0))
     scene_data = scene.serialize() # data must be serialized into a `Dict`
+    first_trace = simulate(scene_data) # get first half of simulation
+    pal, rot, col = first_trace # for clarity
     print(scene_data)
-    client = simulation.init_client(debug = True) # start a server
-    sim = simulation.init_sim(simulation.MarbleSim, scene_data, client) # load ramp into client
-    print(sim)
+    # pal is TxS(pos, lin vel, ang vel)xNx3
+    # rot is TxNx4
+    # col Tx?x2
+    contact = np.nonzero(col)[0][0]
+    init_pos = pal[contact, 0] # position @ t = contact
+    init_rot = rot[contact]
+    # 2 x 3
+    init_vels = pal[contact, 1:2] # angular and linear vels @ t = contact
 
-    pla, rot, col = simulation.run_full_trace(sim, debug = True) # run simulation
-    print(col)
-    # # print(trace.shape)
-    simulation.clear_sim(sim)
+    # use make_scene
+    scene2 = make_scene(...)
+    trace2 = simulate(scene2.serialize())
 
+    # concatenate (np.concatenate)
+    # from sim1[0:contact] + sim2
 
-
-
-
-
+    # save:
+    # both scene_datas
+    # concatenates simulations
+    # two options here, save a dict with json or 3 arrays with np.save
 
     with open(p, 'w') as f:
         json.dump(scene_data, f, indent = 2, cls = NpEncoder)

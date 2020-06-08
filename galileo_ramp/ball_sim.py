@@ -12,12 +12,14 @@ class Ball3Sim(RampSim):
         self.resetSimulation()
         self.setGravity(0, 0, -10)
         self.make_table(w['table'])
+        self.make_obj(w['ramp'])
         init_vel = w['init_vel']
         d = {}
         for obj,data in w['objects'].items():
             d[obj] = self.make_obj(data)
             if obj in w['init_vel']:
-                linear, angular = init_vel[obj]
-                self.resetBaseVelocity(d[obj], linearVelocity = linear,
-                                       angularVelocity = angular)
+                angular, linear = init_vel[obj]
+                self.resetBaseVelocity(d[obj],
+                                       angularVelocity = angular,
+                                       linearVelocity = linear)
         self._world = d

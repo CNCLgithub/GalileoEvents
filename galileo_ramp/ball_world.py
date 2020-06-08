@@ -30,5 +30,5 @@ class Ball3World(RampWorld):
 
     def serialize(self):
         d = super().serialize()
-        d['initial_vel'] = self.initial_vel
+        d['init_vel'] = self.init_vel
         return d
