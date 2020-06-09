@@ -20,7 +20,6 @@ density_map = {"Wood" : 1.0,
 friction_map = {"Wood" : 0.263,
                 "Brick" : 0.323,
                 "Iron" : 0.215}
-
 def canonical_object(material, shape, dims):
     return shape(material, dims, {'density' : density_map[material],
                                   'lateralFriction' : friction_map[material],
@@ -38,7 +37,7 @@ def make_scene(base, objects, positions, vels):
     scene = deepcopy(base)
     for name, (obj, pos, vel) in enumerate(zip(objects, positions, vels)):
         obj = deepcopy(obj)
-        scene.add_object(str(name), obj, pos, init_vel = vel)
+        scene.add_object(str(name), obj, place=pos, init_vel = vel)
     return scene
 
 def make_ball(appearance, dims, density):
@@ -95,18 +94,28 @@ def main():
     init_pos = pal[contact, 0] # position @ t = contact
     init_rot = rot[contact]
 
-    # 2 x 3
-    init_vels = pal[contact, 1:2] # angular and linear vels @ t = contact
+    init_pos_transformed = []
+    for pos in init_pos:
+        x_coord = pos[0]/3.5
+        if x_coord <= 0:
+            x_coord = 1 + abs(x_coord)
+        init_pos_transformed.append(x_coord)
 
+    # 2 x 3
+    init_vels = pal[contact][1:3].transpose() # angular and linear vels @ t = contact
+    init_vels_transformed = []
+    for vel in init_vels:
+        init_vels_transformed.append(vel.transpose())
     # use make_scene
     obj_b_changed = make_ball(appearance, dims, 2)
 
-    scene2 = make_scene(base, [obj_a, obj_b_changed, obj_c], init_pos, init_vels)
+    scene2 = make_scene(base, [obj_a, obj_b_changed, obj_c], init_pos_transformed, init_vels_transformed)
     trace2 = simulate(scene2.serialize())
 
     # concatenate (np.concatenate)
     # from sim1[0:contact] + sim2
 
+    full_trace = np.concatenate((first_trace[0:contact], trace2), axis=1)
     # save:
     # both scene_datas
     # concatenates simulations
