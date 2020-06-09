@@ -29,19 +29,20 @@ def canonical_object(material, shape, dims):
 def simulate(data):
     client = simulation.init_client() # start a server
     sim = simulation.init_sim(Ball3Sim, data, client) # load ramp into client
-    trace = simulation.run_full_trace(sim) # run simulation
+    trace = simulation.run_full_trace(sim, T = 3.0) # run simulation
     simulation.clear_sim(sim)
     return trace
 
 # todo somehow integrate `vels`
-def make_scene(base, names, objects, positions, vels):
+def make_scene(base, objects, positions, vels):
     scene = deepcopy(base)
-    for name, obj, pos, vel in zip(names, objects, positions, vels):
+    for name, (obj, pos, vel) in enumerate(zip(objects, positions, vels)):
         obj = deepcopy(obj)
-        scene.add_object(name, obj, pos, init_vel = vel)
-
+        scene.add_object(str(name), obj, pos, init_vel = vel)
     return scene
 
+def make_ball(appearance, dims, density):
+     return shapes.Ball(appearance, dims, {'density': density, 'lateralFriction': 0.3})
 
 def main():
     parser = argparse.ArgumentParser(
@@ -74,9 +75,9 @@ def main():
     out_path = '/scenes/3ball_change'
     os.path.isdir(out_path) or os.mkdir(out_path)
     
-    obj_a = shapes.Ball(appearance, dims, {'density': density_ratios[0], 'lateralFriction': 0.3})
-    obj_b = shapes.Ball(appearance, dims, {'density': density_ratios[1], 'lateralFriction': 0.3})
-    obj_c = shapes.Ball(appearance, dims, {'density': density_ratios[2], 'lateralFriction': 0.3})
+    obj_a = make_ball(appearance, dims, 1)
+    obj_b = make_ball(appearance, dims, 1)
+    obj_c = make_ball(appearance, dims, 1)
 
 
     # TODO make function to create a scene given objects
@@ -87,18 +88,20 @@ def main():
     scene_data = scene.serialize() # data must be serialized into a `Dict`
     first_trace = simulate(scene_data) # get first half of simulation
     pal, rot, col = first_trace # for clarity
-    print(scene_data)
     # pal is TxS(pos, lin vel, ang vel)xNx3
     # rot is TxNx4
     # col Tx?x2
     contact = np.nonzero(col)[0][0]
     init_pos = pal[contact, 0] # position @ t = contact
     init_rot = rot[contact]
+
     # 2 x 3
     init_vels = pal[contact, 1:2] # angular and linear vels @ t = contact
 
     # use make_scene
-    scene2 = make_scene(...)
+    obj_b_changed = make_ball(appearance, dims, 2)
+
+    scene2 = make_scene(base, [obj_a, obj_b_changed, obj_c], init_pos, init_vels)
     trace2 = simulate(scene2.serialize())
 
     # concatenate (np.concatenate)
