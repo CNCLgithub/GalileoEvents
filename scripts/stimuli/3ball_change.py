@@ -103,6 +103,7 @@ def main():
 
     # 2 x 3
     init_vels = pal[contact][1:3].transpose() # angular and linear vels @ t = contact
+
     init_vels_transformed = []
     for vel in init_vels:
         init_vels_transformed.append(vel.transpose())
@@ -111,18 +112,23 @@ def main():
 
     scene2 = make_scene(base, [obj_a, obj_b_changed, obj_c], init_pos_transformed, init_vels_transformed)
     trace2 = simulate(scene2.serialize())
+    pal2, rot2, col2 = trace2
 
     # concatenate (np.concatenate)
     # from sim1[0:contact] + sim2
 
-    full_trace = np.concatenate((first_trace[0:contact], trace2), axis=1)
+    full_pal = np.concatenate((pal, pal2))
+    full_rot = np.concatenate((rot, rot2))
+    full_col = np.concatenate((col, col2))
+
+    full_trace = (full_pal, full_rot, full_col)
     # save:
     # both scene_datas
     # concatenates simulations
     # two options here, save a dict with json or 3 arrays with np.save
 
     with open(p, 'w') as f:
-        json.dump(scene_data, f, indent = 2, cls = NpEncoder)
+        json.dump(full_trace, f, indent = 2, cls = NpEncoder)
 
 
     # write out metadata
