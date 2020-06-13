@@ -73,6 +73,11 @@ def main():
 
     out_path = '/scenes/3ball_change'
     os.path.isdir(out_path) or os.mkdir(out_path)
+
+    out_path_orig = '/scenes/3ball_change/orig'
+    os.path.isdir(out_path_orig) or os.mkdir(out_path_orig)
+    out_path_intr = '/scenes/3ball_change/intr'
+    os.path.isdir(out_path_intr) or os.mkdir(out_path_intr)
     
     obj_a = make_ball(appearance, dims, 1)
     obj_b = make_ball(appearance, dims, 1)
@@ -121,14 +126,18 @@ def main():
     full_rot = np.concatenate((rot, rot2))
     full_col = np.concatenate((col, col2))
 
-    full_trace = (full_pal, full_rot, full_col)
     # save:
     # both scene_datas
     # concatenates simulations
     # two options here, save a dict with json or 3 arrays with np.save
 
-    with open(p, 'w') as f:
-        json.dump(full_trace, f, indent = 2, cls = NpEncoder)
+    np.save(file=os.path.join(out_path_orig, "orig_pal.npy"), arr=pal)
+    np.save(file=os.path.join(out_path_orig, "orig_rot.npy"), arr=rot)
+    np.save(file=os.path.join(out_path_orig, "orig_col.npy"), arr=col)
+    
+    np.save(file=os.path.join(out_path_intr, "intr_pal.npy"), arr=full_pal)
+    np.save(file=os.path.join(out_path_intr, "intr_rot.npy"), arr=full_rot)
+    np.save(file=os.path.join(out_path_intr, "intr_col.npy"), arr=full_col)
 
 
     # write out metadata
