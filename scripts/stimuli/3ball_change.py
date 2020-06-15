@@ -5,6 +5,7 @@ import json
 import argparse
 import numpy as np
 from copy import deepcopy
+from pprint import pprint
 from itertools import chain
 
 from rbw import shapes, worlds, simulation
@@ -12,7 +13,9 @@ from rbw.utils.encoders import NpEncoder
 from galileo_ramp import Ball3World, Ball3Sim
 
 surface_phys = {'density' : 0.0,
-                'friction': 0.3}
+                'friction': 0.3,
+                'restitution' : 0.2}
+
 obj_dims = np.array([3.0, 3.0, 1.5]) / 10.0
 density_map = {"Wood" : 1.0,
                "Brick" : 2.0,
@@ -32,7 +35,6 @@ def simulate(data):
     simulation.clear_sim(sim)
     return trace
 
-# todo somehow integrate `vels`
 def make_scene(base, objects, positions, vels):
     scene = deepcopy(base)
     for name, (obj, pos, vel) in enumerate(zip(objects, positions, vels)):
@@ -41,7 +43,8 @@ def make_scene(base, objects, positions, vels):
     return scene
 
 def make_ball(appearance, dims, density):
-     return shapes.Ball(appearance, dims, {'density': density, 'lateralFriction': 0.3})
+     return shapes.Ball(appearance, dims, {'density': density, 'lateralFriction': 0.3,
+                                           'restitution' : 0.9})
 
 def main():
     parser = argparse.ArgumentParser(
@@ -74,11 +77,6 @@ def main():
     out_path = '/scenes/3ball_change'
     os.path.isdir(out_path) or os.mkdir(out_path)
 
-    out_path_orig = '/scenes/3ball_change/orig'
-    os.path.isdir(out_path_orig) or os.mkdir(out_path_orig)
-    out_path_intr = '/scenes/3ball_change/intr'
-    os.path.isdir(out_path_intr) or os.mkdir(out_path_intr)
-    
     obj_a = make_ball(appearance, dims, 1)
     obj_b = make_ball(appearance, dims, 1)
     obj_c = make_ball(appearance, dims, 1)
@@ -88,8 +86,16 @@ def main():
     vels = np.zeros((3, 2, 3))
     scene = make_scene(base, [obj_a, obj_b, obj_c], position, vels)
 
-    p = os.path.join(out_path, '{0:d}.json'.format(0))
+    trial_path = os.path.join(out_path, str(0))
+    os.path.isdir(trial_path) or os.mkdir(trial_path)
+
+
     scene_data = scene.serialize() # data must be serialized into a `Dict`
+
+    p = os.path.join(trial_path, 'scene.json')
+    with open(p, 'w') as f:
+        json.dump(scene_data, f, cls = NpEncoder, indent = 2)
+        
     first_trace = simulate(scene_data) # get first half of simulation
     pal, rot, col = first_trace # for clarity
     # pal is TxS(pos, lin vel, ang vel)xNx3
@@ -107,37 +113,44 @@ def main():
         init_pos_transformed.append(x_coord)
 
     # 2 x 3
-    init_vels = pal[contact][1:3].transpose() # angular and linear vels @ t = contact
+    init_vels = np.swapaxes(pal[contact][1:3], 0, 1) # angular and linear vels @ t = contact
 
-    init_vels_transformed = []
-    for vel in init_vels:
-        init_vels_transformed.append(vel.transpose())
+    # init_vels_transformed = []
+    # for vel in init_vels:
+    #     init_vels_transformed.append(vel.transpose())
+
+    diff = {'objects' : {'1' : {'physics' : {'density' : 2}}}}
+    with open(os.path.join(trial_path, 'diff.json'), 'w') as f:
+        json.dump(diff, f)
+
     # use make_scene
     obj_b_changed = make_ball(appearance, dims, 2)
 
-    scene2 = make_scene(base, [obj_a, obj_b_changed, obj_c], init_pos_transformed, init_vels_transformed)
+    scene2 = make_scene(base, [obj_a, obj_b_changed, obj_c],
+                        init_pos_transformed, init_vels)
+    pprint(scene2.serialize())
     trace2 = simulate(scene2.serialize())
     pal2, rot2, col2 = trace2
 
     # concatenate (np.concatenate)
     # from sim1[0:contact] + sim2
 
-    full_pal = np.concatenate((pal, pal2))
-    full_rot = np.concatenate((rot, rot2))
-    full_col = np.concatenate((col, col2))
+    full_pal = np.concatenate((pal[:contact], pal2))
+    full_rot = np.concatenate((rot[:contact], rot2))
+    full_col = np.concatenate((col[:contact], col2))
 
     # save:
     # both scene_datas
     # concatenates simulations
     # two options here, save a dict with json or 3 arrays with np.save
 
-    np.save(file=os.path.join(out_path_orig, "orig_pal.npy"), arr=pal)
-    np.save(file=os.path.join(out_path_orig, "orig_rot.npy"), arr=rot)
-    np.save(file=os.path.join(out_path_orig, "orig_col.npy"), arr=col)
+    np.save(file=os.path.join(trial_path, "orig_pal.npy"), arr=pal)
+    np.save(file=os.path.join(trial_path, "orig_rot.npy"), arr=rot)
+    np.save(file=os.path.join(trial_path, "orig_col.npy"), arr=col)
     
-    np.save(file=os.path.join(out_path_intr, "intr_pal.npy"), arr=full_pal)
-    np.save(file=os.path.join(out_path_intr, "intr_rot.npy"), arr=full_rot)
-    np.save(file=os.path.join(out_path_intr, "intr_col.npy"), arr=full_col)
+    np.save(file=os.path.join(trial_path, "intr_pal.npy"), arr=full_pal)
+    np.save(file=os.path.join(trial_path, "intr_rot.npy"), arr=full_rot)
+    np.save(file=os.path.join(trial_path, "intr_col.npy"), arr=full_col)
 
 
     # write out metadata

@@ -16,7 +16,7 @@ from slurmpy import sbatch
 
 from rbw.utils.render import render
 
-from galileo_ramp.exp1_dataset import Exp1Dataset
+from galileo_ramp.ball_dataset import Ball3Dataset
 
 blender_exec = '/blender/blender'
 base_path = '/project/galileo_ramp/blend/'
@@ -95,21 +95,21 @@ def main():
         # submit `--batch` sbatch jobs to render trials.
         submit_sbatch(args)
     else:
-        dataset = Exp1Dataset(args.src)
-        if not args.idx is None:
-            scene_out = os.path.join(out, str(args.idx))
-            scene, trace, _ = dataset[args.idx]
-            print(scene)
-            render_trace(scene, trace, scene_out, args.resolution,
-                            args.mode, args.snapshot, args.gpu)
-
-
+        dataset = Ball3Dataset(args.src)
+        if args.idx is None:
+            indices = np.arange(len(dataset))
         else:
-            for idx, scene in enumerate(dataset):
-                scene_out = os.path.join(out, str(idx))
-                scene, trace, _ = dataset[idx]
-                render_trace(scene, trace, scene_out, args.resolution,
-                             args.mode, args.snapshot, args.gpu)
+            indices = [args.idx]
+
+        for idx in indices:
+            scene_out = os.path.join(out, str(idx))
+            scene, diff, orig_trc, intr_trc = dataset[idx]
+            orig_out = scene_out + '_orig'
+            intr_out = scene_out + '_intr'
+            render_trace(scene, orig_trc, orig_out, args.resolution,
+                            args.mode, args.snapshot, args.gpu)
+            render_trace(scene, intr_trc, intr_out, args.resolution,
+                            args.mode, args.snapshot, args.gpu)
 
 def submit_sbatch(args, chunks = 210):
     """ Helper function that submits sbatch jobs.

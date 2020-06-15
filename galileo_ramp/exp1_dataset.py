@@ -2,8 +2,6 @@ import io
 import os
 import json
 import h5py
-import time
-import argparse
 import numpy as np
 from pprint import pprint
 from h5data import dataset
@@ -107,21 +105,3 @@ class Exp1Dataset(dataset.HDF5Dataset):
         time_points = np.array([-1, 1, 3, 5]) * self.time_scale
         time_points += contact
         return (scene, trace, time_points)
-
-def main():
-
-    parser = argparse.ArgumentParser(
-        description = 'Unit test for `ParticleDataset`',
-        )
-    parser.add_argument('dataset', type = str, help = 'Path to dataset')
-    args = parser.parse_args()
-
-    dataset = Exp1Dataset(args.dataset)
-    print(dataset[28])
-    print('Dataset has size of {}'.format(len(dataset)))
-    init_time = time.time()
-    dataset[:]
-    print('All trials accessed in {0:8.5f}s'.format(time.time() - init_time))
-
-if __name__ == '__main__':
-    main()
