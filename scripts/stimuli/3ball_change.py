@@ -51,9 +51,9 @@ def main():
         description = 'Generates an HDF5 for the Exp 1 dataset',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-    parser.add_argument('--table', type = int, nargs = 2, default = (3.5, 1.8),
+    parser.add_argument('--table', type = int, nargs = 2, default = (4.0, 1.8),
                         help = 'XY dimensions of table.')
-    parser.add_argument('--ramp', type = int, nargs = 2, default = (3.5, 1.8),
+    parser.add_argument('--ramp', type = int, nargs = 2, default = (4.0, 1.8),
                         help = 'XY dimensions of ramp.')
     parser.add_argument('--ramp_angle', type = float, default = 35,
                         help = 'ramp angle in degrees')
@@ -107,17 +107,11 @@ def main():
 
     init_pos_transformed = []
     for pos in init_pos:
-        x_coord = pos[0]/3.5
-        if x_coord <= 0:
-            x_coord = 1 + abs(x_coord)
+        x_coord =  1 - pos[0]/args.table[0]
         init_pos_transformed.append(x_coord)
 
     # 2 x 3
     init_vels = np.swapaxes(pal[contact][1:3], 0, 1) # angular and linear vels @ t = contact
-
-    # init_vels_transformed = []
-    # for vel in init_vels:
-    #     init_vels_transformed.append(vel.transpose())
 
     diff = {'objects' : {'1' : {'physics' : {'density' : 2}}}}
     with open(os.path.join(trial_path, 'diff.json'), 'w') as f:
