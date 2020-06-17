@@ -5,7 +5,6 @@ import json
 import argparse
 import numpy as np
 from copy import deepcopy
-from pprint import pprint
 from itertools import chain
 
 from rbw import shapes, worlds, simulation
@@ -69,8 +68,9 @@ def main():
     # base.add_object("B", table_obj, 0.35)
 
     # materials have the same proportions of heavy/light perturbations
-    density_ratios = [1, 1, 1]
-    position = [1.9, 0.9, 0.2]
+    density_changes = [2, 3, 4, 5]
+    
+    positions = [[1.9, 0.9, 0.2], [1.5, 0.8, 0.4], [1.7, 1.5, 0.5], [1.7, 1.2, 0.3]]
     appearance = "Wood"
     dims = [0.3, 0.3, 0.3]
 
@@ -81,75 +81,80 @@ def main():
     obj_b = make_ball(appearance, dims, 1)
     obj_c = make_ball(appearance, dims, 1)
 
-
+    i = 0
     # TODO make function to create a scene given objects
-    vels = np.zeros((3, 2, 3))
-    scene = make_scene(base, [obj_a, obj_b, obj_c], position, vels)
+    for density in density_changes:
+        for pos in positions:
 
-    trial_path = os.path.join(out_path, str(0))
-    os.path.isdir(trial_path) or os.mkdir(trial_path)
+            vels = np.zeros((3, 2, 3))
+            scene = make_scene(base, [obj_a, obj_b, obj_c], pos, vels)
+
+            trial_path = os.path.join(out_path, str(i))
+            os.path.isdir(trial_path) or os.mkdir(trial_path)
 
 
-    scene_data = scene.serialize() # data must be serialized into a `Dict`
+            scene_data = scene.serialize() # data must be serialized into a `Dict`
 
-    p = os.path.join(trial_path, 'scene.json')
-    with open(p, 'w') as f:
-        json.dump(scene_data, f, cls = NpEncoder, indent = 2)
-        
-    first_trace = simulate(scene_data) # get first half of simulation
-    pal, rot, col = first_trace # for clarity
-    # pal is TxS(pos, lin vel, ang vel)xNx3
-    # rot is TxNx4
-    # col Tx?x2
-    contact = np.nonzero(col)[0][0]
-    init_pos = pal[contact, 0] # position @ t = contact
-    init_rot = rot[contact]
+            p = os.path.join(trial_path, 'scene.json')
+            with open(p, 'w') as f:
+                json.dump(scene_data, f, cls = NpEncoder, indent = 2)
+                
+            first_trace = simulate(scene_data) # get first half of simulation
+            pal, rot, col = first_trace # for clarity
+            # pal is TxS(pos, lin vel, ang vel)xNx3
+            # rot is TxNx4
+            # col Tx?x2
+            contact = np.nonzero(col)[0][0]
+            init_pos = pal[contact, 0] # position @ t = contact
+            init_rot = rot[contact]
 
-    init_pos_transformed = []
-    for pos in init_pos:
-        x_coord =  1 - pos[0]/args.table[0]
-        init_pos_transformed.append(x_coord)
+            init_pos_transformed = []
+            for pos in init_pos:
+                x_coord =  1 - pos[0]/args.table[0]
+                init_pos_transformed.append(x_coord)
 
-    # 2 x 3
-    init_vels = np.swapaxes(pal[contact][1:3], 0, 1) # angular and linear vels @ t = contact
+            # 2 x 3
+            init_vels = np.swapaxes(pal[contact][1:3], 0, 1) # angular and linear vels @ t = contact
 
-    diff = {'objects' : {'1' : {'physics' : {'density' : 2}}}}
-    with open(os.path.join(trial_path, 'diff.json'), 'w') as f:
-        json.dump(diff, f)
+            diff = {'objects' : {'1' : {'physics' : {'density' : density}}}}
+            with open(os.path.join(trial_path, 'diff.json'), 'w') as f:
+                json.dump(diff, f)
 
-    # use make_scene
-    obj_b_changed = make_ball(appearance, dims, 2)
+            # use make_scene
+            obj_b_changed = make_ball(appearance, dims, density)
 
-    scene2 = make_scene(base, [obj_a, obj_b_changed, obj_c],
-                        init_pos_transformed, init_vels)
-    pprint(scene2.serialize())
-    trace2 = simulate(scene2.serialize())
-    pal2, rot2, col2 = trace2
+            scene2 = make_scene(base, [obj_a, obj_b_changed, obj_c],
+                                init_pos_transformed, init_vels)
 
-    # concatenate (np.concatenate)
-    # from sim1[0:contact] + sim2
+            trace2 = simulate(scene2.serialize())
+            pal2, rot2, col2 = trace2
 
-    full_pal = np.concatenate((pal[:contact], pal2))
-    full_rot = np.concatenate((rot[:contact], rot2))
-    full_col = np.concatenate((col[:contact], col2))
+            # concatenate (np.concatenate)
+            # from sim1[0:contact] + sim2
 
-    # save:
-    # both scene_datas
-    # concatenates simulations
-    # two options here, save a dict with json or 3 arrays with np.save
+            full_pal = np.concatenate((pal[:contact], pal2))
+            full_rot = np.concatenate((rot[:contact], rot2))
+            full_col = np.concatenate((col[:contact], col2))
 
-    np.save(file=os.path.join(trial_path, "orig_pal.npy"), arr=pal)
-    np.save(file=os.path.join(trial_path, "orig_rot.npy"), arr=rot)
-    np.save(file=os.path.join(trial_path, "orig_col.npy"), arr=col)
-    
-    np.save(file=os.path.join(trial_path, "intr_pal.npy"), arr=full_pal)
-    np.save(file=os.path.join(trial_path, "intr_rot.npy"), arr=full_rot)
-    np.save(file=os.path.join(trial_path, "intr_col.npy"), arr=full_col)
+            # save:
+            # both scene_datas
+            # concatenates simulations
+            # two options here, save a dict with json or 3 arrays with np.save
+
+            np.save(file=os.path.join(trial_path, "orig_pal.npy"), arr=pal)
+            np.save(file=os.path.join(trial_path, "orig_rot.npy"), arr=rot)
+            np.save(file=os.path.join(trial_path, "orig_col.npy"), arr=col)
+            
+            np.save(file=os.path.join(trial_path, "intr_pal.npy"), arr=full_pal)
+            np.save(file=os.path.join(trial_path, "intr_rot.npy"), arr=full_rot)
+            np.save(file=os.path.join(trial_path, "intr_col.npy"), arr=full_col)
+
+            i+=1
 
 
     # write out metadata
     with open(os.path.join(out_path, 'info'), 'w') as f:
-        json.dump({'trials' : 1}, f)
+        json.dump({'trials' : 16}, f)
 
 if __name__ == '__main__':
     main()
