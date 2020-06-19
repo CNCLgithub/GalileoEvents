@@ -19,9 +19,9 @@ from rbw.utils.render import render
 from galileo_ramp.ball_dataset import Ball3Dataset
 
 blender_exec = '/blender/blender'
-base_path = '/project/galileo_ramp/blend/'
-def_render_path = base_path + 'render.py'
-def_blend_path = base_path + 'new_scene.blend'
+base_path = '/project/galileo_ramp/billiard/'
+render_path = base_path + 'render.py'
+blend_path = base_path + 'new_scene.blend'
 
 def render_trace(scene, trace, out, res, mode,
                  snapshot = False, gpu = False):
@@ -82,10 +82,6 @@ def main():
                         help = 'Size of sbatch array.')
     parser.add_argument('--gpu', action = 'store_true',
                         help = 'Use CUDA rendering')
-    parser.add_argument('--blend', type = str, default = def_blend_path,
-                        help = 'path to blend scene')
-    parser.add_argument('--rend', type = str, default = def_render_path,
-                        help = 'path to blender script')
 
     args = parser.parse_args()
 
