@@ -38,6 +38,7 @@ def make_scene(base, objects, positions, vels):
     scene = deepcopy(base)
     for name, (obj, pos, vel) in enumerate(zip(objects, positions, vels)):
         obj = deepcopy(obj)
+        print(pos)
         scene.add_object(str(name), obj, x=pos[0], y=pos[1], vel = vel)
     return scene
 
@@ -98,7 +99,7 @@ def main():
             p = os.path.join(trial_path, 'scene.json')
             with open(p, 'w') as f:
                 json.dump(scene_data, f, cls = NpEncoder, indent = 2)
-                
+
             first_trace = simulate(scene_data) # get first half of simulation
             pal, rot, col = first_trace # for clarity
             # pal is TxS(pos, lin vel, ang vel)xNx3

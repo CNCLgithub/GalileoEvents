@@ -26,3 +26,8 @@ class BilliardWorld(MarbleWorld):
         super().add_object(name, obj, x, y, force = force)
         if not (vel is None):
             self.init_vel[name] = vel
+
+    def serialize(self):
+        d = super().serialize()
+        d['init_vel'] = self.init_vel
+        return d

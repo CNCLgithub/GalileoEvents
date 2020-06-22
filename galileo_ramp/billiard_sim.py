@@ -16,6 +16,7 @@ class BilliardSim(MarbleSim):
         init_vel = w['init_vel']
         d = {}
         for obj,data in w['objects'].items():
+            d[obj] = self.make_obj(data)
             if obj in w['init_force']:
                 f = init_force[obj]
                 self.applyExternalForce(d[obj], -1, f, [0,0,0],self.LINK_FRAME)
