@@ -2,8 +2,7 @@ from rbw.worlds import MarbleWorld
 
 class BilliardWorld(MarbleWorld):
 
-    def __init__(self, table_dims,
-                 table_phys = default_phys):
+    def __init__(self, table_dims, table_phys):
         super().__init__(table_dims, table_phys = table_phys)
         self.init_vel = {}
 
