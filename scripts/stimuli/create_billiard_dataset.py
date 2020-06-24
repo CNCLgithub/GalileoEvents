@@ -34,12 +34,21 @@ def simulate(data):
     simulation.clear_sim(sim)
     return trace
 
-def make_scene(base, objects, positions, vels):
+def make_scene2(base, objects, positions, vels):
     scene = deepcopy(base)
     for name, (obj, pos, vel) in enumerate(zip(objects, positions, vels)):
         obj = deepcopy(obj)
-        print(pos)
         scene.add_object(str(name), obj, x=pos[0], y=pos[1], vel = vel)
+    return scene
+
+def make_scene(base, objects, positions):
+    scene = deepcopy(base)
+    for name, (obj, pos) in enumerate(zip(objects, positions)):
+        obj = deepcopy(obj)
+        if name == 0:
+            scene.add_object(str(name), obj, x=pos[0], y=pos[1], vel=[[0, 0, 0], [10, 0, 0]])
+        else:
+            scene.add_object(str(name), obj, x=pos[0], y=pos[1], vel=[[0, 0, 0], [0, 0, 0]])
     return scene
 
 def make_ball(appearance, dims, density):
@@ -70,7 +79,7 @@ def main():
     density_changes = [2, 3, 4, 5]
     
     # different starting positions [[[Ball1 x, Ball1 y], [Ball2 x, Ball2 y], [Ball3 x, Ball3 y]]] => 1 trial
-    positions = [[[0.2, 0.9], [0.4, 0.6], [0.1, 0.6]]]
+    positions = [[[-0.4, 0.0], [0.0, 0.0], [1.0, 0.0]]]
     appearance = "Wood"
     dims = [0.3, 0.3, 0.3]
 
@@ -86,10 +95,8 @@ def main():
     for density in density_changes:
         for pos in positions:
             
-            # set initial velocities to zero
-            vels = np.zeros((3, 2, 3))
             # generate scene with initial postions
-            scene = make_scene(base, [obj_a, obj_b, obj_c], pos, vels)
+            scene = make_scene(base, [obj_a, obj_b, obj_c], pos)
 
             trial_path = os.path.join(out_path, str(i))
             os.path.isdir(trial_path) or os.mkdir(trial_path)
@@ -107,12 +114,7 @@ def main():
             # col Tx?x2
             contact = np.nonzero(col)[0][0]
             init_pos = pal[contact, 0] # position @ t = contact
-            init_rot = rot[contact]
 
-            init_pos_transformed = []
-            for pos in init_pos:
-                x_coord =  1 - pos[0]/args.table[0]
-                init_pos_transformed.append(x_coord)
 
             # 2 x 3
             init_vels = np.swapaxes(pal[contact][1:3], 0, 1) # angular and linear vels @ t = contact
@@ -124,8 +126,8 @@ def main():
             # use make_scene
             obj_b_changed = make_ball(appearance, dims, density)
 
-            scene2 = make_scene(base, [obj_a, obj_b_changed, obj_c],
-                                init_pos_transformed, init_vels)
+            scene2 = make_scene2(base, [obj_a, obj_b_changed, obj_c],
+                                init_pos, init_vels)
 
             trace2 = simulate(scene2.serialize())
             pal2, rot2, col2 = trace2
