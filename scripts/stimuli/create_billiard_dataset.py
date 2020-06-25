@@ -46,9 +46,11 @@ def make_scene(base, objects, positions):
     for name, (obj, pos) in enumerate(zip(objects, positions)):
         obj = deepcopy(obj)
         if name == 0:
-            scene.add_object(str(name), obj, x=pos[0], y=pos[1], vel=[[0, 0, 0], [10, 0, 0]])
+            scene.add_object(str(name), obj, x=pos[0], y=pos[1], vel=np.array([[0, 0, 0], [10, 0, 0]]))
+            print(name)
         else:
-            scene.add_object(str(name), obj, x=pos[0], y=pos[1], vel=[[0, 0, 0], [0, 0, 0]])
+            print(name)
+            scene.add_object(str(name), obj, x=pos[0], y=pos[1], vel=np.array([[0, 0, 0], [0, 0, 0]]))
     return scene
 
 def make_ball(appearance, dims, density):
