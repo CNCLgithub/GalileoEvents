@@ -47,9 +47,7 @@ def make_scene(base, objects, positions):
         obj = deepcopy(obj)
         if name == 0:
             scene.add_object(str(name), obj, x=pos[0], y=pos[1], vel=np.array([[0, 0, 0], [10, 0, 0]]))
-            print(name)
         else:
-            print(name)
             scene.add_object(str(name), obj, x=pos[0], y=pos[1], vel=np.array([[0, 0, 0], [0, 0, 0]]))
     return scene
 
@@ -81,7 +79,7 @@ def main():
     density_changes = [2, 3, 4, 5]
     
     # different starting positions [[[Ball1 x, Ball1 y], [Ball2 x, Ball2 y], [Ball3 x, Ball3 y]]] => 1 trial
-    positions = [[[-0.4, 0.0], [0.0, 0.0], [1.0, 0.0]]]
+    positions = [[[-1.0, 0.0], [0.0, 0.0], [1.0, 0.0]]]
     appearance = "Wood"
     dims = [0.3, 0.3, 0.3]
 
