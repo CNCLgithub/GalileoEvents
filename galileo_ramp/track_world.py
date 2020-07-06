@@ -2,6 +2,7 @@ import numpy as np
 from collections import OrderedDict
 from rbw.worlds import World
 from rbw.shapes import Shape, Block
+from rbw.worlds.ramp import pct_to_coord
 
 default_phys = {
     'lateralFriction': 0.2,
@@ -10,6 +11,17 @@ default_phys = {
         }
 
 track_path = ""
+
+def pct_to_coord_track(mag, z):
+    # circle constnats
+    radius = 1
+    center = [0, 0, 0]
+    # gets angle based on magnitude given
+    angle = mag * 2 * np.pi
+    # calculates x, y coordinates based on angle
+    x_coord = radius * np.cos(angle)
+    y_coord = radius * np.sin(angle)
+    return [x_coord, y_coord, z]
 
 class MeshShape(Shape):
 
@@ -84,7 +96,25 @@ class TrackWorld(World):
                    vel = None, force = None):
         z = obj.dimensions[-1]
         # on track
+        if place < 1:
+            angle = 0
+            pos = pct_to_coord_track(mag, z/2)
         # on ramp
+        elif place < 2 and place > 1:
+            angle = self.ramp_angle
+            mag = (1 - place) * self.ramp.dimensions[0]
+            pos = pct_to_coord(mag, angle, z/2)
+        else:
+            raise ValueError('Place not found')
+
+        obj.position = pos
+        obj.orientation = (0, angle, 0)
+        objects = self.objects
+        objects[name] = obj
+        self.objects = objects
+        initial_pos = self.initial_pos
+        inital_pos[name] = place
+        self.initial_pos = initial_pos
         if not vel is None:
             self.init_vel[name] = vel
         if not force is None:
