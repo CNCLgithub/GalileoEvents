@@ -74,11 +74,13 @@ class TrackWorld(World):
         ramp = Block('ramp', ramp_dims, ramp_phys, angle = (0, ramp_angle, 0))
         ramp.position = [0, -4.2582, 3.2272]
         self.ramp = ramp
+        self.ramp_angle = ramp_angle
         track = MeshShape(track_source, {'lateralFriction': 0.0, 'density': 0.0,
                                          'restitution' : 0.9})
         track.position = [0., 0., 0.]
         self.objects = None
         self.track = track
+        self.initial_pos = {}
         self.init_vel = {}
         self.init_force = {}
 
@@ -113,7 +115,7 @@ class TrackWorld(World):
         objects[name] = obj
         self.objects = objects
         initial_pos = self.initial_pos
-        inital_pos[name] = place
+        initial_pos[name] = place
         self.initial_pos = initial_pos
         if not vel is None:
             self.init_vel[name] = vel
