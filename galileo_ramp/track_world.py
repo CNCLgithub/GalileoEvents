@@ -2,7 +2,6 @@ import numpy as np
 from collections import OrderedDict
 from rbw.worlds import World
 from rbw.shapes import Shape, Block
-from rbw.worlds.ramp import pct_to_coord
 
 default_phys = {
     'lateralFriction': 0.2,
@@ -11,6 +10,11 @@ default_phys = {
         }
 
 track_path = ""
+
+def pct_to_coord(mag, angle, z):
+    y_offset = (np.cos(angle) * mag) + (np.sin(angle) * z)
+    z_offset = (np.sin(angle) * abs(mag)) + (np.cos(angle) * z)
+    return np.array([0, y_offset, z_offset])
 
 def pct_to_coord_track(mag, z):
     # circle constnats
@@ -67,7 +71,7 @@ class TrackWorld(World):
     """
 
     def __init__(self, outer_track_radius, inner_track_radius, ramp_dims,
-                 ramp_angle = 43.0,
+                 ramp_angle = 43.0 * (np.pi/180.),
                  ramp_phys = default_phys,
                  track_source = track_path):
 
@@ -100,16 +104,17 @@ class TrackWorld(World):
         # on track
         if place < 1:
             angle = 0
-            pos = pct_to_coord_track(mag, z/2)
+            pos = pct_to_coord_track(place, z/2)
         # on ramp
         elif place < 2 and place > 1:
             angle = self.ramp_angle
             mag = (1 - place) * self.ramp.dimensions[0]
-            pos = pct_to_coord(mag, angle, z/2)
+            pos = pct_to_coord(mag, angle, z/2) + self.ramp.position
         else:
             raise ValueError('Place not found')
 
         obj.position = pos
+        print(pos)
         obj.orientation = (0, angle, 0)
         objects = self.objects
         objects[name] = obj

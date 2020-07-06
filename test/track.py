@@ -4,10 +4,10 @@ from rbw.shapes import Ball
 from rbw.utils.render import render
 from galileo_ramp import TrackWorld, TrackSim
 
-wrl = TrackWorld(10.0, 8.0, [0,0,0],
+wrl = TrackWorld(10.0, 8.0, [1.0, 4.702, 1.0],
                  track_source = "/project/galileo_ramp/track/track.urdf")
 # add objects here
-ball = Ball('', [0.3,0.3,0.3], {'density': 1.0, 'lateralFriction':0.5,
+ball = Ball('', [1., 1., 1.], {'density': 1.0, 'lateralFriction':0.5,
                                 'resitution':0.9})
 wrl.add_object('1', ball, 1.5)
 data = wrl.serialize()
