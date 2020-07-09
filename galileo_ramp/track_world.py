@@ -114,7 +114,6 @@ class TrackWorld(World):
             raise ValueError('Place not found')
 
         obj.position = pos
-        print(pos)
         obj.orientation = (0, angle, 0)
         objects = self.objects
         objects[name] = obj

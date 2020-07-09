@@ -21,10 +21,10 @@
         <color rgba="1 0.4 0.4 1"/>
       </material>
     </visual>
-    <collision>
+    <collision concave="yes">
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-      <mesh filename="track.obj" scale="1. 1. 1."/>
+      <mesh filename="track.stl" scale="1. 1. 1."/>
       </geometry>
     </collision>
   </link>
