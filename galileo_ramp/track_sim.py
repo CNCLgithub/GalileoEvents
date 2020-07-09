@@ -40,5 +40,6 @@ class TrackSim(Sim):
 
     def make_track(self, params):
         obj_id = self.loadURDF(params['source'],
-                               baseOrientation = [0.707,0, 0, 0.707])
+                               )
+                               # baseOrientation = [0.707,0, 0, 0.707])
         self.update_obj(obj_id, params)

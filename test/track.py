@@ -4,16 +4,16 @@ from rbw.shapes import Ball
 from rbw.utils.render import render
 from galileo_ramp import TrackWorld, TrackSim
 
-wrl = TrackWorld(10.0, 8.0, [1.0, 4.702, 1.0],
+wrl = TrackWorld(10.0, 8.0, [1.0, 4.702, 4.0],
                  track_source = "/project/galileo_ramp/track/track.urdf")
 # add objects here
 ball = Ball('', [1., 1., 1.], {'density': 1.0, 'lateralFriction':0.5,
                                 'resitution':0.9})
-wrl.add_object('1', ball, 1.5)
+wrl.add_object('1', ball, 1.7)
 data = wrl.serialize()
-client = simulation.init_client() # start a server
+client = simulation.init_client(debug = True) # start a server
 sim = simulation.init_sim(TrackSim, data, client) # load ramp into client
-pla, rot, cols = simulation.run_full_trace(sim, T = 3.0) # run simulation
+pla, rot, cols = simulation.run_full_trace(sim, debug=True,  T = 3.0) # run simulation
 simulation.clear_sim(sim)
 
 

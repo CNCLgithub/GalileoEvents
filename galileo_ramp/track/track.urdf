@@ -1,6 +1,6 @@
 <?xml version="1.0" ?>
 <robot name="track.urdf">
-  <link name="baseLink">
+  <link concave="yes" name="baseLink">
     <contact>
       <lateral_friction value="0.5"/>
       <rolling_friction value="0.0"/>
@@ -15,7 +15,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="track.obj" scale="1. 1. 1."/>
+        <mesh filename="track.stl" scale="1. 1. 1."/>
       </geometry>
        <material name="red">
         <color rgba="1 0.4 0.4 1"/>
