@@ -17,15 +17,16 @@ def pct_to_coord(mag, angle, z):
     return np.array([0, y_offset, z_offset])
 
 def pct_to_coord_track(mag, z):
+    diameter = 16.58
     # circle constnats
-    radius = 1
-    center = [0, 0, 0]
+    radius = diameter / 2 
+    center = np.array([0, radius, 0])
     # gets angle based on magnitude given
     angle = mag * 2 * np.pi
     # calculates x, y coordinates based on angle
     x_coord = radius * np.cos(angle)
     y_coord = radius * np.sin(angle)
-    return [x_coord, y_coord, z]
+    return np.array([x_coord, y_coord, z]) + center
 
 class MeshShape(Shape):
 
@@ -104,7 +105,8 @@ class TrackWorld(World):
         # on track
         if place < 1:
             angle = 0
-            pos = pct_to_coord_track(place, z/2)
+            pos = pct_to_coord_track(place, z/2) 
+            print(pos)
         # on ramp
         elif place < 2 and place > 1:
             angle = self.ramp_angle
