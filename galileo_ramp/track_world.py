@@ -17,7 +17,7 @@ def pct_to_coord(mag, angle, z):
     return np.array([0, y_offset, z_offset])
 
 def pct_to_coord_track(mag, z):
-    diameter = 16.58
+    diameter = 0.903725
     # circle constnats
     radius = diameter / 2 
     center = np.array([0, radius, 0])
@@ -77,11 +77,12 @@ class TrackWorld(World):
                  track_source = track_path):
 
         ramp = Block('ramp', ramp_dims, ramp_phys, angle = (0, ramp_angle, 0))
-        ramp.position = [0, -4.2582, 3.2272]
+        ramp.position = [0, -0.34536, 0.27761]
         self.ramp = ramp
         self.ramp_angle = ramp_angle
-        track = MeshShape(track_source, {'lateralFriction': 0.0, 'density': 0.0,
-                                         'restitution' : 0.9})
+        track = MeshShape(track_source, {'lateralFriction': 0.1, 'density': 0.0,
+                                         'rollingFriction':1.0,
+                                         'restitution' : 1.0})
         track.position = [0., 0., 0.]
         self.objects = None
         self.track = track
