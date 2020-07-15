@@ -33,6 +33,8 @@ class TrackSim(Sim):
                 self.applyExternalForce(d[obj], -1, f, [0,0,0],self.LINK_FRAME)
             if obj in w['init_vel']:
                 angular, linear = init_vel[obj]
+                # print(angular)
+                # raise ValueError()
                 self.resetBaseVelocity(d[obj],
                                        angularVelocity = angular,
                                        linearVelocity = linear)

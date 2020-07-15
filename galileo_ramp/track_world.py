@@ -80,9 +80,8 @@ class TrackWorld(World):
         ramp.position = [0, -0.34536, 0.27761]
         self.ramp = ramp
         self.ramp_angle = ramp_angle
-        track = MeshShape(track_source, {'lateralFriction': 0.1, 'density': 0.0,
-                                         'rollingFriction':1.0,
-                                         'restitution' : 1.0})
+        track = MeshShape(track_source, {'lateralFriction': 0.01, 'density': 0.0,
+                                         'restitution' : 0.0})
         track.position = [0., 0., 0.]
         self.objects = None
         self.track = track

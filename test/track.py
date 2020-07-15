@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+
+from pprint import pprint
 from rbw import simulation
 from rbw.shapes import Ball
 from rbw.utils.render import render
@@ -7,19 +9,19 @@ from galileo_ramp import TrackWorld, TrackSim
 wrl = TrackWorld(10.0, 8.0, [0.1, 0.8, 0.146],
                  track_source = "/project/galileo_ramp/track/track.urdf")
 # add objects here
-ball_dims = [0.065, 0.065, 0.065]
+ball_dims = [0.055, 0.055, 0.055]
 
 def make_ball():
     return Ball('', ball_dims, {'density': 1.0,
-                                'lateralFriction':1.0,
-                                'rollingFriction':0.2,
-                                'spinningFriction':0.2,
-                                'resitution':1.0})
+                                'lateralFriction':0.1,
+                                'rollingFriction':0.01,
+                                'spinningFriction':0.01,
+                                'resitution':0.99})
 ball1 = make_ball()
 ball2 = make_ball()
 ball3 = make_ball()
 
-wrl.add_object('1', ball1, 0.0, force = [0, -2.5, 0], vel = ([1, 0, 0], [0,0,0]))
+wrl.add_object('1', ball1, 0.0, vel = ([10, 0,  0], [0, -1,0]))
 # wrl.add_object('1', ball1, 0.0, )
 wrl.add_object('2', ball2, 0.33)
 wrl.add_object('3', ball3, 0.66)
@@ -55,3 +57,5 @@ kwargs = dict(
     exec = blender_exec
 )
 render(**kwargs)
+
+pprint(data)
