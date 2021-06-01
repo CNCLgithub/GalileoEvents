@@ -46,7 +46,7 @@ Simply run `setup.sh` in the root of this repo as follows
 
 ```bash
 chmod +x setup.sh
-./setup.sh
+./setup.sh cont_pull conda julia
 ```
 
 You will be prompted for sudo when building the container.
