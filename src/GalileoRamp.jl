@@ -11,8 +11,6 @@ function __init__()
     copy!(physics, pyimport("ramp_physics"))
     copy!(galileo_ramp, pyimport("galileo_ramp.exp1_dataset"))
 
-    # setup gen static functions
-    Gen.load_generated_functions()
 end
 
 include("distributions.jl")
@@ -21,5 +19,11 @@ include("procedures/procedures.jl")
 include("queries/queries.jl")
 include("analysis.jl")
 include("visualize/visualize.jl")
+
+#################################################################################
+# Load Gen functions
+#################################################################################
+
+@load_generated_functions
 
 end # module

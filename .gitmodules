@@ -4,15 +4,9 @@
 [submodule "deps/slurm"]
 	path = deps/slurm
 	url = https://github.com/belledon/slurm.git
-[submodule "deps/ClusterManagers"]
-	path = deps/ClusterManagers
-	url = https://github.com/CNCLgithub/ClusterManagers.jl
 [submodule "deps/Gen_Compose"]
 	path = deps/Gen_Compose
 	url = git@github.com:CNCLgithub/Gen_Compose.git
-[submodule "deps/AsyncManager.jl"]
-	path = deps/AsyncManager.jl
-	url = git@github.com:CNCLgithub/AsyncManager.jl.git
 [submodule "deps/rigid_body_world"]
 	path = deps/rigid_body_world
 	url = git@github.com:CNCLgithub/rigid_body_world.git
