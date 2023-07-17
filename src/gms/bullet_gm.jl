@@ -8,6 +8,72 @@ export GMParams,
 
 using PyCall
 
+
+"""Parameters for using the Bullet physics engine"""
+@with_kw struct BulletGM <: PhysicsGM
+    n_objects::Int64 = 2
+    object_prior::Vector{BulletPrior}
+    obs_noise::Float64
+    client::Int64
+    object_map::Dict{String, Int64}
+end
+
+"""
+
+State for `BulletGM`.
+
+# Properties
+- client: The bullet client id
+- latents: The physical properties for each object
+
+"""
+struct BulletState <: SimState
+    # simulation context
+    client::Int64
+    latents::Dict{String, BulletLatents}
+    kinematics::BulletKinematics
+end
+
+
+@with_kw struct BulletLatents
+    density::Float64 = 1.0
+    lateral_friction::Float64 = 1.0
+    volume::Float64 = 1.0
+    mass::Float64 = density * volume
+end
+
+struct BulletKinematics
+    positions::PyArray
+    orientations::PyArray
+    linear_velicities::PyArray
+    angular_velocities::PyArray
+end
+
+const surface_latents = BulletLatents(
+    density = 0.0, # static object
+    lateral_friction = 0.5,
+)
+
+abstract type Material end
+
+abstract type BulletMaterial <: Material end
+
+struct Wood <: BulletMaterial end
+const wood = Wood()
+prior(wood) = (density = 1.0,
+               lateral_friction = 0.263)
+
+struct Brick <: BulletMaterial end
+const brick = Brick()
+prior(Brick) = (density = 2.0,
+                lateral_friction = 0.323)
+
+
+struct Iron <: BulletMaterial end
+const iron = Iron()
+prior(Iron) = (density = 8.0,
+               lateral_friction = 0.215)
+
 const surface_phys = Dict("density" => 0,
                           "lateralFriction" => 0.5)
 const default_physics = Dict("density" => 2.0,
@@ -29,12 +95,6 @@ const default_prior_width  = 0.1
 abstract type GMParams end
 
 struct Params <: GMParams
-    n_objects::Int
-    object_prior::Vector{Dict}
-    obs_noise::Float64
-    prior_width::Float64
-    client::Int
-    object_map::Dict{String, Int}
     # during init
     function Params(object_prior::Vector, init_pos::Vector{Float64},
                     scene::Dict, obs_noise::Float64, prior_width::Float64,
