@@ -1,6 +1,6 @@
-# Galileo Ramp (v3)
+# Galileo Events
 
-The ramp-ball scenario for galileo
+The ramps and events
 
 ## Contributing
 
@@ -8,7 +8,7 @@ All team members must
 
 1. Create a branch based off the current master (preferably on their own fork)
 2. Add commits to that new branch
-3. push the new branch and submit a pull request to master
+3. push the new branch and submit a pull request to dev
 
 ## Setup
 
@@ -46,7 +46,7 @@ Simply run `setup.sh` in the root of this repo as follows
 
 ```bash
 chmod +x setup.sh
-./setup.sh cont_pull conda julia
+./setup.sh cont_build python julia
 ```
 
 You will be prompted for sudo when building the container.
