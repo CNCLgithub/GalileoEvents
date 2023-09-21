@@ -1,48 +1,81 @@
+export GMParams,
+    GMState,
+    Material,
+    Iron,
+    Brick,
+    Wood,
+    UnknownMaterial,
+    iron,
+    brick,
+    wood,
+    unknown_material,
+    MaterialPrior,
+    PhysPrior
 
 
+################################################################################
+# Common
+################################################################################
 
-abstract type PhysicsGM end
+"Parameters defining model behavior"
+abstract type GMParams end
 
-abstract type SimState end
+"Encapsulated state for a given model"
+abstract type GMState end
 
+abstract type Material end
+
+struct Iron <: Material end
+const iron = Iron()
+
+struct Brick <: Material end
+const brick = Brick()
+
+struct Wood <: Material end
+const wood = Wood()
+
+struct UnknownMaterial <: Material end
+const unknown_material = UnknownMaterial()
 
 """
-     step(gm::PhysicsGM, st::SimState)::SimState
+A collection of materials and their associate prior weights
 
-Performs a stateless evolution of the simulation state.
+$(TYPEDEF)
+
+---
+
+$(TYPEDFIELDS)
 """
-function step(gm::PhysicsGM, st::StimState)
-    sync!(gm, st)
-    new_st = forward_step(gm)
+struct MaterialPrior
+    materials::Vector{Material}
+    material_weights::Vector{Float64}
 end
 
+"""
+$(TYPEDSIGNATURES)
+
+A uniform prior over given materials
+"""
+function MaterialPrior(ms::Vector{Material})
+    n = length(ms)
+    ws = Fill(1.0 / n, n)
+    MaterialPrior(ms, ws)
+end
 
 """
-    sync!(gm::PhysicsGM, st::SimState)::Nothing
+Parameterizes an object's prior distribtuion over physical properties.
 
-Synchronizes the context within `gm` using `st`.
+$(TYPEDEF)
+
+---
+
+$(TYPEDFIELDS)
 """
-function sync! end
+struct PhysPrior
+    mass::NTuple{2, Float64}
+    friction::NTuple{2, Float64}
+    restitution::NTuple{2, Float64}
+end
 
-
-
-"""
-    forward_step(gm::PhysicsGM)::SimState
-
-Resolves physical interactions and obtains the next state representation.
-"""
-function forward_step end
-
-
-
-# REVIEW: is useful or possible?
-# """
-#     is_synced(gm::PhysicsGM, st::SimState)::Bool
-
-# Determines whether the gm
-# """
-# function is_synced end
-
-include("bullet_gm.jl")
-# include("mc_gm.jl")
-include("cp_gm.jl")
+include("mc_gm.jl")
+# include("cp_gm.jl")

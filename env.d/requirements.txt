@@ -3,7 +3,3 @@ scipy
 pybullet
 pyquaternion
 pandas
--e deps/hdf5_dataset
--e deps/slurm
--e deps/rigid_body_world
--e .

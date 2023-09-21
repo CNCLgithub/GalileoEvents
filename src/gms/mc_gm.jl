@@ -1,54 +1,107 @@
-export markov_generative_model
+export MCParams,
+    MCState,
+    mc_gm
 
-## Generative Model + components
-##
+################################################################################
+# Generative Model
+################################################################################
+"""
+Parameters for Markov-simulation model
 
-@gen (static) function object_prior(material_params)
-    mat_prop = from_material_params(material_params)
-    dens_prior = mat_prop["density"]
-    fric_prior = mat_prop["lateralFriction"]
-    density = @trace(trunc_norm(dens_prior[1],
-                                dens_prior[2],
-                                0., 150.),
-                     :density)
-    friction = @trace(trunc_norm(fric_prior[1],
-                                 fric_prior[2],
-                                 0., 1.),
+$(TYPEDEF)
+
+---
+
+$(TYPEDFIELDS)
+"""
+struct MCParams <: GMParams
+    # prior
+    material_prior::MaterialPrior
+    physics_prior::Vector{PhysPrior}
+    # simulation
+    sim::BulletSim
+    template::BulletState
+    n_objects::Int64
+end
+
+"""
+$(TYPEDSIGNATURES)
+
+Initializes `MCParams` from a constructed scene in pybullet.
+"""
+function MCParams(client::PyObject, objs::Vector{PyObject},
+                  mprior::MaterialPrior, pprior::Vector{PhysPrior})
+    # configure simulator with the provided
+    # client id
+    sim = BulletSim(;client=client)
+    # These are the objects of interest in the scene
+    rigid_bodies = RigidBody.(objs)
+    # Retrieve the default latents for the objects
+    # as well as their initial positions
+    # Note: alternative latents will be suggested by the `prior`
+    template = BulletState(sim, rigid_bodies)
+
+    MCParams(mprior, pprior, sim, template, length(objs))
+end
+
+struct MCState <: GMState
+    bullet_state::BulletState
+end
+
+
+################################################################################
+# Gen code
+################################################################################
+
+
+@gen function mc_object_prior(ls::RigidBodyLatents, gm::MCParams)
+    # sample material
+    mi = @trace(categorical(gm.material_weights), :material)
+    # sample physical properties
+    phys_params = gm.phys_params[mi]
+    mass_mu, mass_sd = phys_params.mass
+    mass = @trace(trunc_norm(mass_mu, mass_sd, 0., Inf),
+                     :mass)
+    fric_mu, fric_sd = phys_params.friction
+    friction = @trace(trunc_norm(fric_mu,fric_sd, 0., 1.),
                       :friction)
-    restitution = @trace(uniform(0.8, 1.0), :restitution)
-    physical_props = Dict("density" => density,
-                          "lateralFriction" => friction,
-                          "restitution" => restitution)
-    return physical_props
+    res_low, res_high = phys_params.restitution
+    restitution = @trace(uniform(res_low, res_high), :restitution)
+    # package
+    new_ls = setproperties(ls.data;
+                           mass = mass,
+                           lateralFriction = friction,
+                           restitution = restitution)
+    new_latents::RigidBodyLatents = RigidBodyLatents(new_ls)
+    return new_latents
 end
 
-map_object_prior = Gen.Map(object_prior)
-
-@gen (static) function state_prior()
-    init_pos = @trace(uniform(0, 2), :init_pos)
-    return init_pos
+@gen function mc_prior(gm::MCParams)
+    latents = gm.template.latents
+    gms = Fill(gm, length(latents))
+    new_latents = @trace(Gen.Map(mc_object_prior)(latents, gms), :objects)
+    bullet_state = setproperties(gm.template; latents = new_latents)
+    init_state = MCState(bullet_state)
+    return init_state
 end
 
-map_init_state = Gen.Map(state_prior)
+@gen function observe_position(k::RigidBodyState, noise::Float64)
+    pos = k.position # XYZ position
+    # add noise to position
+    obs = @trace(broadcasted_normal(pos, noise), :position)
+    return obs
+end
 
-@gen (static) function kernel(t::Int, prev_state, params, belief)
-    next_state = forward_step(prev_state, params, belief)
-    pos = next_state[1, :, :]
-    next_pos = @trace(Gen.broadcasted_normal(pos, params.obs_noise),
-                      :positions)
+@gen function kernel(t::Int, prev_state::MCState, gm::MCParams)
+    sim_step::BulletState = PhySMC.step(gm.sim, prev_state.bullet_state)
+    obs = @trace(Gen.Map(observe_position)(sim_step.kinematics), :observe)
+    next_state = MCState(sim_step)
     return next_state
 end
 
-chain = Gen.Unfold(kernel)
-
-@gen (static) function markov_generative_model(t::Int, params::Params)
-
-    objects = @trace(map_object_prior(params.object_prior),
-                     :object_physics)
-    init_args = fill(tuple(), params.n_objects)
-    initial_pos = @trace(map_init_state(init_args), :initial_state)
-    i_state = initialize_state(params, objects, initial_pos)
-
-    states = @trace(chain(t, i_state[1], params, i_state[2]), :chain)
+@gen function mc_gm(t::Int, gm::MCParams)
+    init_state = @trace(mc_prior(gm), :prior)
+    # simulate `t` timesteps
+    states = @trace(Gen.Unfold(kernel)(t, init_state, gm), :kernel)
     return states
 end

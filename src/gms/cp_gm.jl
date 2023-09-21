@@ -9,6 +9,11 @@ const material_ps = ones(3) ./ 3
 const incongruent_mat = Dict( "density" => (0.01, 150.),
                               "lateralFriction" => (0.01, 0.99))
 
+struct ObjectBelief
+    congruent::Bool
+    physical_latents::RigidBodyLatents
+end
+
 function cp_material_params(mat::String, w::Float64)
     dens_mu = density_map[mat]
     density_prior = (dens_mu * (1-w), dens_mu * (1+w))
@@ -175,6 +180,6 @@ chain = Gen.Unfold(kernel)
     objects = @trace(map_object_prior(args), :object_physics)
     initial_pos = @trace(map_init_state(args), :initial_state)
     i_state = initialize_state(params, objects, initial_pos)
-    states = @trace(chain(t, i_state, params), :chain)
+    states = @trace(Gen.Unfold(kernel)(t, i_state, params), :chain)
     return states
 end
