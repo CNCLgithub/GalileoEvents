@@ -46,10 +46,15 @@ Simply run `setup.sh` in the root of this repo as follows
 
 ```bash
 chmod +x setup.sh
-./setup.sh cont_build python julia
+./env.d/setup.sh cont_build python julia
 ```
 
-You will be prompted for sudo when building the container.
+You will be prompted for sudo when building the container. If you are not able to gain sudo privilege, you can use 
+
+```bash
+chmod +x setup.sh
+./env.d/setup.sh cont_build_nosudo python julia
+```
 
 `setup.sh` will then create the container at the path specified in the config (`julia-cont` by default).
 
@@ -66,14 +71,14 @@ After running `setup.sh`, you can now use `run.sh` to use the environment.
 
 The synatx of `run.sh` is simply:
 ```bash
-./run.sh <command>
+./env.d/run.sh <command>
 ```
 
 Where `command` can be any arbitrary bash expression.
 
 For example, you can probe the python version in the conda environment using:
 ```
->: ./run.sh python3 --version
+>: ./env.d/run.sh python3 --version
 No user config found, using default
 INFO for ENV
         path => julia-cont
@@ -84,7 +89,7 @@ INFO for ENV
 Python 3.6.8 :: Anaconda, Inc.
 
 ```
-As you can see `./run.sh` first
+As you can see `./env.d/run.sh` first
 
 1. Loads the available config
 2. Reads out the config
@@ -95,7 +100,7 @@ As you can see `./run.sh` first
 Getting into the `julia` repl is simply
 
 ```
->: ./run.sh julia
+>: ./env.d/run.sh julia
 ```
 ```
 No user config found, using default
