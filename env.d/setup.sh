@@ -51,6 +51,9 @@ cont_dest="${SENV[envd]}/${SENV[cont]}"
     SINGULARITY_TMPDIR="${SPATHS[tmp]}" sudo -E $SING build \
     "$cont_dest" "$BUILD"
 
+[[ "${@}" =~ "cont_build_nosudo" ]] && echo "building ${BUILD} -> ${cont_dest} without sudo" && \
+    SINGULARITY_TMPDIR="${SPATHS[tmp]}" $SING build \
+    "$cont_dest" "$BUILD"
 
 #################################################################################
 # Python setup
