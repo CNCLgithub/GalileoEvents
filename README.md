@@ -142,11 +142,11 @@ Some Julia packages (usually stale ones) will attempt to install system level de
 
 The main method of executing elements within this package are via scripts found in the (queue drum roll) `scripts` directory. If the script has a proper shebang and is executable, congrats, you just need to run:
 
-`./run.sh scripts/my_script.`
+`./env.d/run.sh scripts/my_script.`
 
 ie
 ```
-[galileo-ramp]$ ./run.sh scripts/ramp_profile.py --help
+[galileo-ramp]$ ./env.d/run.sh scripts/ramp_profile.py --help
 No user config found, using default
 pybullet build time: May 15 2019 00:10:22
 usage: ramp_profile.py [-h] [--table TABLE TABLE] [--table_steps TABLE_STEPS]
