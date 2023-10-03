@@ -27,3 +27,4 @@ worker-*
 tmp*
 dask-worker-space
 __pycache__
+env.d/jenv/

@@ -1,3 +1,5 @@
+using FillArrays
+
 export GMParams,
     GMState,
     Material,
@@ -56,7 +58,7 @@ $(TYPEDSIGNATURES)
 
 A uniform prior over given materials
 """
-function MaterialPrior(ms::Vector{Material})
+function MaterialPrior(ms::Vector{<: Material}) 
     n = length(ms)
     ws = Fill(1.0 / n, n)
     MaterialPrior(ms, ws)

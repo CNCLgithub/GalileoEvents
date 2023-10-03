@@ -1,5 +1,6 @@
 module GalileoEvents
 
+using Accessors
 using Gen
 using Gen_Compose
 using PhySMC
