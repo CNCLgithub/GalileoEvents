@@ -1,7 +1,7 @@
 
 export CPParams,
     CPState,
-    CPModel
+    cp_model
 
 using LinearAlgebra:norm
 
@@ -19,9 +19,6 @@ struct Collision <: EventRelation
     b::RigidBody
 end
 
-struct EventState
-    active_events::Vector{EventRelation}
-end
 
 """
 Parameters for change point model
@@ -47,7 +44,7 @@ end
 
 struct CPState <: GMState
     bullet_state::BulletState
-    event_state::EventState
+    active_events::Vector{EventRelation}
 end
 
 ## PRIOR
@@ -113,6 +110,7 @@ end
 
 function valid_relations(state::CPState, event_concepts::Vector{Type{EventRelation}})
     return event_concepts
+    # TODO: replace by map in the end
     for EventRelation in event_concepts
         # TODO: decide if valid
     end
@@ -127,16 +125,24 @@ end
     return new_latents
 end
 
+# iterate over event concepts and evaluate predicates to active/deactive
 @gen function event_kernel(state::CPState, event_concepts::Vector{Type{EventRelation}})
     # filter out invalid event relations (e.g., a collision is already active between a and b)
-    relations = valid_relations(state, event_concepts)
+    #relations = valid_relations(state, event_concepts)
 
-    # pairwise weights of event concepts
-    weights = pairwise(event_concepts, state)
+    # activate new events
+    # map active events to weights 3D tensor for birth decision
+    # evaluate predicates object-pairwise 
+    weights = #call predicates event_concepts for each 
     event_idx = @trace(categorical(weights), :event_idx)
 
-    new_latents = @trace(Switch(map(clause, event_concepts))(event_idx, state.bullet_state), :event)
+    # Switch combinator to evaluate clauses for each event, currently only one
+    new_latents = @trace(Gen.Switch(map(clause, event_concepts))(event_idx, state.bullet_state), :event)
+    # alternative: update latents with Map
     update_latents(state, new_latents)
+
+    # some new events kill old events
+
     return active_events
 end
 
@@ -161,7 +167,7 @@ end
     return next_state
 end
 
-@gen (static) function CPModel(t::Int, params::CPParams)
+@gen (static) function cp_model(t::Int, params::CPParams)
     # initalize the kinematic and event state
     init_state = @trace(cp_prior(params), :prior)
 
