@@ -20,8 +20,6 @@ function forward_test()
 end
 
 
-# TODO: use `Gen.update` to change a traces physical latents and
-# compare the final positions (they should be different)
 function update_test()
     client, a, b = ramp(mass_ratio, obj_frictions, obj_positions)
     mc_params = MCParams(client, [a,b], mprior, pprior, obs_noise)
@@ -32,9 +30,10 @@ function update_test()
     trace2, _ = Gen.update(trace, cm)
 
     # compare final positions
-    for i in 1:2
-        @assert get_submap(get_choices(trace), :kernel=>120=>:observe=>i) != get_submap(get_choices(trace2), :kernel=>120=>:observe=>i)
-    end
+    t=120
+    pos1 = Vector(get_retval(trace)[t].bullet_state.kinematics[1].position)
+    pos2 = Vector(get_retval(trace2)[t].bullet_state.kinematics[1].position)
+    @assert pos1 != pos2
 
     return trace, trace2
 end
