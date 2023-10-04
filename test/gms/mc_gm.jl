@@ -16,9 +16,7 @@ function forward_test()
     client, a, b = ramp(mass_ratio, obj_frictions, obj_positions)
     mc_params = MCParams(client, [a,b], mprior, pprior, obs_noise)
     trace, _ = Gen.generate(mc_gm, (t, mc_params))
-    #display(get_choices(trace))
 end
-
 
 function update_test()
     client, a, b = ramp(mass_ratio, obj_frictions, obj_positions)
@@ -27,22 +25,17 @@ function update_test()
 
     addr = :prior => :objects => 1 => :mass
     cm = Gen.choicemap(addr => trace[addr] + 3)
-    trace2, _ = Gen.update(trace, cm)
+    trace2, _ = Gen.update(trace ,cm)
 
     # compare final positions
-    t=120
-    pos1 = Vector(get_retval(trace)[t].bullet_state.kinematics[1].position)
-    pos2 = Vector(get_retval(trace2)[t].bullet_state.kinematics[1].position)
+    i=120
+    pos1 = Vector(get_retval(trace)[i].bullet_state.kinematics[1].position)
+    pos2 = Vector(get_retval(trace2)[i].bullet_state.kinematics[1].position)
     @assert pos1 != pos2
 
-    return trace, trace2
+    return pos1, pos2
 end
 
-function main()
-    forward_test()
-    update_test()
-end
 
-if abspath(PROGRAM_FILE) == @__FILE__
-    main()
-end
+forward_test()
+update_test()
