@@ -5,13 +5,11 @@ export CPParams,
 
 using LinearAlgebra:norm
 
-## Generative Model + components
+## Changepoint Model + components
 
-struct ObjectBelief
-    congruent::Bool
-    physical_latents::RigidBodyLatents
-end
-
+"""
+Event types
+"""
 abstract type EventRelation end
 
 struct Collision <: EventRelation
@@ -22,12 +20,6 @@ end
 
 """
 Parameters for change point model
-
-$(TYPEDEF)
-
----
-
-$(TYPEDFIELDS)
 """
 struct CPParams <: GMParams
     # prior
@@ -42,6 +34,9 @@ struct CPParams <: GMParams
     obs_noise::Float64
 end
 
+"""
+Current state of the change point model, simulation state and event state
+"""
 struct CPState <: GMState
     bullet_state::BulletState
     active_events::Vector{EventRelation}
@@ -49,6 +44,9 @@ end
 
 ## PRIOR
 
+"""
+initalizes prior beliefs about mass, friction and resitution of the given objects
+"""
 @gen function cp_object_prior(ls::RigidBodyLatents, gm::CPParams)
     # sample material
     mi = @trace(categorical(gm.material_prior.material_weights), :material)
@@ -71,6 +69,9 @@ end
     return new_latents
 end
 
+"""
+initializes belief about all objects and events
+"""
 @gen function cp_prior(params::CPParams)
     # initialize the kinematic state
     latents = params.template.latents
@@ -79,9 +80,9 @@ end
     bullet_state = setproperties(params.template; latents = new_latents)
 
     # initialize the event state
-    event_state = EventState([])
+    active_events = Vector{EventRelation}()
 
-    init_state = CPState(bullet_state, event_state)
+    init_state = CPState(bullet_state, active_events)
     return init_state
 end
 
@@ -93,7 +94,9 @@ function predicate(Type{Collision}, x::RigidBodyState, y::RigidBodyState)
     clamp(1.0 - d, 0., 1.)
 end
 
-# in case of collision: Gaussian drift update of mass and restitution
+"""
+in case of collision: Gaussian drift update of mass and restitution#
+"""
 @gen static function _collision_clause(event_idx, latents::RigidBodyLatents)
     new_mass = @trace(trunc_norm(latents.mass, .1, 0., Inf), :mass)
     new_restitution = @trace(trunc_norm(latents.restitution, .1, res_low, res_high), :restitution)
@@ -107,7 +110,9 @@ function clause(Type{Collision})
     _collision_clause
 end
 
-
+"""
+objects that are already involved in some events should not be involved in new events
+"""
 function valid_relations(state::CPState, event_concepts::Vector{Type{EventRelation}})
     return event_concepts
     # TODO: replace by map in the end
@@ -115,6 +120,7 @@ function valid_relations(state::CPState, event_concepts::Vector{Type{EventRelati
         # TODO: decide if valid
     end
 end
+
 
 @gen function update_latents(state, latents)
     new_latents = setproperties(latents.data;
@@ -125,7 +131,9 @@ end
     return new_latents
 end
 
-# iterate over event concepts and evaluate predicates to active/deactive
+"""
+iterate over event concepts and evaluate predicates to active/deactive
+"""
 @gen function event_kernel(state::CPState, event_concepts::Vector{Type{EventRelation}})
     # filter out invalid event relations (e.g., a collision is already active between a and b)
     #relations = valid_relations(state, event_concepts)
@@ -146,7 +154,9 @@ end
     return active_events
 end
 
-# for one object, observe the noisy positions
+"""
+for one object, observe the noisy position in every dimension
+"""
 @gen function observe_position(k::RigidBodyState, noise::Float64)
     pos = k.position
     # add noise to position
@@ -154,7 +164,9 @@ end
     return obs
 end
 
-# for one time step, run event and physics kernel
+"""
+for one time step, run event and physics kernel
+"""
 @gen (static) function kernel(t::Int, prev_state::CPState, params::CPParams)
     # event kernel
     event_state = @trace(event_kernel(prev_state, params.event_concepts), :events)
@@ -167,6 +179,9 @@ end
     return next_state
 end
 
+"""
+generate physical scene with changepoints in the belief state
+"""
 @gen (static) function cp_model(t::Int, params::CPParams)
     # initalize the kinematic and event state
     init_state = @trace(cp_prior(params), :prior)
