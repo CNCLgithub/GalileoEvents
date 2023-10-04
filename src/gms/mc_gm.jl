@@ -17,11 +17,12 @@ $(TYPEDFIELDS)
 struct MCParams <: GMParams
     # prior
     material_prior::MaterialPrior
-    physics_prior::Vector{PhysPrior}
+    physics_prior::PhysPrior
     # simulation
     sim::BulletSim
     template::BulletState
     n_objects::Int64
+    obs_noise::Float64
 end
 
 """
@@ -29,8 +30,9 @@ $(TYPEDSIGNATURES)
 
 Initializes `MCParams` from a constructed scene in pybullet.
 """
-function MCParams(client::PyObject, objs::Vector{PyObject},
-                  mprior::MaterialPrior, pprior::Vector{PhysPrior})
+function MCParams(client::Int64, objs::Vector{Int64},
+                  mprior::MaterialPrior, pprior::PhysPrior,
+                  obs_noise::Float64=0.)
     # configure simulator with the provided
     # client id
     sim = BulletSim(;client=client)
@@ -41,7 +43,7 @@ function MCParams(client::PyObject, objs::Vector{PyObject},
     # Note: alternative latents will be suggested by the `prior`
     template = BulletState(sim, rigid_bodies)
 
-    MCParams(mprior, pprior, sim, template, length(objs))
+    MCParams(mprior, pprior, sim, template, length(objs), obs_noise)
 end
 
 struct MCState <: GMState
@@ -56,9 +58,9 @@ end
 
 @gen function mc_object_prior(ls::RigidBodyLatents, gm::MCParams)
     # sample material
-    mi = @trace(categorical(gm.material_weights), :material)
+    mi = @trace(categorical(gm.material_prior.material_weights), :material)
     # sample physical properties
-    phys_params = gm.phys_params[mi]
+    phys_params = gm.physics_prior
     mass_mu, mass_sd = phys_params.mass
     mass = @trace(trunc_norm(mass_mu, mass_sd, 0., Inf),
                      :mass)
@@ -94,7 +96,8 @@ end
 
 @gen function kernel(t::Int, prev_state::MCState, gm::MCParams)
     sim_step::BulletState = PhySMC.step(gm.sim, prev_state.bullet_state)
-    obs = @trace(Gen.Map(observe_position)(sim_step.kinematics), :observe)
+    noises = Fill(gm.obs_noise, length(sim_step.kinematics))
+    obs = @trace(Gen.Map(observe_position)(sim_step.kinematics, noises), :observe)
     next_state = MCState(sim_step)
     return next_state
 end
@@ -102,6 +105,7 @@ end
 @gen function mc_gm(t::Int, gm::MCParams)
     init_state = @trace(mc_prior(gm), :prior)
     # simulate `t` timesteps
+    println(init_state)
     states = @trace(Gen.Unfold(kernel)(t, init_state, gm), :kernel)
     return states
 end

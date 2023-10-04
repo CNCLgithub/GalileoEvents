@@ -6,8 +6,11 @@ export ramp
          obj_positions::NTuple{2}; slope, ramp_intersection)
 """
 function ramp(
+    mass_ratio::Float64,
+    obj_frictions::NTuple{2, Float64} = (.5, .5),
+    obj_positions::NTuple{2, Float64} = (0.5, 1.5),
     slope::Float64=2/3,
-    tableRampIntersection::Float64=0.,
+    tableRampIntersection::Float64=0.
     )
     # for debugging
     #client = @pycall pb.connect(pb.GUI)::Int64
@@ -56,7 +59,8 @@ function ramp(
     end
 
     # add a ramp
-    ramp_col_id = pb.createCollisionShape(pb.GEOM_MESH, fileName="examples/ramp/ramp.obj", physicsClientId=client, meshScale=[2, base_dims[2], slope*2])
+    pb.setAdditionalSearchPath("/project")
+    ramp_col_id = pb.createCollisionShape(pb.GEOM_MESH, fileName="src/utils/ramp.obj", physicsClientId=client, meshScale=[2, base_dims[2], slope*2])
     ramp_position = [-2+tableRampIntersection, -base_dims[2]/2, 0]
     ramp_obj_id = pb.createMultiBody(baseCollisionShapeIndex=ramp_col_id, basePosition=ramp_position, physicsClientId=client)
     pb.changeDynamics(ramp_obj_id, -1; mass=0.0, restitution=0.9, physicsClientId=client)
@@ -90,18 +94,18 @@ function ramp(
     obj_on_ramp_col_id = pb.createCollisionShape(pb.GEOM_BOX, halfExtents=obj_ramp_dims/2, physicsClientId=client)
     lift = obj_ramp_dims[3]/2
     position = [
-        -1+tableRampIntersection+lift*cos(theta_radians),
+        -2+2*obj_positions[1]+tableRampIntersection+lift*cos(theta_radians),
         0,
-        1*slope-lift*sin(theta_radians)
+        (2-2*obj_positions[1])*slope-lift*sin(theta_radians)
     ]
     obj_on_ramp_obj_id = pb.createMultiBody(baseCollisionShapeIndex=obj_on_ramp_col_id, basePosition=position, baseOrientation=orientation, physicsClientId=client)
-    pb.changeDynamics(obj_on_ramp_obj_id, -1; mass=1.0, restitution=0.9, physicsClientId=client)
-
+    pb.changeDynamics(obj_on_ramp_obj_id, -1; mass=mass_ratio, restitution=0.9, lateralFriction=obj_frictions[1], physicsClientId=client)
+    
     # add an object on the table that will collide with the object on the ramp as that one slides down
     obj_on_table_dims = [0.2, 0.2, 0.1]
     obj_on_table_col_id = pb.createCollisionShape(pb.GEOM_BOX, halfExtents=obj_on_table_dims/2, physicsClientId=client)
-    obj_on_table_obj_id = pb.createMultiBody(baseCollisionShapeIndex=obj_on_table_col_id, basePosition=[1, 0, obj_on_table_dims[3]/2], physicsClientId=client)
-    pb.changeDynamics(obj_on_table_obj_id, -1; mass=1.0, restitution=0.9, physicsClientId=client)
+    obj_on_table_obj_id = pb.createMultiBody(baseCollisionShapeIndex=obj_on_table_col_id, basePosition=[2.5*(obj_positions[2]-1), 0, obj_on_table_dims[3]/2], physicsClientId=client)
+    pb.changeDynamics(obj_on_table_obj_id, -1; mass=1.0, restitution=0.9, lateralFriction=obj_frictions[2], physicsClientId=client)
 
     (client, obj_on_ramp_obj_id, obj_on_table_obj_id)
 end
