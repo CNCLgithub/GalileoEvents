@@ -80,4 +80,4 @@ struct PhysPrior
 end
 
 include("mc_gm.jl")
-# include("cp_gm.jl")
+include("cp_gm_pb.jl")
