@@ -362,7 +362,7 @@ version = "0.72.9+1"
 
 [[deps.Gen]]
 deps = ["Compat", "DataStructures", "Distributions", "ForwardDiff", "FunctionalCollections", "JSON", "LinearAlgebra", "MacroTools", "Parameters", "Random", "ReverseDiff", "SpecialFunctions"]
-git-tree-sha1 = "9878ff4ab1990f5647e89b4228a3c9da5f0e69c7"
+path = "/home/dg963/GalileoEvents/env.d/jenv/dev/Gen"
 uuid = "ea4f424c-a589-11e8-07c0-fd5c91b9da4a"
 version = "0.4.6"
 
