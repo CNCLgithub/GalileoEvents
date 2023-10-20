@@ -1,4 +1,3 @@
-using Revise
 using Gen
 using GalileoEvents
 
@@ -100,29 +99,41 @@ end
     v ~ uniform(-1., 1.)
 end
 
-@gen function choose_delta(i::Int64)
-    function_idx = @trace(categorical([0.5, 0.5]), (:function, i))
-    delta ~ Gen.Switch(function1, function2)(function_idx)
+@gen function switch_model_static()
+    function_idx = @trace(categorical([0.5, 0.5]), :function)
+
+    x = @trace(Gen.Switch(function1, function2)(function_idx), :x)
+    
+    y = @trace(normal(x, 1.), :y)
 end
 
-@gen function switch_model()
-    n = @trace(poisson(5), :n)
-    total = 0.
-    for i=1:n
-        function_idx = @trace(categorical([0.5, 0.5]), (:function, i))
-        total += @trace(Gen.Switch(function1, function2)(function_idx), (:x, i))
-    end
-    @trace(normal(total, 1.), :y)
-    total
-end
-
-function switch_test()
-    trace, _ = Gen.generate(switch_model, ())
+function switch_test_static()
+    # unconstrained generation
+    trace, _ = Gen.generate(switch_model_static, ())
     display(get_choices(trace))
+
+    # constrained generation
+    cm = Gen.choicemap(:function => 1)
+    trace2, _ = Gen.generate(switch_model_static, (), cm)
+    display(get_choices(trace2))
+
+    # update trace
+    trace3, _ = Gen.update(trace, cm)
+    display(get_choices(trace3))
 end
 
-switch_test()
 
+
+@gen function switch_model_unfold()
+    function_idx = @trace(categorical([0.5, 0.5]), :function)
+
+    x = @trace(Gen.Switch(function1, function2)(function_idx), :x)
+    
+    y = @trace(normal(x, 1.), :y)
+end
+
+
+switch_test_static()
 #forward_test()
 #constrained_test()
 #update_test()
