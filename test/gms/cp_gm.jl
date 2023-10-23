@@ -1,3 +1,4 @@
+using Revise
 using Gen
 using GalileoEvents
 
@@ -19,7 +20,8 @@ function forward_test()
     cp_params = CPParams(client, [a,b], mprior, pprior, event_concepts, obs_noise)
     addr = :prior => :objects => 1 => :mass
     cm = Gen.choicemap(addr => 30)
-    trace, _ = Gen.generate(cp_model, (t, cp_params), cm)
+    trace, _ = Gen.generate(cp_model, (t, cp_params), cm);
+    println("")
     #display(get_choices(trace))
 end
 
@@ -123,7 +125,6 @@ function switch_test_static()
 end
 
 
-
 @gen function switch_model_unfold()
     function_idx = @trace(categorical([0.5, 0.5]), :function)
 
@@ -133,7 +134,7 @@ end
 end
 
 
-switch_test_static()
-#forward_test()
+#switch_test_static()
+forward_test()
 #constrained_test()
 #update_test()

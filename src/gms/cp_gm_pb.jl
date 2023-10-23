@@ -1,3 +1,4 @@
+using Revise
 
 export CPParams,
     CPState,
@@ -112,9 +113,12 @@ end
 Bernoulli weight that event relation holds
 """
 function predicate(t::Type{Collision}, a::RigidBodyState, b::RigidBodyState)
+    println(a)
     d = norm(Vector(a.position)-Vector(b.position)) # l2 distance
-    @show d
-    clamp(1.0 - exp(-d), 0., 1.)
+    
+    #@show d
+
+    clamp(exp(-20d), 0., 1.)
 end
 
 # TODO: surface distances, use pybullet (contact maybe not helpful)
