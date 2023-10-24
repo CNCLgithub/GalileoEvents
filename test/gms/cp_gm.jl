@@ -1,6 +1,7 @@
 using Revise
 using Gen
 using GalileoEvents
+using Plots
 
 mass_ratio = 2.0
 obj_frictions = (0.3, 0.3)
@@ -23,6 +24,33 @@ function forward_test()
     trace, _ = Gen.generate(cp_model, (t, cp_params), cm);
     println("")
     #display(get_choices(trace))
+end
+
+function visualize_active_events()
+    client, a, b = ramp(mass_ratio, obj_frictions, obj_positions)
+    event_concepts = Type{<:EventRelation}[Collision]
+    cp_params = CPParams(client, [a,b], mprior, pprior, event_concepts, obs_noise)
+
+    cm = Gen.choicemap()
+    cm[:prior => :objects => 1 => :mass] = 10
+    cm[:prior => :objects => 2 => :mass] = 10
+
+    cumulative_active_events = zeros(Int, t)
+    cumulative_started_events = zeros(Int, t)
+    cumulative_ended_events = zeros(Int, t)
+    num_traces = 1000
+    for i in 1:num_traces
+        trace, _ = Gen.generate(cp_model, (t, cp_params), cm);
+        cumulative_active_events .+= [length(trace[:kernel=>j=>:events][1]) for j in 1:t]
+        cumulative_started_events .+= [Int(trace[:kernel=>j=>:events=>:start_event_idx]>1) for j in 1:t]
+        cumulative_ended_events .+= [Int(trace[:kernel=>j=>:events=>:end_event_idx]>1) for j in 1:t]
+    end
+
+    for (var, filename) in zip([cumulative_active_events, cumulative_started_events, cumulative_ended_events],
+                            ["active_events.png", "started_events.png", "ended_events.png"])
+        plt = plot(1:t, var ./ num_traces, xlabel="t", ylabel="average events", legend=false, yrotation=90)
+        savefig(plt, filename)
+    end
 end
 
 # constrained generation
@@ -134,7 +162,9 @@ end
 end
 
 
-#switch_test_static()
-forward_test()
+
+#forward_test()
+visualize_active_events()
 #constrained_test()
 #update_test()
+#switch_test_static()

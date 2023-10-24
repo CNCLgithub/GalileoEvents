@@ -103,7 +103,7 @@ initializes belief about all objects and events
     bullet_state = setproperties(params.template; latents = new_latents)
 
     # initialize the event state
-    active_events = Set{EventRelation}()
+    active_events = Set{Int64}()
 
     init_state = CPState(bullet_state, active_events)
     return init_state
@@ -113,12 +113,11 @@ end
 Bernoulli weight that event relation holds
 """
 function predicate(t::Type{Collision}, a::RigidBodyState, b::RigidBodyState)
-    println(a)
+    #println(a)
     d = norm(Vector(a.position)-Vector(b.position)) # l2 distance
     
     #@show d
-
-    clamp(exp(-20d), 0., 1.)
+    clamp(exp(-10d), 0., 1.)
 end
 
 # TODO: surface distances, use pybullet (contact maybe not helpful)
@@ -194,7 +193,7 @@ end
 iterate over event concepts and evaluate predicates to active/deactive
 """
 @gen function event_kernel(state::CPState, event_concepts::Vector{Type{<:EventRelation}})
-    println("-------")
+    #println("-------")
     object_pairs = collect(combinations(state.bullet_state.kinematics, 2))
     pair_idx = repeat(collect(combinations(1:length(state.bullet_state.kinematics), 2)), length(event_concepts))
     pair_idx = [[0,0], pair_idx...] # for no event
@@ -202,29 +201,29 @@ iterate over event concepts and evaluate predicates to active/deactive
 
     # map possible events to weight vector for birth decision using the predicates
     predicates = [predicate(event_type, a, b) for  event_type in event_concepts for (a, b) in object_pairs]
-    print("Predicates: ")
-    println(predicates)
+    #@show predicates
 
     # randomly draw a starting and an ending event
     # birth
     weights = copy(predicates)
-    for idx in state.active_events # active events should not be born again
+    active_events = copy(state.active_events)
+    for idx in active_events # active events should not be born again
         weights[idx-1] = 0
     end
     weights = [max(0, 1 - sum(weights)), weights...]
     # TODO: objects that are already involved in some events should not be involved in other event types as well
     weights_normalized = weights ./ sum(weights)
-    println(weights_normalized)
+    # println(weights_normalized)
     
     # Draw born event
     events = vcat(NoEvent, [repeat([event_type], length(object_pairs)) for event_type in event_concepts]...)
 
     start_event_idx = @trace(categorical(weights_normalized), :start_event_idx)
     if start_event_idx > 1
-        push!(state.active_events, start_event_idx)
-        print("Event started: ")
-        print(events[start_event_idx])
-        println(pair_idx[start_event_idx])
+        push!(active_events, start_event_idx)
+        #print("Event started: ")
+        #print(events[start_event_idx])
+        #println(pair_idx[start_event_idx])
     end
 
     # Evaluate clauses for the born event
@@ -235,7 +234,7 @@ iterate over event concepts and evaluate predicates to active/deactive
     # death of old active events
     #println([1.0-predicates[idx] for idx in 1:length(predicates)])
     # TODO: think about another death probability function, maybe including event age, or add death predicate
-    weights = [(idx+1 in state.active_events && idx+1 != start_event_idx) ? (1.0 - predicates[idx]) : 0.0 for idx in 1:length(predicates)] # dying has the opposite chance of being born
+    weights = [(idx+1 in active_events && idx+1 != start_event_idx) ? (1.0 - predicates[idx]) : 0.0 for idx in 1:length(predicates)] # dying has the opposite chance of being born
     #print("Unnormalized death weights: ")
     #println(weights)
     weights = [max(0, 1-sum(weights)), weights...] # no event at index 1
@@ -245,13 +244,13 @@ iterate over event concepts and evaluate predicates to active/deactive
     end_event_idx = @trace(categorical(weights), :end_event_idx)
     #println(end_event_idx)
     if end_event_idx > 1 # nothing happens when no event dies
-        delete!(state.active_events, end_event_idx)
-        print("Ended event: ")
-        print(events[end_event_idx])
-        println(pair_idx[end_event_idx])
+        delete!(active_events, end_event_idx)
+        #print("Ended event: ")
+        #print(events[end_event_idx])
+        #println(pair_idx[end_event_idx])
     end 
 
-    return state.active_events, bullet_state
+    return active_events, bullet_state
 end
 
 """
