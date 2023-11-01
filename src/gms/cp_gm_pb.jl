@@ -38,12 +38,14 @@ struct CPParams <: GMParams
     template::BulletState
     n_objects::Int64
     obs_noise::Float64
+    death_factor::Float64
 end
 
 function CPParams(client::Int64, objs::Vector{Int64},
     mprior::MaterialPrior, pprior::PhysPrior,
     event_concepts::Vector{Type{<:EventRelation}},
-    obs_noise::Float64=0.)
+    obs_noise::Float64=0.,
+    death_factor=10.)
     # configure simulator with the provided
     # client id
     sim = BulletSim(;client=client)
@@ -54,7 +56,7 @@ function CPParams(client::Int64, objs::Vector{Int64},
     # Note: alternative latents will be suggested by the `prior`
     template = BulletState(sim, rigid_bodies)
 
-    CPParams(mprior, pprior, event_concepts, sim, template, length(objs), obs_noise)
+    CPParams(mprior, pprior, event_concepts, sim, template, length(objs), obs_noise, death_factor)
 end
 
 """
@@ -113,11 +115,11 @@ end
 Bernoulli weight that event relation holds
 """
 function predicate(t::Type{Collision}, a::RigidBodyState, b::RigidBodyState)
-    #println(a)
-    d = norm(Vector(a.position)-Vector(b.position)) # l2 distance
-    
-    #@show d
-    clamp(exp(-10d), 0., 1.)
+    if norm(Vector(a.linear_vel)-Vector(b.linear_vel)) < 0.01
+        return 0
+    end
+    d = norm(Vector(a.position)-Vector(b.position))-0.175 # l2 distance
+    clamp(exp(-15d), 0., 1.)
 end
 
 # TODO: surface distances, use pybullet (contact maybe not helpful)
@@ -173,9 +175,6 @@ function valid_relations(state::CPState, event_concepts::Vector{Type{EventRelati
     end
 end
 
-## TODO: add Pkg revise
-
-
 # map mcmc kernel (link: https://www.gen.dev/docs/stable/ref/mcmc/#Composing-Stationary-Kernels)
 # set of proposal functions
 
@@ -184,27 +183,18 @@ end
 # e.g. another event type for the same pair or another event for one event type
 
 
-# cognition: computation around events
-# modelling: changepoint model with Switch combinator
-# inference: change types of events to help inference being faster
-
-
 """
 iterate over event concepts and evaluate predicates to active/deactive
 """
-@gen function event_kernel(state::CPState, event_concepts::Vector{Type{<:EventRelation}})
-    #println("-------")
+@gen function event_kernel(state::CPState, params::CPParams)
     object_pairs = collect(combinations(state.bullet_state.kinematics, 2))
-    pair_idx = repeat(collect(combinations(1:length(state.bullet_state.kinematics), 2)), length(event_concepts))
+    pair_idx = repeat(collect(combinations(1:length(state.bullet_state.kinematics), 2)), length(params.event_concepts))
     pair_idx = [[0,0], pair_idx...] # for no event
-    #println(pair_idx)
 
     # map possible events to weight vector for birth decision using the predicates
-    predicates = [predicate(event_type, a, b) for  event_type in event_concepts for (a, b) in object_pairs]
-    #@show predicates
+    predicates = [predicate(event_type, a, b) for  event_type in params.event_concepts for (a, b) in object_pairs]
 
-    # randomly draw a starting and an ending event
-    # birth
+    # birth of one or no random event
     weights = copy(predicates)
     active_events = copy(state.active_events)
     for idx in active_events # active events should not be born again
@@ -213,41 +203,27 @@ iterate over event concepts and evaluate predicates to active/deactive
     weights = [max(0, 1 - sum(weights)), weights...]
     # TODO: objects that are already involved in some events should not be involved in other event types as well
     weights_normalized = weights ./ sum(weights)
-    # println(weights_normalized)
     
     # Draw born event
-    events = vcat(NoEvent, [repeat([event_type], length(object_pairs)) for event_type in event_concepts]...)
+    events = vcat(NoEvent, [repeat([event_type], length(object_pairs)) for event_type in params.event_concepts]...)
 
     start_event_idx = @trace(categorical(weights_normalized), :start_event_idx)
     if start_event_idx > 1
         push!(active_events, start_event_idx)
-        #print("Event started: ")
-        #print(events[start_event_idx])
-        #println(pair_idx[start_event_idx])
     end
 
-    # Evaluate clauses for the born event
-    
     updated_latents = @trace(Gen.Switch(map(clause, events)...)(start_event_idx, pair_idx[start_event_idx], state.bullet_state.latents), :event)
     bullet_state = setproperties(state.bullet_state; latents = updated_latents)
 
-    # death of old active events
-    #println([1.0-predicates[idx] for idx in 1:length(predicates)])
-    # TODO: think about another death probability function, maybe including event age, or add death predicate
-    weights = [(idx+1 in active_events && idx+1 != start_event_idx) ? (1.0 - predicates[idx]) : 0.0 for idx in 1:length(predicates)] # dying has the opposite chance of being born
-    #print("Unnormalized death weights: ")
-    #println(weights)
+    # death of one or no active event
+    weights = [(idx+1 in active_events && idx+1 != start_event_idx) ? max(1. - predicates[idx] * params.death_factor, 0.) : 0.0 for idx in 1:length(predicates)] # dying has a much lower chance of being born
+
     weights = [max(0, 1-sum(weights)), weights...] # no event at index 1
     weights = weights ./ sum(weights) # normalize
-    #print("Normalized death weights: ")
-    #println(weights)
+
     end_event_idx = @trace(categorical(weights), :end_event_idx)
-    #println(end_event_idx)
     if end_event_idx > 1 # nothing happens when no event dies
         delete!(active_events, end_event_idx)
-        #print("Ended event: ")
-        #print(events[end_event_idx])
-        #println(pair_idx[end_event_idx])
     end 
 
     return active_events, bullet_state
@@ -268,7 +244,7 @@ for one time step, run event and physics kernel
 """
 @gen function kernel(t::Int, prev_state::CPState, params::CPParams)
     # event kernel
-    active_events, bullet_state = @trace(event_kernel(prev_state, params.event_concepts), :events)
+    active_events, bullet_state = @trace(event_kernel(prev_state, params), :events)
 
     # simulate physics for the next step based on the current state and observe positions
     bullet_state::BulletState = PhySMC.step(params.sim, bullet_state)

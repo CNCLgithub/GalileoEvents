@@ -2,6 +2,7 @@ using Revise
 using Gen
 using GalileoEvents
 using Plots
+ENV["GKSwstype"]="160" # fixes some plotting warnings
 
 mass_ratio = 2.0
 obj_frictions = (0.3, 0.3)
@@ -26,31 +27,55 @@ function forward_test()
     #display(get_choices(trace))
 end
 
+function add_rectangle!(plt, xstart, xend, y; height=0.8, color=:blue)
+    xvals = [xstart, xend, xend, xstart, xstart]
+    yvals = [y, y, y+height, y+height, y]
+    plot!(plt, xvals, yvals, fill=true, seriestype=:shape, fillcolor=color, linecolor=color)
+end
+
+get_x2(trace, t) = get_retval(trace)[t].bullet_state.kinematics[2].position[1]
+
 function visualize_active_events()
     client, a, b = ramp(mass_ratio, obj_frictions, obj_positions)
     event_concepts = Type{<:EventRelation}[Collision]
     cp_params = CPParams(client, [a,b], mprior, pprior, event_concepts, obs_noise)
 
     cm = Gen.choicemap()
-    cm[:prior => :objects => 1 => :mass] = 10
-    cm[:prior => :objects => 2 => :mass] = 10
+    cm[:prior => :objects => 1 => :mass] = 2
+    cm[:prior => :objects => 2 => :mass] = 1
+    cm[:prior => :objects => 1 => :friction] = 0.5
+    cm[:prior => :objects => 2 => :friction] = 1.2
+    cm[:prior => :objects => 1 => :restitution] = 0.2
+    cm[:prior => :objects => 2 => :restitution] = 0.2
 
-    cumulative_active_events = zeros(Int, t)
-    cumulative_started_events = zeros(Int, t)
-    cumulative_ended_events = zeros(Int, t)
-    num_traces = 1000
+    num_traces = 50    
+    plt = plot(legend=false, xlim=(0, t), ylim=(1, num_traces+1), yrotation=90, ylabel="Trace", yticks=false, xlabel="Time step")
+    collision_t = nothing
     for i in 1:num_traces
+        if i % 10 == 0
+            @show i
+        end
         trace, _ = Gen.generate(cp_model, (t, cp_params), cm);
-        cumulative_active_events .+= [length(trace[:kernel=>j=>:events][1]) for j in 1:t]
-        cumulative_started_events .+= [Int(trace[:kernel=>j=>:events=>:start_event_idx]>1) for j in 1:t]
-        cumulative_ended_events .+= [Int(trace[:kernel=>j=>:events=>:end_event_idx]>1) for j in 1:t]
-    end
 
-    for (var, filename) in zip([cumulative_active_events, cumulative_started_events, cumulative_ended_events],
-                            ["active_events.png", "started_events.png", "ended_events.png"])
-        plt = plot(1:t, var ./ num_traces, xlabel="t", ylabel="average events", legend=false, yrotation=90)
-        savefig(plt, filename)
+        start = nothing
+        first_x = i==1 ? get_x2(trace, 1) : nothing # only look for collision in first trace
+        for j in 1:t
+            if trace[:kernel=>j=>:events=>:start_event_idx]==2
+                start = j
+            end
+            if trace[:kernel=>j=>:events=>:end_event_idx]==2
+                finish = j
+                add_rectangle!(plt, start, finish, i)
+            end
+            if first_x !== nothing && abs(first_x - get_x2(trace, j)) > 0.001
+                collision_t = j
+                first_x = nothing
+            end
+        end
+
     end
+    vline!(plt, [collision_t], linecolor=:red, linewidth=2, label="Vertical Line")
+    savefig(plt, "test/gms/plots/events.png")
 end
 
 # constrained generation
