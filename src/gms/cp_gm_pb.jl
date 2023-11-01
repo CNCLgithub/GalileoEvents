@@ -212,7 +212,9 @@ iterate over event concepts and evaluate predicates to active/deactive
         push!(active_events, start_event_idx)
     end
 
-    updated_latents = @trace(Gen.Switch(map(clause, events)...)(start_event_idx, pair_idx[start_event_idx], state.bullet_state.latents), :event)
+    switch = Gen.Switch(map(clause, events)...)
+
+    updated_latents = @trace(switch(start_event_idx, pair_idx[start_event_idx], state.bullet_state.latents), :event)
     bullet_state = setproperties(state.bullet_state; latents = updated_latents)
 
     # death of one or no active event

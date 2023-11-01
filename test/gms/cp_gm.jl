@@ -16,6 +16,14 @@ pprior = PhysPrior((3.0, 10.0), # mass
 obs_noise = 0.05
 t = 120
 
+fixed_prior_cm = Gen.choicemap()
+fixed_prior_cm[:prior => :objects => 1 => :mass] = 2
+fixed_prior_cm[:prior => :objects => 2 => :mass] = 1
+fixed_prior_cm[:prior => :objects => 1 => :friction] = 0.5
+fixed_prior_cm[:prior => :objects => 2 => :friction] = 1.2
+fixed_prior_cm[:prior => :objects => 1 => :restitution] = 0.2
+fixed_prior_cm[:prior => :objects => 2 => :restitution] = 0.2
+
 function forward_test()
     client, a, b = ramp(mass_ratio, obj_frictions, obj_positions)
     event_concepts = Type{<:EventRelation}[Collision]
@@ -38,15 +46,7 @@ get_x2(trace, t) = get_retval(trace)[t].bullet_state.kinematics[2].position[1]
 function visualize_active_events()
     client, a, b = ramp(mass_ratio, obj_frictions, obj_positions)
     event_concepts = Type{<:EventRelation}[Collision]
-    cp_params = CPParams(client, [a,b], mprior, pprior, event_concepts, obs_noise)
-
-    cm = Gen.choicemap()
-    cm[:prior => :objects => 1 => :mass] = 2
-    cm[:prior => :objects => 2 => :mass] = 1
-    cm[:prior => :objects => 1 => :friction] = 0.5
-    cm[:prior => :objects => 2 => :friction] = 1.2
-    cm[:prior => :objects => 1 => :restitution] = 0.2
-    cm[:prior => :objects => 2 => :restitution] = 0.2
+    cp_params = CPParams(client, [a,b], mprior, pprior, event_concepts, obs_noise)    
 
     num_traces = 50    
     plt = plot(legend=false, xlim=(0, t), ylim=(1, num_traces+1), yrotation=90, ylabel="Trace", yticks=false, xlabel="Time step")
@@ -55,7 +55,7 @@ function visualize_active_events()
         if i % 10 == 0
             @show i
         end
-        trace, _ = Gen.generate(cp_model, (t, cp_params), cm);
+        trace, _ = Gen.generate(cp_model, (t, cp_params), fixed_prior_cm);
 
         start = nothing
         first_x = i==1 ? get_x2(trace, 1) : nothing # only look for collision in first trace
@@ -90,9 +90,6 @@ function constrained_test()
     display(get_choices(trace))
 end
 
-# gen regenerate
-
-
 function update_test()
     t = 120
 
@@ -114,26 +111,23 @@ function update_test()
     return trace, trace2
 end
 
-
+# change event start
 function update_test_2()
-    t = 120
 
     client, a, b = ramp(mass_ratio, obj_frictions, obj_positions)
     event_concepts = Type{<:EventRelation}[Collision]
     cp_params = CPParams(client, [a,b], mprior, pprior, event_concepts, obs_noise)
+
+    # generate initial trace
     trace, _ = Gen.generate(cp_model, (t, cp_params))
 
-    addr = :prior => :objects => 1 => :mass
-    cm = Gen.choicemap(addr => trace[addr] + 3)
-    trace2, _ = Gen.update(trace, cm)
-
-    # compare final positions
-    t=120
-    pos1 = Vector(get_retval(trace)[t].bullet_state.kinematics[1].position)
-    pos2 = Vector(get_retval(trace2)[t].bullet_state.kinematics[1].position)
-    @assert pos1 != pos2
-
-    # TODO: more tests that include events
+    # find first born event
+    
+    
+    cm = copy(fixed_prior_cm)
+    cm[:kernel => 50 => :events => :start_event_idx] = 
+    trace2, _ = Gen.update(trace, fixed_prior_cm)
+    trace3, _ = Gen.regenerate(trace2, select(:kernel => 50 => :events => :start_event_idx))
 
     return trace, trace2
 end
@@ -154,11 +148,11 @@ end
     v ~ uniform(-1., 1.)
 end
 
+switch = Gen.Switch(function1, function2)
+
 @gen function switch_model_static()
     function_idx = @trace(categorical([0.5, 0.5]), :function)
-
-    x = @trace(Gen.Switch(function1, function2)(function_idx), :x)
-    
+    x = @trace(switch(function_idx), :x)
     y = @trace(normal(x, 1.), :y)
 end
 
@@ -172,24 +166,15 @@ function switch_test_static()
     trace2, _ = Gen.generate(switch_model_static, (), cm)
     display(get_choices(trace2))
 
-    # update trace
+    # update and regenerate trace
     trace3, _ = Gen.update(trace, cm)
-    display(get_choices(trace3))
+    trace4, _ = Gen.regenerate(trace3, select(:y))
+    display(get_choices(trace4))
 end
-
-
-@gen function switch_model_unfold()
-    function_idx = @trace(categorical([0.5, 0.5]), :function)
-
-    x = @trace(Gen.Switch(function1, function2)(function_idx), :x)
-    
-    y = @trace(normal(x, 1.), :y)
-end
-
-
 
 #forward_test()
-visualize_active_events()
+#visualize_active_events()
 #constrained_test()
 #update_test()
+update_test_2()
 #switch_test_static()
