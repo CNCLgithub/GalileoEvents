@@ -118,11 +118,12 @@ function predicate(t::Type{Collision}, a::RigidBodyState, b::RigidBodyState)
     if norm(Vector(a.linear_vel)-Vector(b.linear_vel)) < 0.01
         return 0
     end
-    d = norm(Vector(a.position)-Vector(b.position))-0.175 # l2 distance
+
+    a_dim = a.aabb[2] - a.aabb[1]
+    b_dim = b.aabb[2] - b.aabb[1]
+    d = norm(Vector(a.position)-Vector(b.position))-norm((a_dim+b_dim)/2) # l2 distance
     clamp(exp(-15d), 0., 1.)
 end
-
-# TODO: surface distances, use pybullet (contact maybe not helpful)
 
 # gen functional collections 
 
@@ -182,17 +183,22 @@ end
 # revise for which event, modify the categorical
 # e.g. another event type for the same pair or another event for one event type
 
+@gen function event_switch(clause, events, start_event_idx, pair, latents)
+    switch = Gen.Switch(map(clause, events)...)
+    return switch(start_event_idx, pair, latents)
+end
 
 """
 iterate over event concepts and evaluate predicates to active/deactive
 """
 @gen function event_kernel(state::CPState, params::CPParams)
-    object_pairs = collect(combinations(state.bullet_state.kinematics, 2))
-    pair_idx = repeat(collect(combinations(1:length(state.bullet_state.kinematics), 2)), length(params.event_concepts))
+    obj_states = state.bullet_state.kinematics
+    object_pairs = collect(combinations(obj_states, 2))
+    pair_idx = repeat(collect(combinations(1:length(obj_states), 2)), length(params.event_concepts))
     pair_idx = [[0,0], pair_idx...] # for no event
 
     # map possible events to weight vector for birth decision using the predicates
-    predicates = [predicate(event_type, a, b) for  event_type in params.event_concepts for (a, b) in object_pairs]
+    predicates = [predicate(event_type, a, b) for event_type in params.event_concepts for (a, b) in object_pairs]
 
     # birth of one or no random event
     weights = copy(predicates)
@@ -212,9 +218,9 @@ iterate over event concepts and evaluate predicates to active/deactive
         push!(active_events, start_event_idx)
     end
 
-    switch = Gen.Switch(map(clause, events)...)
+    
 
-    updated_latents = @trace(switch(start_event_idx, pair_idx[start_event_idx], state.bullet_state.latents), :event)
+    updated_latents = @trace(event_switch(clause, events, start_event_idx, pair_idx[start_event_idx], state.bullet_state.latents), :event)
     bullet_state = setproperties(state.bullet_state; latents = updated_latents)
 
     # death of one or no active event

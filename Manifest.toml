@@ -738,8 +738,8 @@ uuid = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
 version = "2.7.2"
 
 [[deps.PhyBullet]]
-deps = ["Accessors", "Conda", "Distributions", "DocStringExtensions", "Gen", "Parameters", "PhySMC", "Plots", "PyCall", "Revise", "StaticArrays", "UnicodePlots"]
-git-tree-sha1 = "f553bbf8cfdc3a291380ee17f600f818f6cad054"
+deps = ["Accessors", "Conda", "Distributions", "DocStringExtensions", "Gen", "Parameters", "PhySMC", "PyCall", "Revise", "StaticArrays", "UnicodePlots"]
+git-tree-sha1 = "9fddd996bd0e0fded73a3a15d7f579e1f76cc46f"
 repo-rev = "master"
 repo-url = "https://github.com/CNCLgithub/PhyBullet"
 uuid = "63daae69-5b14-439d-ac6f-096429ca839b"

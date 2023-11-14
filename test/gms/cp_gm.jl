@@ -28,11 +28,10 @@ function forward_test()
     client, a, b = ramp(mass_ratio, obj_frictions, obj_positions)
     event_concepts = Type{<:EventRelation}[Collision]
     cp_params = CPParams(client, [a,b], mprior, pprior, event_concepts, obs_noise)
-    addr = :prior => :objects => 1 => :mass
-    cm = Gen.choicemap(addr => 30)
-    trace, _ = Gen.generate(cp_model, (t, cp_params), cm);
+    
+    trace, _ = Gen.generate(cp_model, (t, cp_params));
     println("")
-    #display(get_choices(trace))
+    display(get_choices(trace))
 end
 
 function add_rectangle!(plt, xstart, xend, y; height=0.8, color=:blue)
@@ -78,18 +77,19 @@ function visualize_active_events()
     savefig(plt, "test/gms/plots/events.png")
 end
 
-# constrained generation
+# constrained generation, event 2 must start at timestep 10
 function constrained_test()
     client, a, b = ramp(mass_ratio, obj_frictions, obj_positions)
     event_concepts = Type{<:EventRelation}[Collision]
     cp_params = CPParams(client, [a,b], mprior, pprior, event_concepts, obs_noise)
 
     addr = 10 => :events => :start_event_idx
-    cm = Gen.choicemap(addr => 1)
+    cm = Gen.choicemap(addr => 2)
     trace, _ = Gen.generate(cp_model, (t, cp_params), cm)
     display(get_choices(trace))
 end
 
+# update priors
 function update_test()
     t = 120
 
@@ -121,13 +121,42 @@ function update_test_2()
     # generate initial trace
     trace, _ = Gen.generate(cp_model, (t, cp_params))
 
-    # find first born event
+    # find first collision in the trace
+    start_event_indices = [trace[:kernel=>i=>:events=>:start_event_idx] for i in 1:t]
+    t1 = findfirst(x -> x == 2, start_event_indices)
+
+    # move first collision five steps earlier
+    cm = choicemap(fixed_prior_cm)
+    cm[:kernel => t1 => :events => :start_event_idx] = 1
+    cm[:kernel => t1 - 5 => :events => :start_event_idx] = 2
+    trace2, ls2, _... = Gen.update(trace, cm)
+    trace3, delta_s, _... = Gen.regenerate(trace2, select(:kernel => t1 - 5 => :events => :event))
+
+    @assert delta_s != -Inf
+    @assert delta_s != NaN
+
+    return trace, trace2
+end
+
+# redraw latents at same event start
+function update_test_3()
+
+    client, a, b = ramp(mass_ratio, obj_frictions, obj_positions)
+    event_concepts = Type{<:EventRelation}[Collision]
+    cp_params = CPParams(client, [a,b], mprior, pprior, event_concepts, obs_noise)
+
+    # generate initial trace
+    trace, _ = Gen.generate(cp_model, (t, cp_params))
+
+    # find first collision in the trace
+    start_event_indices = [trace[:kernel=>i=>:events=>:start_event_idx] for i in 1:t]
+    t1 = findfirst(x -> x == 2, start_event_indices)
+
+    # in future maybe gaussian rw
+    trace2, delta_s, _... = Gen.regenerate(trace, select(:kernel => t1 => :events => :event))
     
-    
-    cm = copy(fixed_prior_cm)
-    cm[:kernel => 50 => :events => :start_event_idx] = 
-    trace2, _ = Gen.update(trace, fixed_prior_cm)
-    trace3, _ = Gen.regenerate(trace2, select(:kernel => 50 => :events => :start_event_idx))
+    @assert delta_s != -Inf
+    @assert delta_s != NaN
 
     return trace, trace2
 end
@@ -168,7 +197,7 @@ function switch_test_static()
 
     # update and regenerate trace
     trace3, _ = Gen.update(trace, cm)
-    trace4, _ = Gen.regenerate(trace3, select(:y))
+    trace4, _ = Gen.regenerate(trace3, select(:x))
     display(get_choices(trace4))
 end
 
@@ -176,5 +205,6 @@ end
 #visualize_active_events()
 #constrained_test()
 #update_test()
-update_test_2()
+#update_test_2()
+update_test_3()
 #switch_test_static()
