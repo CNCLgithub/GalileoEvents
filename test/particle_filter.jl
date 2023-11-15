@@ -3,6 +3,7 @@ using GalileoEvents
 using Gen
 using Printf
 using Plots
+using GenParticleFilters
 ENV["GKSwstype"]="160" # fixes some plotting warnings
 
 """
@@ -25,7 +26,7 @@ function gen_trial()
     
     cp_params = CPParams(client, [a,b], mprior, pprior, event_concepts, obs_noise)
 
-    t = 60
+    t = 100
 
     # run model forward
     trace, _ = Gen.generate(cp_model, (t, cp_params));
@@ -46,38 +47,25 @@ end
 """
 do_inference
 
-Implements a truncated random walk for the both mass priors
-"""
-@gen function proposal(tr::Gen.Trace)
-    # get previous values from `tr`
-    address(obj_nr) = :prior => :objects => obj_nr => :mass
-    choices = get_choices(tr)
-    #display(choices)
-    for i in 1:2
-        prev_mass = choices[address(1)]
-        mass = {address(i)} ~ trunc_norm(prev_mass, .25, 0., Inf)
-    end
-end
-
-"""
-do_inference
-
 Runs particle filter inference on a model and given observations
 """
-function do_inference(t::Int, params::CPParams, observations::Vector{ChoiceMap}, n_particles::Int = 100)
+function do_inference(t::Int, params::CPParams, observations::Vector{ChoiceMap}, n_particles::Int = 100, ess_thresh=0.5)
     # initialize particle filter
-    state = Gen.initialize_particle_filter(cp_model, (0, params), EmptyChoiceMap(), n_particles)
+    state = pf_initialize(cp_model, (1, params), observations[1], n_particles)
 
     # Then increment through each observation step
-    for (t, o) = enumerate(observations)
-        # apply a rejuvenation move to each particle
+    for t in 2:length(observations)
         step_time = @elapsed begin
-            for i=1:particles
-                state.traces[i], _  = mh(state.traces[i], proposal, ())
+            # Resample and rejuvenate if the effective sample size is too low
+            if effective_sample_size(state) < ess_thresh * n_particles
+                # Perform residual resampling, pruning low-weight particles
+                pf_resample!(state, :residual)
+                # Perform a rejuvenation move on past choices
+                rejuv_sel = select(:kernel => t-1 => :events => :event)
+                pf_rejuvenate!(state, mh, (rejuv_sel,))
             end
-        
-            Gen.maybe_resample!(state, ess_threshold=particles/2) 
-            Gen.particle_filter_step!(state, (t, params), (UnknownChange(), NoChange()), o)
+            # Update filter state with new observation at timestep t
+            pf_update!(state, (t, params), (UnknownChange(), NoChange()), observations[t])
         end
 
         if t % 10 == 0
@@ -86,7 +74,8 @@ function do_inference(t::Int, params::CPParams, observations::Vector{ChoiceMap},
     end
 
     # return the "unweighted" set of traces after t steps
-    return Gen.sample_unweighted_traces(state, particles)
+    #return Gen.sample_unweighted_traces(state, particles)
+    return get_traces(state)
 end
 
 
@@ -131,7 +120,7 @@ t, params, truth, observations = gen_trial()
 #display(get_choices(truth))
 
 # inference
-traces = do_inference(t, params, observations, 5)
+traces = do_inference(t, params, observations, 50)
 
 # visualize results
 plot_traces(truth, traces)
