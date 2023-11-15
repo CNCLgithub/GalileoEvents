@@ -4,6 +4,7 @@ using Gen
 using Printf
 using Plots
 using GenParticleFilters
+using Distributions
 ENV["GKSwstype"]="160" # fixes some plotting warnings
 
 """
@@ -13,9 +14,9 @@ Generates a trial and returns the generation parameters, the true trace and the 
 """
 function gen_trial()
     # configure model paramaters
-    mass_ratio = 2.0
-    obj_frictions = (0.3, 0.3)
-    obj_positions = (0.5, 1.2)
+    mass_ratio = rand(Gamma(2.0, 1.0))
+    obj_frictions = (rand(Uniform(0.1, 0.9)), rand(Uniform(0.1, 0.9)))
+    obj_positions = (rand(Uniform(0.2, 0.8)), rand(Uniform(1.2, 1.8)))
     mprior = MaterialPrior([unknown_material])
     pprior = PhysPrior((3.0, 10.0), # mass
                     (0.5, 10.0), # friction
@@ -74,8 +75,7 @@ function do_inference(t::Int, params::CPParams, observations::Vector{ChoiceMap},
     end
 
     # return the "unweighted" set of traces after t steps
-    #return Gen.sample_unweighted_traces(state, particles)
-    return get_traces(state)
+    return get_traces(state), get_log_weights(state)
 end
 
 
@@ -99,16 +99,15 @@ plot_traces(truth::Gen.DynamicDSLTrace, traces::Vector{Gen.DynamicDSLTrace})
 
 Display the observed and final simulated trajectory as well as distributions for latents and the score
 """
-function plot_traces(truth::Gen.DynamicDSLTrace, traces::Vector{Gen.DynamicDSLTrace})
+function plot_traces(truth::Gen.DynamicDSLTrace, traces::Vector{Gen.DynamicDSLTrace}, weights)
     observed_plt = plot_trace(truth, "True trajectory")
     simulated_plt = plot_trace(last(traces), "Last trace")
 
     (t, _) = get_args(truth)
     num_traces = length(traces)
     mass_logs = [[t[:prior => :objects => i => :mass] for t in traces] for i in 1:2]
-    scores = [get_score(t) for t in traces]
 
-    scores_plt = plot(1:num_traces, scores, title="Scores", xlabel="trace number", ylabel="log score")
+    scores_plt = plot(1:num_traces, weights, title="Scores", xlabel="trace number", ylabel="log score")
     mass_plts = [Plots.histogram(1:num_traces, mass_logs[i], title="Mass $(i == 1 ? "Ramp object" : "Table object")", legend=false) for i in 1:2]
     ratio_plt = Plots.histogram(1:num_traces, mass_logs[1]./mass_logs[2], title="mass ramp object / mass table object", legend=false)
     plt = plot(observed_plt, simulated_plt, mass_plts..., scores_plt, ratio_plt,  size=(1200, 800))
@@ -120,7 +119,7 @@ t, params, truth, observations = gen_trial()
 #display(get_choices(truth))
 
 # inference
-traces = do_inference(t, params, observations, 50)
+traces, weights = do_inference(t, params, observations, 100)
 
 # visualize results
-plot_traces(truth, traces)
+plot_traces(truth, traces, weights)
