@@ -62,6 +62,9 @@ function CPParams(client::Int64, objs::Vector{Int64},
     CPParams(mprior, pprior, event_concepts, sim, template, length(objs), obs_noise, death_factor)
 end
 
+event_concepts = Type{<:EventRelation}[Collision]
+switch = Gen.Switch(map(clause, event_concepts)...)
+
 """
 Current state of the change point model, simulation state and event state
 """
@@ -182,14 +185,15 @@ end
 """
 map possible events to weight vector for birth decision using the predicates
 """
-function calculate_predicates(obj_states, event_concepts)
+function calculate_predicates(obj_states)
     object_pairs = collect(combinations(obj_states, 2))
     pair_idx = repeat(collect(combinations(1:length(obj_states), 2)), length(event_concepts))
     pair_idx = [[0,0], pair_idx...] # for no event
 
     predicates = [predicate(event_type, a, b) for event_type in event_concepts for (a, b) in object_pairs]
-    events = vcat(NoEvent, [repeat([event_type], length(object_pairs)) for event_type in event_concepts]...)
-    return predicates, events, pair_idx
+    event_ids = vcat(1, repeat(1:length(event_concepts), length(object_pairs)))
+    @show event_ids
+    return predicates, event_ids, pair_idx
 end
 
 function normalize_weights(weights, active_events)
@@ -213,22 +217,21 @@ end
 """
 create a Switch combinator to evaluate the corresponding clause for a started event to trace new latents
 """
-@gen function event_switch(clause, events, start_event_idx, pair, bullet_state, active_events)
-    switch = Gen.Switch(map(clause, events)...)
-    updated_latents = @trace(switch(start_event_idx, pair, bullet_state.latents), :event) # trace latents
-    bullet_state = setproperties(bullet_state; latents = updated_latents)
-    start_event_idx > 1 && push!(active_events, start_event_idx)
-    return bullet_state, active_events
+@gen function event_switch(event_idx, start_event_idx, pair, bullet_state)
+    return 
 end
 
 """
 iterate over event concepts and evaluate predicates for newly activated events
 """
 @gen function event_kernel(active_events, bullet_state, event_concepts, death_factor)
-    predicates, events, pair_idx = calculate_predicates(bullet_state.kinematics, event_concepts)
+    predicates, event_ids, pair_idx = calculate_predicates(bullet_state.kinematics, event_concepts)
     weights = normalize_weights(copy(predicates), active_events)
     start_event_idx = @trace(categorical(weights), :start_event_idx) # up to one event is born
-    bullet_state, active_events = @trace(event_switch(clause, events, start_event_idx, pair_idx[start_event_idx], bullet_state, active_events), :switch)
+    updated_latents = @trace(switch(event_idx, pair_idx[start_event_idx], bullet_state.latents), :event)
+    # TODO: use funcitonal collections
+    bullet_state = setproperties(bullet_state; latents = updated_latents)
+    start_event_idx > 1 && push!(active_events, start_event_idx)
     
     weights = calculate_death_weights(predicates, active_events, start_event_idx, death_factor)
     end_event_idx = @trace(categorical(weights), :end_event_idx) # up to one active event dies
