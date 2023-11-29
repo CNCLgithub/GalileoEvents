@@ -124,20 +124,27 @@ function update_test_2()
     # find first collision in the trace
     start_event_indices = [trace[:kernel=>i=>:events=>:start_event_idx] for i in 1:t]
     t1 = findfirst(x -> x == 2, start_event_indices)
-# TODO: validate existence of event
+    # TODO: validate existence of event
     # move first collision five steps earlier
     cm = choicemap(fixed_prior_cm)
     cm[:kernel => t1 => :events => :start_event_idx] = 1
     cm[:kernel => t1 - 5 => :events => :start_event_idx] = 2
     trace2, ls2, _... = Gen.update(trace, cm)
+    @show ls2
+    choices = get_choices(trace2)
+    display(get_submap(choices, :kernel => t1  => :events))
+    display(get_submap(choices, :kernel => t1 -5 => :events))
+
     trace3, delta_s, _... = Gen.regenerate(trace2, select(:kernel => t1 - 5 => :events => :event))
-    # TODO: check ls2
-    # print choices and 
+    @show delta_s
+    choices2 = get_choices(trace3)
+    display(get_submap(choices2, :kernel => t1 => :events))
+    display(get_submap(choices2, :kernel => t1 -5 ))
 
     @assert delta_s != -Inf
-    @assert delta_s != NaN
+    @assert !isnan(delta_s)
 
-    return trace, trace2
+    #return trace, trace2
 end
 
 # redraw latents at same event start
@@ -207,6 +214,6 @@ end
 #visualize_active_events()
 #constrained_test()
 #update_test()
-#update_test_2()
-update_test_3()
+update_test_2()
+#update_test_3()
 #switch_test_static()

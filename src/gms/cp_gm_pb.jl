@@ -228,7 +228,7 @@ iterate over event concepts and evaluate predicates for newly activated events
     predicates, events, pair_idx = calculate_predicates(bullet_state.kinematics, event_concepts)
     weights = normalize_weights(copy(predicates), active_events)
     start_event_idx = @trace(categorical(weights), :start_event_idx) # up to one event is born
-    bullet_state, active_events = event_switch(clause, events, start_event_idx, pair_idx[start_event_idx], bullet_state, active_events)
+    bullet_state, active_events = @trace(event_switch(clause, events, start_event_idx, pair_idx[start_event_idx], bullet_state, active_events), :switch)
     
     weights = calculate_death_weights(predicates, active_events, start_event_idx, death_factor)
     end_event_idx = @trace(categorical(weights), :end_event_idx) # up to one active event dies
