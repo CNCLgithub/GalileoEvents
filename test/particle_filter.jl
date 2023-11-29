@@ -14,8 +14,8 @@ Generates a trial and returns the generation parameters, the true trace and the 
 """
 function gen_trial()
     # configure model paramaters
-    mass_ratio = rand(Gamma(2.0, 1.0))
-    obj_frictions = (rand(Uniform(0.1, 0.9)), rand(Uniform(0.1, 0.9)))
+    #mass_ratio = rand(Gamma(2.0, 1.0))
+    #obj_frictions = (rand(Uniform(0.1, 0.9)), rand(Uniform(0.1, 0.9)))
     obj_positions = (rand(Uniform(0.2, 0.8)), rand(Uniform(1.2, 1.8)))
     mprior = MaterialPrior([unknown_material])
     pprior = PhysPrior((3.0, 10.0), # mass
@@ -45,6 +45,17 @@ function gen_trial()
     return t, cp_params, trace, observations
 end
 
+@gen function(proposal)
+    # something like
+    # find first collision in the trace
+    # find first collision in the trace
+    start_event_indices = [trace[:kernel=>i=>:events=>:start_event_idx] for i in 1:t]
+    t1 = findfirst(x -> x == 2, start_event_indices)
+
+    # in future maybe gaussian rw
+    trace2, delta_s, _... = Gen.regenerate(trace, select(:kernel => t1 => :events => :event))
+end
+
 """
 do_inference
 
@@ -52,21 +63,25 @@ Runs particle filter inference on a model and given observations
 """
 function do_inference(t::Int, params::CPParams, observations::Vector{ChoiceMap}, n_particles::Int = 100, ess_thresh=0.5)
     # initialize particle filter
-    state = pf_initialize(cp_model, (1, params), observations[1], n_particles)
+    state = pf_initialize(cp_model, (0, params), EmptyChoiceMap(), n_particles)
 
     # Then increment through each observation step
-    for t in 2:length(observations)
+    for t in 1:length(observations)
+        # Update filter state with new observation at timestep t
+        pf_update!(state, (t, params), (UnknownChange(), NoChange()), observations[t])
+
         step_time = @elapsed begin
             # Resample and rejuvenate if the effective sample size is too low
             if effective_sample_size(state) < ess_thresh * n_particles
                 # Perform residual resampling, pruning low-weight particles
                 pf_resample!(state, :residual)
-                # Perform a rejuvenation move on past choices
-                rejuv_sel = select(:kernel => t-1 => :events => :event)
-                pf_rejuvenate!(state, mh, (rejuv_sel,))
             end
-            # Update filter state with new observation at timestep t
-            pf_update!(state, (t, params), (UnknownChange(), NoChange()), observations[t])
+            # Perform a rejuvenation move on past choices
+            rejuv_sel = select(:kernel => t => :events => :event)
+            pf_rejuvenate!(state, mh, (rejuv_sel,))
+            #proposal = 
+            #kern = move_reweight(proposal)
+            # pf_move_reweight!(state, kern)
         end
 
         if t % 10 == 0
