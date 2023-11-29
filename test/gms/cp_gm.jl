@@ -228,9 +228,9 @@ function switch_test_static()
 end
 
 #forward_test()
-#visualize_active_events()
+visualize_active_events()
 #constrained_test()
 #update_test()
-update_test_2()
+#update_test_2()
 #update_test_3()
 #switch_test_static()

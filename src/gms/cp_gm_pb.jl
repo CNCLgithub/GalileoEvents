@@ -181,6 +181,11 @@ function valid_relations(state::CPState, event_concepts::Vector{Type{EventRelati
     end
 end
 
+@gen function event_switch(clause, events, start_event_idx, pair, latents)
+    switch = Gen.Switch(map(clause, events)...)
+    return switch(start_event_idx, pair, latents)
+end
+
 """
 map possible events to weight vector for birth decision using the predicates
 """
