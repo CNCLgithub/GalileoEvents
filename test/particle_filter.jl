@@ -14,8 +14,8 @@ Generates a trial and returns the generation parameters, the true trace and the 
 """
 function gen_trial()
     # configure model paramaters
-    #mass_ratio = rand(Gamma(2.0, 1.0))
-    #obj_frictions = (rand(Uniform(0.1, 0.9)), rand(Uniform(0.1, 0.9)))
+    mass_ratio = rand(Gamma(2.0, 1.0))
+    obj_frictions = (rand(Uniform(0.1, 0.9)), rand(Uniform(0.1, 0.9)))
     obj_positions = (rand(Uniform(0.2, 0.8)), rand(Uniform(1.2, 1.8)))
     mprior = MaterialPrior([unknown_material])
     pprior = PhysPrior((3.0, 10.0), # mass
@@ -47,12 +47,17 @@ end
 
 @gen function proposal(trace)
     # find first collision in the trace
+    t = get_args(trace)[1]
     start_event_indices = [trace[:kernel=>i=>:events=>:start_event_idx] for i in 1:t]
     t1 = findfirst(x -> x == 2, start_event_indices)
 
-    # in future, maybe gaussian rw
-    trace2, delta_s, _... = Gen.regenerate(trace, select(:kernel => t1 => :events => :event))
-    return trace2, delta_s
+    if !isnothing(t1)
+        # in future, maybe gaussian rw
+        trace2, delta_s, _... = Gen.regenerate(trace, select(:kernel => t1 => :events => :event))
+        return trace2, delta_s
+    end
+    
+    return trace, 0
 end
 
 """
@@ -79,12 +84,9 @@ function do_inference(t::Int, params::CPParams, observations::Vector{ChoiceMap},
             #rejuv_sel = select(:kernel => t => :events => :event)
             #pf_rejuvenate!(state, mh, (rejuv_sel,))
 
-            # 
-            particle_traces = get_traces(state)
-            for trace in particle_traces
-                kern = pf_move_reweight(trace, proposal)
-                pf_move_reweight!(state, kern)
-            end
+            
+            kern(trace) = move_reweight(trace, proposal, ())
+            pf_move_reweight!(state, kern)
         end
 
         if t % 10 == 0
