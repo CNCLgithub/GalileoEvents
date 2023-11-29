@@ -45,15 +45,14 @@ function gen_trial()
     return t, cp_params, trace, observations
 end
 
-@gen function(proposal)
-    # something like
-    # find first collision in the trace
+@gen function proposal(trace)
     # find first collision in the trace
     start_event_indices = [trace[:kernel=>i=>:events=>:start_event_idx] for i in 1:t]
     t1 = findfirst(x -> x == 2, start_event_indices)
 
-    # in future maybe gaussian rw
+    # in future, maybe gaussian rw
     trace2, delta_s, _... = Gen.regenerate(trace, select(:kernel => t1 => :events => :event))
+    return trace2, delta_s
 end
 
 """
@@ -77,11 +76,15 @@ function do_inference(t::Int, params::CPParams, observations::Vector{ChoiceMap},
                 pf_resample!(state, :residual)
             end
             # Perform a rejuvenation move on past choices
-            rejuv_sel = select(:kernel => t => :events => :event)
-            pf_rejuvenate!(state, mh, (rejuv_sel,))
-            #proposal = 
-            #kern = move_reweight(proposal)
-            # pf_move_reweight!(state, kern)
+            #rejuv_sel = select(:kernel => t => :events => :event)
+            #pf_rejuvenate!(state, mh, (rejuv_sel,))
+
+            # 
+            particle_traces = get_traces(state)
+            for trace in particle_traces
+                kern = pf_move_reweight(trace, proposal)
+                pf_move_reweight!(state, kern)
+            end
         end
 
         if t % 10 == 0
