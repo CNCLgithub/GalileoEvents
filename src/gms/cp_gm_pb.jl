@@ -25,7 +25,7 @@ struct NoEvent <: EventRelation end
 
 
 """
-Parameters for change point model
+holds parameters for change point model
 """
 struct CPParams <: GMParams
     # prior
@@ -41,6 +41,9 @@ struct CPParams <: GMParams
     death_factor::Float64
 end
 
+"""
+constructs parameter struct for change point model
+"""
 function CPParams(client::Int64, objs::Vector{Int64},
     mprior::MaterialPrior, pprior::PhysPrior,
     event_concepts::Vector{Type{<:EventRelation}},
@@ -142,7 +145,7 @@ update latents of a single element
 end
 
 """
-in case of collision: Gaussian drift update of mass and restitution#
+in case of collision: Gaussian drift update of mass and restitution
 """
 @gen function _collision_clause(pair_idx::Vector{Int64}, latents::Vector{BulletElemLatents})
     latents[pair_idx[1]] = @trace(update_latents(latents[pair_idx[1]]), :new_latents_a)
@@ -150,15 +153,15 @@ in case of collision: Gaussian drift update of mass and restitution#
     return latents
 end
 
-@gen function _no_event_clause(pair_idx, latents::Vector{BulletElemLatents})
-    return latents
+function clause(::Type{Collision})
+    _collision_clause
 end
 
 """
-Returns the generative function over latents for the event relation
+in case of no event: no change
 """
-function clause(::Type{Collision})
-    _collision_clause
+@gen function _no_event_clause(pair_idx, latents::Vector{BulletElemLatents})
+    return latents
 end
 
 function clause(::Type{NoEvent})
@@ -176,63 +179,60 @@ function valid_relations(state::CPState, event_concepts::Vector{Type{EventRelati
     end
 end
 
-# map mcmc kernel (link: https://www.gen.dev/docs/stable/ref/mcmc/#Composing-Stationary-Kernels)
-# set of proposal functions
-
-# change randomly clause choices of mass 
-# revise for which event, modify the categorical
-# e.g. another event type for the same pair or another event for one event type
-
-@gen function event_switch(clause, events, start_event_idx, pair, latents)
-    switch = Gen.Switch(map(clause, events)...)
-    return switch(start_event_idx, pair, latents)
-end
-
 """
-iterate over event concepts and evaluate predicates to active/deactive
+map possible events to weight vector for birth decision using the predicates
 """
-@gen function event_kernel(state::CPState, params::CPParams)
-    obj_states = state.bullet_state.kinematics
+function calculate_predicates(obj_states, event_concepts)
     object_pairs = collect(combinations(obj_states, 2))
-    pair_idx = repeat(collect(combinations(1:length(obj_states), 2)), length(params.event_concepts))
+    pair_idx = repeat(collect(combinations(1:length(obj_states), 2)), length(event_concepts))
     pair_idx = [[0,0], pair_idx...] # for no event
 
-    # map possible events to weight vector for birth decision using the predicates
-    predicates = [predicate(event_type, a, b) for event_type in params.event_concepts for (a, b) in object_pairs]
+    predicates = [predicate(event_type, a, b) for event_type in event_concepts for (a, b) in object_pairs]
+    events = vcat(NoEvent, [repeat([event_type], length(object_pairs)) for event_type in event_concepts]...)
+    return predicates, events, pair_idx
+end
 
-    # birth of one or no random event
-    weights = copy(predicates)
-    active_events = copy(state.active_events)
+function normalize_weights(weights, active_events)
     for idx in active_events # active events should not be born again
         weights[idx-1] = 0
     end
     weights = [max(0, 1 - sum(weights)), weights...]
     # TODO: objects that are already involved in some events should not be involved in other event types as well
-    weights_normalized = weights ./ sum(weights)
-    
-    # Draw born event
-    events = vcat(NoEvent, [repeat([event_type], length(object_pairs)) for event_type in params.event_concepts]...)
+    return weights ./ sum(weights)
+end
 
-    start_event_idx = @trace(categorical(weights_normalized), :start_event_idx)
-    if start_event_idx > 1
-        push!(active_events, start_event_idx)
-    end
-
-    
-
-    updated_latents = @trace(event_switch(clause, events, start_event_idx, pair_idx[start_event_idx], state.bullet_state.latents), :event)
-    bullet_state = setproperties(state.bullet_state; latents = updated_latents)
-
-    # death of one or no active event
-    weights = [(idx+1 in active_events && idx+1 != start_event_idx) ? max(1. - predicates[idx] * params.death_factor, 0.) : 0.0 for idx in 1:length(predicates)] # dying has a much lower chance of being born
-
+function calculate_death_weights(predicates, active_events, start_event_idx, death_factor)
+    can_die(idx) = idx+1 in active_events && idx+1 != start_event_idx
+    # dying has a much lower chance of being born
+    get_weight(idx) = can_die(idx) ? max(1. - predicates[idx] * death_factor, 0.) : 0.0  
+    weights = [get_weight(idx) for idx in 1:length(predicates)]
     weights = [max(0, 1-sum(weights)), weights...] # no event at index 1
-    weights = weights ./ sum(weights) # normalize
+    return weights ./ sum(weights)
+end
 
-    end_event_idx = @trace(categorical(weights), :end_event_idx)
-    if end_event_idx > 1 # nothing happens when no event dies
-        delete!(active_events, end_event_idx)
-    end 
+"""
+create a Switch combinator to evaluate the corresponding clause for a started event to trace new latents
+"""
+@gen function event_switch(clause, events, start_event_idx, pair, bullet_state, active_events)
+    switch = Gen.Switch(map(clause, events)...)
+    updated_latents = @trace(switch(start_event_idx, pair, bullet_state.latents), :event) # trace latents
+    bullet_state = setproperties(bullet_state; latents = updated_latents)
+    start_event_idx > 1 && push!(active_events, start_event_idx)
+    return bullet_state, active_events
+end
+
+"""
+iterate over event concepts and evaluate predicates for newly activated events
+"""
+@gen function event_kernel(active_events, bullet_state, event_concepts, death_factor)
+    predicates, events, pair_idx = calculate_predicates(bullet_state.kinematics, event_concepts)
+    weights = normalize_weights(copy(predicates), active_events)
+    start_event_idx = @trace(categorical(weights), :start_event_idx) # up to one event is born
+    bullet_state, active_events = event_switch(clause, events, start_event_idx, pair_idx[start_event_idx], bullet_state, active_events)
+    
+    weights = calculate_death_weights(predicates, active_events, start_event_idx, death_factor)
+    end_event_idx = @trace(categorical(weights), :end_event_idx) # up to one active event dies
+    end_event_idx > 1 && delete!(active_events, end_event_idx)
 
     return active_events, bullet_state
 end
@@ -241,25 +241,22 @@ end
 for one object, observe the noisy position in every dimension
 """
 @gen function observe_position(k::RigidBodyState, noise::Float64)
-    pos = k.position
-    # add noise to position
-    obs = @trace(broadcasted_normal(pos, noise), :positions)
-    return obs
+    @trace(broadcasted_normal(k.position, noise), :positions)
 end
 
 """
-for one time step, run event and physics kernel
+run event and physics kernel for one time step and observe noisy positions
 """
 @gen function kernel(t::Int, prev_state::CPState, params::CPParams)
-    # event kernel
-    active_events, bullet_state = @trace(event_kernel(prev_state, params), :events)
+    active_events, bullet_state = @trace(event_kernel(prev_state.active_events,
+                                                      prev_state.bullet_state, 
+                                                      params.event_concepts,
+                                                      params.death_factor), :events)
 
-    # simulate physics for the next step based on the current state and observe positions
     bullet_state::BulletState = PhySMC.step(params.sim, bullet_state)
-    obs = @trace(Gen.Map(observe_position)(bullet_state.kinematics, Fill(params.obs_noise, params.n_objects)), :observe)
+    @trace(Gen.Map(observe_position)(bullet_state.kinematics, Fill(params.obs_noise, params.n_objects)), :observe)
 
-    next_state = CPState(bullet_state, active_events)
-    return next_state
+    return CPState(bullet_state, active_events)
 end
 
 """

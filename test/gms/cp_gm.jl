@@ -31,7 +31,7 @@ function forward_test()
     
     trace, _ = Gen.generate(cp_model, (t, cp_params));
     println("")
-    display(get_choices(trace))
+    #display(get_choices(trace))
 end
 
 function add_rectangle!(plt, xstart, xend, y; height=0.8, color=:blue)
@@ -124,13 +124,15 @@ function update_test_2()
     # find first collision in the trace
     start_event_indices = [trace[:kernel=>i=>:events=>:start_event_idx] for i in 1:t]
     t1 = findfirst(x -> x == 2, start_event_indices)
-
+# TODO: validate existence of event
     # move first collision five steps earlier
     cm = choicemap(fixed_prior_cm)
     cm[:kernel => t1 => :events => :start_event_idx] = 1
     cm[:kernel => t1 - 5 => :events => :start_event_idx] = 2
     trace2, ls2, _... = Gen.update(trace, cm)
     trace3, delta_s, _... = Gen.regenerate(trace2, select(:kernel => t1 - 5 => :events => :event))
+    # TODO: check ls2
+    # print choices and 
 
     @assert delta_s != -Inf
     @assert delta_s != NaN
