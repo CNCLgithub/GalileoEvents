@@ -62,9 +62,6 @@ function CPParams(client::Int64, objs::Vector{Int64},
     CPParams(mprior, pprior, event_concepts, sim, template, length(objs), obs_noise, death_factor)
 end
 
-event_concepts = Type{<:EventRelation}[Collision]
-switch = Gen.Switch(map(clause, event_concepts)...)
-
 """
 Current state of the change point model, simulation state and event state
 """
@@ -171,6 +168,10 @@ function clause(::Type{NoEvent})
     _no_event_clause
 end
 
+
+event_concepts = Type{<:EventRelation}[NoEvent, Collision]
+switch = Gen.Switch(map(clause, event_concepts)...)
+
 """
 
 """
@@ -188,11 +189,10 @@ map possible events to weight vector for birth decision using the predicates
 function calculate_predicates(obj_states)
     object_pairs = collect(combinations(obj_states, 2))
     pair_idx = repeat(collect(combinations(1:length(obj_states), 2)), length(event_concepts))
-    pair_idx = [[0,0], pair_idx...] # for no event
+    pair_idx = [[0,0], pair_idx...] # [0,0] for no event
 
-    predicates = [predicate(event_type, a, b) for event_type in event_concepts for (a, b) in object_pairs]
-    event_ids = vcat(1, repeat(1:length(event_concepts), length(object_pairs)))
-    @show event_ids
+    predicates = [predicate(event_type, a, b) for event_type in event_concepts for (a, b) in object_pairs if event_type != NoEvent] # NoEvent excluded and added in weights
+    event_ids = vcat(1, repeat(2:length(event_concepts), inner=length(object_pairs))) # 1 for NoEvent
     return predicates, event_ids, pair_idx
 end
 
@@ -200,7 +200,7 @@ function normalize_weights(weights, active_events)
     for idx in active_events # active events should not be born again
         weights[idx-1] = 0
     end
-    weights = [max(0, 1 - sum(weights)), weights...]
+    weights = [max(0, 1 - sum(weights)), weights...] # first element for NoEvent
     # TODO: objects that are already involved in some events should not be involved in other event types as well
     return weights ./ sum(weights)
 end
@@ -217,18 +217,18 @@ end
 """
 create a Switch combinator to evaluate the corresponding clause for a started event to trace new latents
 """
-@gen function event_switch(event_idx, start_event_idx, pair, bullet_state)
-    return 
+@gen function event_switch(event_idx, pair_idx, latents)
+    return (pair_idx, latents)
 end
 
 """
 iterate over event concepts and evaluate predicates for newly activated events
 """
-@gen function event_kernel(active_events, bullet_state, event_concepts, death_factor)
-    predicates, event_ids, pair_idx = calculate_predicates(bullet_state.kinematics, event_concepts)
+@gen function event_kernel(active_events, bullet_state, death_factor)
+    predicates, event_ids, pair_idx = calculate_predicates(bullet_state.kinematics)
     weights = normalize_weights(copy(predicates), active_events)
     start_event_idx = @trace(categorical(weights), :start_event_idx) # up to one event is born
-    updated_latents = @trace(switch(event_idx, pair_idx[start_event_idx], bullet_state.latents), :event)
+    updated_latents = @trace(switch(event_ids[start_event_idx], pair_idx[start_event_idx], bullet_state.latents), :event)
     # TODO: use funcitonal collections
     bullet_state = setproperties(bullet_state; latents = updated_latents)
     start_event_idx > 1 && push!(active_events, start_event_idx)
@@ -252,8 +252,7 @@ run event and physics kernel for one time step and observe noisy positions
 """
 @gen function kernel(t::Int, prev_state::CPState, params::CPParams)
     active_events, bullet_state = @trace(event_kernel(prev_state.active_events,
-                                                      prev_state.bullet_state, 
-                                                      params.event_concepts,
+                                                      prev_state.bullet_state,
                                                       params.death_factor), :events)
 
     bullet_state::BulletState = PhySMC.step(params.sim, bullet_state)

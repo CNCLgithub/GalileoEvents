@@ -119,11 +119,16 @@ function update_test_2()
     cp_params = CPParams(client, [a,b], mprior, pprior, event_concepts, obs_noise)
 
     # generate initial trace
-    trace, _ = Gen.generate(cp_model, (t, cp_params))
+    trace, ls = Gen.generate(cp_model, (t, cp_params))
 
     # find first collision in the trace
     start_event_indices = [trace[:kernel=>i=>:events=>:start_event_idx] for i in 1:t]
     t1 = findfirst(x -> x == 2, start_event_indices)
+    @show ls
+    choices = get_choices(trace)
+    display(get_submap(choices, :kernel => t1  => :events))
+    display(get_submap(choices, :kernel => t1 -5 => :events))
+
     # TODO: validate existence of event
     # move first collision five steps earlier
     cm = choicemap(fixed_prior_cm)
@@ -139,7 +144,7 @@ function update_test_2()
     @show delta_s
     choices2 = get_choices(trace3)
     display(get_submap(choices2, :kernel => t1 => :events))
-    display(get_submap(choices2, :kernel => t1 -5 ))
+    display(get_submap(choices2, :kernel => t1 -5 => :events ))
 
     @assert delta_s != -Inf
     @assert !isnan(delta_s)
