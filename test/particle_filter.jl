@@ -14,12 +14,13 @@ Generates a trial and returns the generation parameters, the true trace and the 
 """
 function gen_trial()
     # configure model paramaters
-    mass_ratio = rand(Gamma(2.0, 1.0))
-    obj_frictions = (rand(Uniform(0.1, 0.9)), rand(Uniform(0.1, 0.9)))
-    obj_positions = (rand(Uniform(0.2, 0.8)), rand(Uniform(1.2, 1.8)))
+    mass_ratio = 1. # rand(Gamma(5.0, 0.25)) # is overwritten anyway
+    obj_frictions = (rand(Uniform(0.1, 0.2)), rand(Uniform(0.1, 0.2)))
+    obj_positions = (rand(Uniform(0.5, 0.6)), rand(Uniform(1.1, 1.2)))
+    @show obj_positions
     mprior = MaterialPrior([unknown_material])
     pprior = PhysPrior((3.0, 10.0), # mass
-                    (0.5, 10.0), # friction
+                    (0.5, 0.25), # friction
                     (0.2, 1.0))  # restitution
     client, a, b = ramp(mass_ratio, obj_frictions, obj_positions)
     event_concepts = Type{<:EventRelation}[Collision]
@@ -27,7 +28,7 @@ function gen_trial()
     
     cp_params = CPParams(client, [a,b], mprior, pprior, event_concepts, obs_noise)
 
-    t = 100
+    t = 70
 
     # run model forward
     trace, _ = Gen.generate(cp_model, (t, cp_params));
@@ -53,7 +54,10 @@ end
 
     if !isnothing(t1)
         # in future, maybe gaussian rw
-        trace2, delta_s, _... = Gen.regenerate(trace, select(:kernel => t1 => :events => :event))
+        trace2, delta_s, _... = Gen.regenerate(trace, select(
+            :kernel => t1 => :events => :event => :new_latents_a => :mass,
+            :kernel => t1 => :events => :event => :new_latents_b => :mass
+            ))
         return trace2, delta_s
     end
     
@@ -83,7 +87,6 @@ function do_inference(t::Int, params::CPParams, observations::Vector{ChoiceMap},
             # Perform a rejuvenation move on past choices
             #rejuv_sel = select(:kernel => t => :events => :event)
             #pf_rejuvenate!(state, mh, (rejuv_sel,))
-
             
             kern(trace) = move_reweight(trace, proposal, ())
             pf_move_reweight!(state, kern)
@@ -139,7 +142,7 @@ t, params, truth, observations = gen_trial()
 #display(get_choices(truth))
 
 # inference
-traces, weights = do_inference(t, params, observations, 100)
+traces, weights = do_inference(t, params, observations, 25)
 
 # visualize results
 plot_traces(truth, traces, weights)
