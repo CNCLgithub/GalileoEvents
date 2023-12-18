@@ -14,13 +14,13 @@ pprior = PhysPrior((3.0, 10.0), # mass
                    (0.2, 1.0))  # restitution
 
 obs_noise = 0.05
-t = 120
+t = 80
 
 fixed_prior_cm = Gen.choicemap()
-fixed_prior_cm[:prior => :objects => 1 => :mass] = 2
-fixed_prior_cm[:prior => :objects => 2 => :mass] = 1
+fixed_prior_cm[:prior => :objects => 1 => :mass] = 2.
+fixed_prior_cm[:prior => :objects => 2 => :mass] = 1.
 fixed_prior_cm[:prior => :objects => 1 => :friction] = 0.5
-fixed_prior_cm[:prior => :objects => 2 => :friction] = 1.2
+fixed_prior_cm[:prior => :objects => 2 => :friction] = 0.5
 fixed_prior_cm[:prior => :objects => 1 => :restitution] = 0.2
 fixed_prior_cm[:prior => :objects => 2 => :restitution] = 0.2
 
@@ -29,8 +29,8 @@ function forward_test()
     event_concepts = Type{<:EventRelation}[Collision]
     cp_params = CPParams(client, [a,b], mprior, pprior, event_concepts, obs_noise)
     
-    trace, _ = Gen.generate(cp_model, (t, cp_params));
-    println("")
+    trace, weight = Gen.generate(cp_model, (t, cp_params));
+    @show weight
     #display(get_choices(trace))
 end
 
@@ -83,10 +83,11 @@ function constrained_test()
     event_concepts = Type{<:EventRelation}[Collision]
     cp_params = CPParams(client, [a,b], mprior, pprior, event_concepts, obs_noise)
 
-    addr = 10 => :events => :start_event_idx
-    cm = Gen.choicemap(addr => 2)
-    trace, _ = Gen.generate(cp_model, (t, cp_params), cm)
-    display(get_choices(trace))
+    #addr = 10 => :events => :start_event_idx
+    #cm = Gen.choicemap(addr => 2)
+    trace, weight = Gen.generate(cp_model, (t, cp_params), fixed_prior_cm)
+    @show weight
+    #display(get_choices(trace))
 end
 
 # update priors
@@ -119,7 +120,7 @@ function update_test_2()
     cp_params = CPParams(client, [a,b], mprior, pprior, event_concepts, obs_noise)
 
     # generate initial trace
-    trace, ls = Gen.generate(cp_model, (t, cp_params))
+    trace, ls = Gen.generate(cp_model, (t, cp_params), fixed_prior_cm)
 
     # find first collision in the trace
     start_event_indices = [trace[:kernel=>i=>:events=>:start_event_idx] for i in 1:t]
@@ -127,25 +128,36 @@ function update_test_2()
     @show ls
     choices = get_choices(trace)
     display(get_submap(choices, :kernel => t1  => :events))
-    display(get_submap(choices, :kernel => t1 -5 => :events))
 
     # TODO: validate existence of event
     # move first collision five steps earlier
-    cm = choicemap(fixed_prior_cm)
+    cm = choicemap()
     cm[:kernel => t1 => :events => :start_event_idx] = 1
     cm[:kernel => t1 - 5 => :events => :start_event_idx] = 2
     trace2, ls2, _... = Gen.update(trace, cm)
-    @show ls2
+    #@show ls2
     choices = get_choices(trace2)
-    display(get_submap(choices, :kernel => t1  => :events))
-    display(get_submap(choices, :kernel => t1 -5 => :events))
+    #display(get_submap(choices, :kernel => t1  => :events))
+    #display(get_submap(choices, :kernel => t1 -5 => :events))
 
-    trace3, delta_s, _... = Gen.regenerate(trace2, select(:kernel => t1 - 5 => :events => :event))
+    # the keys have to be enumerated, subsets do not work
+    trace3, delta_s, _... = Gen.regenerate(trace, select(
+        :kernel => t1 => :events => :event => :new_latents_a => :mass,))
+        #:kernel => t1 => :events => :event => :new_latents_a => :restitution))
+
     @show delta_s
     choices2 = get_choices(trace3)
     display(get_submap(choices2, :kernel => t1 => :events))
-    display(get_submap(choices2, :kernel => t1 -5 => :events ))
+    
 
+    for i in 1:t
+        if project(trace3, select(:kernel => i)) == -Inf
+            @show i
+            display(get_submap(choices2, :kernel => i => :events))
+        end
+    end
+    @show t1
+    @show project(trace3, select(:kernel))
     @assert delta_s != -Inf
     @assert !isnan(delta_s)
 

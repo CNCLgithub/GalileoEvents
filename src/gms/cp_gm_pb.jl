@@ -125,10 +125,9 @@ function predicate(t::Type{Collision}, a::RigidBodyState, b::RigidBodyState)
     a_dim = a.aabb[2] - a.aabb[1]
     b_dim = b.aabb[2] - b.aabb[1]
     d = norm(Vector(a.position)-Vector(b.position))-norm((a_dim+b_dim)/2) # l2 distance
-    clamp(exp(-15d), 0., 1.)
+    clamp(exp(-15d), 1e-3, 1 - 1e-3)
 end
 
-# gen functional collections 
 
 """
 update latents of a single element
@@ -168,12 +167,11 @@ function clause(::Type{NoEvent})
     _no_event_clause
 end
 
-
 event_concepts = Type{<:EventRelation}[NoEvent, Collision]
 switch = Gen.Switch(map(clause, event_concepts)...)
 
 """
-
+TODO: this function was intended to check if some event relations are impossible to be created a certain time step
 """
 function valid_relations(state::CPState, event_concepts::Vector{Type{EventRelation}})
     return event_concepts
@@ -191,11 +189,15 @@ function calculate_predicates(obj_states)
     pair_idx = repeat(collect(combinations(1:length(obj_states), 2)), length(event_concepts))
     pair_idx = [[0,0], pair_idx...] # [0,0] for no event
 
+    # break up to two lines
     predicates = [predicate(event_type, a, b) for event_type in event_concepts for (a, b) in object_pairs if event_type != NoEvent] # NoEvent excluded and added in weights
     event_ids = vcat(1, repeat(2:length(event_concepts), inner=length(object_pairs))) # 1 for NoEvent
     return predicates, event_ids, pair_idx
 end
 
+"""
+transform predicates for pairs of objects into a probability vector that adds to 1, including one weight for NoEvent at the first position
+"""
 function normalize_weights(weights, active_events)
     for idx in active_events # active events should not be born again
         weights[idx-1] = 0
@@ -205,6 +207,9 @@ function normalize_weights(weights, active_events)
     return weights ./ sum(weights)
 end
 
+"""
+similar to normalize_weights but for death of events
+"""
 function calculate_death_weights(predicates, active_events, start_event_idx, death_factor)
     can_die(idx) = idx+1 in active_events && idx+1 != start_event_idx
     # dying has a much lower chance of being born
@@ -215,11 +220,21 @@ function calculate_death_weights(predicates, active_events, start_event_idx, dea
 end
 
 """
-create a Switch combinator to evaluate the corresponding clause for a started event to trace new latents
+updates active events in a functional form
+add=True -> add event to set of active events
+add=False -> remove event from set of active events
 """
-@gen function event_switch(event_idx, pair_idx, latents)
-    return (pair_idx, latents)
+function update_active_events(active_events::Set{Int64}, event_idx::Int64, add::Bool) 
+    if event_idx == 1
+        return active_events
+    end
+    if add
+        return union(active_events, Set([event_idx]))
+    else
+        return setdiff(active_events, Set([event_idx])) 
+    end
 end
+
 
 """
 iterate over event concepts and evaluate predicates for newly activated events
@@ -228,14 +243,14 @@ iterate over event concepts and evaluate predicates for newly activated events
     predicates, event_ids, pair_idx = calculate_predicates(bullet_state.kinematics)
     weights = normalize_weights(copy(predicates), active_events)
     start_event_idx = @trace(categorical(weights), :start_event_idx) # up to one event is born
+
     updated_latents = @trace(switch(event_ids[start_event_idx], pair_idx[start_event_idx], bullet_state.latents), :event)
-    # TODO: use funcitonal collections
     bullet_state = setproperties(bullet_state; latents = updated_latents)
-    start_event_idx > 1 && push!(active_events, start_event_idx)
+    active_events = update_active_events(active_events, start_event_idx, true)
     
     weights = calculate_death_weights(predicates, active_events, start_event_idx, death_factor)
     end_event_idx = @trace(categorical(weights), :end_event_idx) # up to one active event dies
-    end_event_idx > 1 && delete!(active_events, end_event_idx)
+    active_events = update_active_events(active_events, end_event_idx, false)
 
     return active_events, bullet_state
 end
