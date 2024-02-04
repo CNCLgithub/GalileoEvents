@@ -105,7 +105,6 @@ end
 @gen function mc_gm(t::Int, gm::MCParams)
     init_state = @trace(mc_prior(gm), :prior)
     # simulate `t` timesteps
-    println(init_state)
     states = @trace(Gen.Unfold(kernel)(t, init_state, gm), :kernel)
     return states
 end
